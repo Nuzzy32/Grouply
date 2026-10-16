@@ -1,0 +1,58 @@
+name: Grouply
+options:
+  bundleIdPrefix: id.grouply
+  deploymentTarget:
+    iOS: '17.0'
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: '5.9'
+    DEVELOPMENT_TEAM: ''
+    CODE_SIGN_STYLE: Automatic
+    TARGETED_DEVICE_FAMILY: '1'
+    MARKETING_VERSION: '0.1.0'
+    CURRENT_PROJECT_VERSION: '1'
+targets:
+  Grouply:
+    type: application
+    platform: iOS
+    sources: [Grouply]
+    info:
+      path: Grouply/Resources/Info.plist
+      properties:
+        CFBundleDisplayName: Grouply
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        UIUserInterfaceStyle: Light
+        CFBundleURLTypes:
+          - CFBundleURLName: id.grouply.demo
+            CFBundleURLSchemes: [grouply]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: id.grouply.app
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+  GrouplyTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: [GrouplyTests]
+    dependencies:
+      - target: Grouply
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+  GrouplyUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [GrouplyUITests]
+    dependencies:
+      - target: Grouply
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+schemes:
+  Grouply:
+    build:
+      targets:
+        Grouply: all
+    test:
+      targets: [GrouplyTests, GrouplyUITests]
