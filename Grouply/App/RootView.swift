@@ -14,6 +14,11 @@ struct RootView: View {
   @State private var paths: [[Route]] = [[], [], [], []]
   @State private var linkError: String?
   @Environment(\.scenePhase) private var scenePhase
+  private var reminderPlan: [(id: String, title: String, fireAt: Date)] {
+    DeadlineReminders.plan(
+      tasks: store.memberTasks,
+      activeProjectIDs: Set(store.projects.filter { $0.status == .active }.map(\.id)), now: Date())
+  }
   var body: some View {
     Group {
       if store.currentUserID == nil {
@@ -57,6 +62,11 @@ struct RootView: View {
     .onChange(of: scenePhase) { _, phase in
       store.setBackendActive(phase == .active)
       if phase == .active { Task { await store.refreshFromBackend() } }
+    }
+    .task(id: reminderPlan.map { "\($0.id)|\($0.title)|\($0.fireAt.timeIntervalSince1970)" }) {
+      // UI tests skip this so the notification permission alert never blocks them.
+      guard !ProcessInfo.processInfo.arguments.contains("--uitesting") else { return }
+      await DeadlineReminders.sync(reminderPlan)
     }
     .disabled(store.isBusy)
     .overlay {

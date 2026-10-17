@@ -11,6 +11,9 @@ abstract class GrouplyBackend {
   Stream<String?> get authChanges;
   Future<void> initialize();
   Future<void> signIn(String email, String password);
+  Future<bool> signUp(String name, String email, String password);
+  Future<void> requestPasswordReset(String email);
+  Future<void> recoverPassword(String email, String token, String password);
   Future<void> signOut();
   Future<Map<String, dynamic>> snapshot();
   Future<Map<String, dynamic>> mutate(
@@ -238,6 +241,52 @@ class SupabaseGrouplyBackend implements GrouplyBackend {
     try {
       await _flushStorage();
     } catch (_) {
+      await signOut();
+      rethrow;
+    }
+  }
+
+  @override
+  Future<bool> signUp(String name, String email, String password) async {
+    await initialize();
+    final response = await _sdk.auth.signUp(
+      email: email,
+      password: password,
+      data: {'name': name},
+    );
+    try {
+      await _flushStorage();
+    } catch (_) {
+      if (response.session != null) await signOut();
+      rethrow;
+    }
+    return response.session != null;
+  }
+
+  @override
+  Future<void> requestPasswordReset(String email) async {
+    await initialize();
+    await _sdk.auth.resetPasswordForEmail(email);
+  }
+
+  @override
+  Future<void> recoverPassword(
+    String email,
+    String token,
+    String password,
+  ) async {
+    await initialize();
+    await _sdk.auth.verifyOTP(
+      type: OtpType.recovery,
+      email: email,
+      token: token,
+    );
+    try {
+      await _sdk.auth.updateUser(UserAttributes(password: password));
+      await _flushStorage();
+    } catch (_) {
+      // The OTP already signed the user in; don't leave a session behind
+      // when the new password was not saved.
       await signOut();
       rethrow;
     }

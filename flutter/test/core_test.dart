@@ -26,6 +26,11 @@ class FakeBackend implements GrouplyBackend {
   FakeBackend({this.actor});
   String? actor;
   bool available = true;
+  bool signUpHasSession = true;
+  String? signUpName, signUpEmail, signUpPassword;
+  String? resetEmail;
+  String recoveryCode = '123456';
+  String? recoveryPassword;
   int mutations = 0, snapshots = 0, connections = 0;
   Completer<void>? loginGate;
   Future<JsonMap> Function()? read;
@@ -42,6 +47,34 @@ class FakeBackend implements GrouplyBackend {
   @override
   Future<void> signIn(String email, String password) async {
     await loginGate?.future;
+    actor = email;
+    changes.add(actor);
+  }
+
+  @override
+  Future<bool> signUp(String name, String email, String password) async {
+    signUpName = name;
+    signUpEmail = email;
+    signUpPassword = password;
+    if (!signUpHasSession) return false;
+    actor = email;
+    changes.add(actor);
+    return true;
+  }
+
+  @override
+  Future<void> requestPasswordReset(String email) async {
+    resetEmail = email;
+  }
+
+  @override
+  Future<void> recoverPassword(
+    String email,
+    String token,
+    String password,
+  ) async {
+    if (token != recoveryCode) throw StateError('wrong code');
+    recoveryPassword = password;
     actor = email;
     changes.add(actor);
   }
@@ -166,6 +199,45 @@ void main() {
       expect(store.user('u1'), isNull);
     },
   );
+
+  test(
+    'sign-up sends name and signs in when server returns a session',
+    () async {
+      final signedIn = await store.signUp('Ayu', 'ayu@example.com', 'password');
+      expect(signedIn, isTrue);
+      expect(backend.signUpName, 'Ayu');
+      expect(backend.signUpEmail, 'ayu@example.com');
+      expect(backend.signUpPassword, 'password');
+      expect(store.currentUserID, 'ayu@example.com');
+    },
+  );
+
+  test('sign-up without a session leaves the store signed out', () async {
+    backend.signUpHasSession = false;
+    expect(await store.signUp('Ayu', 'ayu@example.com', 'password'), isFalse);
+    expect(store.authenticated, isFalse);
+    expect(store.loading, isFalse);
+  });
+
+  test(
+    'password recovery sends reset email and signs in after valid OTP',
+    () async {
+      await store.requestPasswordReset('ayu@example.com');
+      expect(backend.resetEmail, 'ayu@example.com');
+      await store.recoverPassword('ayu@example.com', '123456', 'newpass');
+      expect(backend.recoveryPassword, 'newpass');
+      expect(store.currentUserID, 'ayu@example.com');
+    },
+  );
+
+  test('password recovery rejects an incorrect OTP', () async {
+    await expectLater(
+      store.recoverPassword('ayu@example.com', '000000', 'newpass'),
+      throwsA(isA<GrouplyException>()),
+    );
+    expect(store.authenticated, isFalse);
+    expect(store.loading, isFalse);
+  });
 
   test(
     'sign-out waits for delayed sign-in and leaves no live SDK account',
