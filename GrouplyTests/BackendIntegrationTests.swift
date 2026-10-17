@@ -35,6 +35,55 @@ private final class IntegrationTokenStore: BackendTokenStore {
 }
 
 final class BackendIntegrationTests: XCTestCase {
+  @MainActor private func waitForRealtime(_ description: String, condition: () -> Bool) async throws {
+    let deadline = Date().addingTimeInterval(20)
+    while !condition(), Date() < deadline { try await Task.sleep(for: .milliseconds(100)) }
+    XCTAssertTrue(condition(), description)
+    guard condition() else { throw BackendError(status: 0, message: description) }
+  }
+
+  @MainActor func testRealtimeMessagesUnreadReconnectAndMembershipRevocation() async throws {
+    let config = try LocalBackendAccounts.load()
+    guard BackendConfiguration.bundled?.url == config.url else { throw XCTSkip("Requires local app configuration.") }
+    let configuration = BackendConfiguration(url: config.url, publishableKey: config.publishableKey)
+    let sender = SupabaseBackend(configuration: configuration, tokenStore: IntegrationTokenStore())
+    let alex = try config.account("alex")
+    let raka = try config.account("raka")
+    try await sender.signIn(email: alex.email, password: alex.password)
+    let receiver = DemoStore(persist: false, backendFactory: { SupabaseBackend(configuration: $0, tokenStore: IntegrationTokenStore()) })
+    let otherDevice = DemoStore(persist: false, backendFactory: { SupabaseBackend(configuration: $0, tokenStore: IntegrationTokenStore()) })
+    defer { receiver.setBackendActive(false); otherDevice.setBackendActive(false) }
+    try await receiver.connectBackend(email: raka.email, password: raka.password)
+    try await otherDevice.connectBackend(email: raka.email, password: raka.password)
+    try await waitForRealtime("Both subscribers join") { receiver.realtimeConnected && otherDevice.realtimeConnected && !receiver.isBusy && !otherDevice.isBusy }
+    let created = try await sender.mutate(action: "createGroup", payload: ["name": .string("Realtime \(UUID().uuidString.prefix(8))"), "description": .string(""), "course": .string("Pengujian")])
+    let groupID = try XCTUnwrap(created.id)
+    let invitation = try await sender.mutate(action: "generateInvite", payload: ["groupID": .string(groupID)])
+    let invite = try XCTUnwrap(invitation.invite)
+    try await receiver.joinGroup(code: invite.code)
+    try await waitForRealtime("Membership sync reaches second device without refresh") { otherDevice.group(groupID) != nil && !receiver.isBusy }
+    let first = UUID().uuidString.lowercased()
+    _ = try await sender.mutate(action: "sendMessage", payload: ["groupID": .string(groupID), "text": .string("Realtime hello"), "clientID": .string(first)])
+    try await waitForRealtime("Incoming chat updates both unread badges") { receiver.unreadCount(groupID: groupID) == 1 && otherDevice.unreadCount(groupID: groupID) == 1 }
+    receiver.markChatRead(groupID: groupID)
+    try await waitForRealtime("Read acknowledgement syncs across sessions") { receiver.unreadCount(groupID: groupID) == 0 && otherDevice.unreadCount(groupID: groupID) == 0 }
+    receiver.setBackendActive(false)
+    XCTAssertFalse(receiver.realtimeConnected)
+    let missed = UUID().uuidString.lowercased()
+    _ = try await sender.mutate(action: "sendMessage", payload: ["groupID": .string(groupID), "text": .string("Sent while paused"), "clientID": .string(missed)])
+    receiver.setBackendActive(true)
+    try await waitForRealtime("Reconnect catches missed messages with no duplicate") { receiver.realtimeConnected && receiver.messages.filter { $0.id == missed }.count == 1 && receiver.unreadCount(groupID: groupID) == 1 }
+    let receiverID = try XCTUnwrap(receiver.currentUserID)
+    _ = try await sender.mutate(action: "removeMember", payload: ["groupID": .string(groupID), "userID": .string(receiverID)])
+    try await waitForRealtime("Revoked membership purges cached chat for both sessions") { receiver.group(groupID) == nil && otherDevice.group(groupID) == nil }
+    XCTAssertTrue(receiver.messages(groupID: groupID).isEmpty)
+    try await waitForRealtime("Pending snapshots finish") { !receiver.isBusy && !otherDevice.isBusy }
+    try await receiver.signOut()
+    try await otherDevice.signOut()
+    try await sender.signOut()
+    XCTAssertFalse(receiver.realtimeConnected)
+  }
+
   @MainActor func testSignedSimulatorKeychainRoundTrip() async throws {
     let config = try LocalBackendAccounts.load()
     let configuration = BackendConfiguration(url: config.url, publishableKey: config.publishableKey)

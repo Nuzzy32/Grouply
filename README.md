@@ -49,7 +49,9 @@ Backend verification on 17 October 2026: **23 native tests and 6 UI tests passed
 
 The server mode now connects to Supabase Auth and the migration-backed PostgreSQL API. It stores sessions in Keychain, refreshes tokens, and waits for authorized server mutations before updating the UI. The native Apple sign-in exchange is implemented but remains unverified with the Apple provider. [Backend setup](docs/BACKEND_SETUP.md) explains configuration, accounts, migrations and security tests.
 
-Before a shared beta: deploy to an explicitly selected cloud project, validate Apple sign-in on a real iPhone, connect Realtime/APNs/local reminders, host a domain/AASA file, and provide operational moderation, retention and server account deletion. Notification switches remain example preferences. Server reports are stored privately but do not reach a moderator yet. Never put service-role/APNs secrets in the app.
+Group Chat Realtime is connected locally using native WebSockets: cross-account messages, account-scoped unread/read sync, reconnect catch-up and membership revocation are tested against localhost with multiple clients in one simulator. See [Backend Setup](docs/BACKEND_SETUP.md).
+
+Before a shared beta: deploy to an explicitly selected cloud project, validate Apple sign-in and Realtime on real iPhones/networks, connect APNs/local reminders, host a domain/AASA file, and provide operational moderation, retention and server account deletion. Notification switches remain example preferences. Server reports are stored privately but do not reach a moderator yet. Never put service-role/APNs secrets in the app.
 
 ## Project map
 

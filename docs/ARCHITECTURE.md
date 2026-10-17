@@ -14,12 +14,12 @@
 
 ## Status implementasi dan batas verifikasi
 
-Per 17 Oktober 2026 tersedia dua mode: demo lokal dan **server Supabase lokal**. Server memakai Auth, PostgreSQL, RLS, RPC transactional dan integrasi SwiftUI async; workflow tiga akun telah diuji melalui SQL, HTTP dan client native. Deployment cloud, login Apple dengan provider nyata, Realtime, APNs, Universal Links, moderasi operasional dan penghapusan akun server belum diverifikasi/tersedia. Lihat [Backend Setup](BACKEND_SETUP.md) untuk implementasi aktual; bagian lain mendeskripsikan target produk P0.
+Per 17 Oktober 2026 tersedia demo dan **server Supabase lokal** dengan Auth, RLS, RPC transactional serta SwiftUI async. Workflow tiga akun dan Group Chat Realtime/unread/reconnect/revoke membership teruji lintas client native pada satu simulator + localhost. Deployment cloud, provider Apple nyata, Realtime pada dua perangkat fisik/jaringan nyata, APNs, Universal Links, moderasi operasional dan penghapusan akun server belum diverifikasi/tersedia. Lihat [Backend Setup](BACKEND_SETUP.md); bagian lain mendeskripsikan target produk P0.
 
 
 ## 1. Architecture decision record
 
-**Implementasi slice server lokal (17 Oktober 2026):** native `SupabaseBackend` memakai URLSession untuk Auth dan dua public RPC `grouply_snapshot()` / `grouply_mutate(action,payload)`. Aksi domain bernama pada tabel kontrak di bawah didispatch melalui `action` camelCase, bukan endpoint per aksi. `DemoStore` dipertahankan namanya untuk kompatibilitas UI; kini ia menyajikan mode demo atau bridge async server. Migration aktual berada di `supabase/migrations`; contoh struktur berlapis di bawah tetap target arsitektur berikutnya. Keychain menyimpan sesi; JSON lokal hanya untuk demo. Group Chat saat ini fetch/refresh; target Realtime belum diaktifkan. [Detail setup dan batas](BACKEND_SETUP.md).
+**Implementasi slice server lokal (17 Oktober 2026):** native `SupabaseBackend` memakai URLSession untuk Auth, dua public RPC `grouply_snapshot()` / `grouply_mutate(action,payload)`, dan WebSocket Realtime. Aksi domain pada tabel kontrak di bawah didispatch melalui `action` camelCase, bukan endpoint per aksi. `DemoStore` menyajikan demo atau bridge async server. Migration aktual ada di `supabase/migrations`; struktur berlapis di bawah tetap target berikutnya. Keychain menyimpan sesi; JSON lokal hanya untuk demo. Subscription aktif selama foreground untuk semua pesan grup yang diizinkan RLS agar unread tab ikut berubah, ditambah read markers/revision akun sendiri. Event menginvalidasi snapshot; burst digabung, fetch gagal dicoba ulang, dan reconnect memulihkan gap. [Detail setup dan batas](BACKEND_SETUP.md).
 
 | Keputusan | Pilihan | Alasan | Trade-off |
 |---|---|---|---|

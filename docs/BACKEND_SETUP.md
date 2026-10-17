@@ -57,7 +57,17 @@ Suite SQL memakai transaksi rollback untuk fixture. `supabase db reset --local -
 - Undangan memakai token acak dan hash privat, expiry tujuh hari, kuota dan kapasitas delapan anggota. Kode hanya dikembalikan pada pembuatan undangan.
 - Batas server: 30 pesan teks per pengirim/grup/menit dan 10 undangan per grup/menit. Retry pesan dengan ID yang sama diperiksa sebelum batas frekuensi.
 
-UI menunggu respons server sebelum menganggap perubahan berhasil. Cloud state tidak ditulis ke JSON demo. Token sesi hanya masuk Keychain; logout menghapus state cloud. Refresh dilakukan saat foreground atau pull to refresh. **Realtime belum dihubungkan pada tahap ini.**
+UI menunggu respons server sebelum menganggap perubahan berhasil. Cloud state tidak ditulis ke JSON demo. Token sesi hanya masuk Keychain; logout menghapus state cloud. Refresh dilakukan saat foreground atau pull to refresh.
+
+### Group Chat Realtime lokal
+
+Migration `20261017040000_realtime_group_chat.sql` mengaktifkan publikasi INSERT/UPDATE untuk `chat_messages`, `chat_reads`, dan `user_sync_state` saja. Client memakai WebSocket URLSession dan protokol Phoenix 1.0.0, tanpa dependency tambahan. Payload message dibatasi SELECT RLS membership. Read markers dan revision difilter ke akun sendiri; jangan menerbitkan DELETE membership karena event DELETE tidak memiliki jaminan RLS yang sama.
+
+Event menginvalidasi snapshot terotorisasi, bukan langsung menambahkan payload ke UI. Event beruntun digabung dan ditunda saat mutasi berlangsung. Fetch gagal dicoba kembali dengan backoff. Heartbeat 20 detik, pembaruan JWT, retry 1–30 detik, snapshot setelah subscription siap/reconnect, serta penghentian socket saat background/logout menangani lifecycle. Daftar dan ruang chat menampilkan status ketika koneksi belum siap. Unread/read disinkronkan lintas sesi akun yang sama. Penanda baca mengirim `messageIDs` yang benar-benar diamati, sehingga pesan baru yang berlomba dengan request tidak ikut terbaca.
+
+Membership berubah → revision pribadi tanpa payload grup → snapshot baru, termasuk bagi akun yang dicabut. Snapshot menghapus akses dan pesan grup dari state aktif. Ini tidak dapat menarik kembali data yang pernah diterima perangkat; perangkat offline baru mengetahui pencabutan setelah terhubung kembali.
+
+Tes `testRealtimeMessagesUnreadReconnectAndMembershipRevocation` membuktikan pengiriman antar-akun, unread/read lintas sesi, recovery pesan ketika socket dihentikan lalu diaktifkan, deduplikasi ID, serta penghapusan cache setelah membership dicabut. Ini memakai beberapa client native dalam **satu simulator** dan Supabase localhost, bukan dua iPhone fisik atau layanan cloud.
 
 `shortcut:` snapshot memuat seluruh data terotorisasi untuk slice awal; ganti dengan query berhalaman sebelum riwayat grup membesar. Ini belum merupakan uji beban atau readiness beta publik.
 
@@ -67,4 +77,4 @@ Salin `Config/Local.xcconfig.example` dan isi URL HTTPS serta publishable key pr
 
 Sign in with Apple sudah memiliki tombol native, nonce aman, pertukaran id_token, dan entitlement. Pemakaiannya masih membutuhkan signing team/capability Apple yang valid dan konfigurasi provider Apple di Supabase. Alur Apple belum diuji dengan akun/perangkat nyata. Lihat [panduan Apple Supabase](https://supabase.com/docs/guides/auth/social-login/auth-apple).
 
-Belum tersedia: deployment cloud, Realtime multi-device, APNs/local reminders, domain/AASA Universal Links, penghapusan akun server, pengiriman laporan ke moderator, serta kebijakan retention yang disahkan. Aksi yang belum didukung server menampilkan error; tidak jatuh kembali ke mutasi demo.
+Belum tersedia/teruji: deployment cloud, Realtime pada jaringan nyata/dua perangkat fisik, APNs/local reminders, domain/AASA Universal Links, penghapusan akun server, pengiriman laporan ke moderator, serta kebijakan retention yang disahkan. Aksi yang belum didukung server menampilkan error; tidak jatuh kembali ke mutasi demo.

@@ -193,7 +193,30 @@ struct AppleSignInNonce {
   }
 }
 
+struct RealtimeFrame: Decodable {
+  let event: String
+  let ref: String?
+  let payload: [String: JSONValue]
+  var isOK: Bool {
+    if case .string("ok") = payload["status"] { return true }
+    return false
+  }
+  var isError: Bool {
+    if case .string("error") = payload["status"] { return true }
+    if case .string("timeout") = payload["status"] { return true }
+    return false
+  }
+  var subscriptionReady: Bool {
+    guard event == "system", isOK, case .string("postgres_changes") = payload["extension"] else { return false }
+    return true
+  }
+}
+
 @MainActor final class SupabaseBackend {
+  private final class RealtimeState {
+    var subscribed = false
+    var heartbeatPending = false
+  }
   private struct AuthSession: Codable {
     struct User: Codable { let id: String }
     let access_token: String
@@ -210,6 +233,103 @@ struct AppleSignInNonce {
   private var refreshTask: Task<Void, Error>?
   private var generation = 0
   var hasSession: Bool { auth != nil }
+
+  func realtime(
+    onConnection: @escaping @MainActor (Bool) -> Void,
+    onChange: @escaping @MainActor () -> Void
+  ) async {
+    var retrySeconds = 1
+    while !Task.isCancelled, hasSession {
+      do {
+        try await ensureFreshSession()
+        guard configuration.isValid, let token = auth?.access_token, let userID = auth?.user.id else { return }
+        let socket = session.webSocketTask(with: Self.realtimeURL(configuration))
+        socket.resume()
+        defer { socket.cancel(with: .goingAway, reason: nil) }
+        try await withTaskCancellationHandler {
+          try await sendRealtime(socket, event: "phx_join", payload: [
+            "access_token": .string(token),
+            "config": .object([
+              "broadcast": .object(["ack": .bool(false), "self": .bool(false)]),
+              "presence": .object(["enabled": .bool(false)]),
+              "postgres_changes": .array(Self.realtimeSubscriptions(userID: userID))
+            ])
+          ], reference: "join")
+          let state = RealtimeState()
+          let heartbeat = Task { @MainActor in
+            do {
+              while !Task.isCancelled {
+                try await Task.sleep(for: .seconds(20))
+                guard state.subscribed, !state.heartbeatPending else {
+                  socket.cancel(with: .goingAway, reason: nil)
+                  return
+                }
+                try await self.ensureFreshSession()
+                guard let freshToken = self.auth?.access_token else { return }
+                try await self.sendRealtime(socket, event: "access_token", payload: ["access_token": .string(freshToken)])
+                state.heartbeatPending = true
+                try await self.sendRealtime(socket, event: "heartbeat", topic: "phoenix", reference: "heartbeat")
+              }
+            } catch {
+              socket.cancel(with: .goingAway, reason: nil)
+            }
+          }
+          defer { heartbeat.cancel() }
+          while !Task.isCancelled {
+            let message = try await socket.receive()
+            let data: Data
+            switch message {
+            case .data(let value): data = value
+            case .string(let value): data = Data(value.utf8)
+            @unknown default: continue
+            }
+            let frame = try JSONDecoder().decode(RealtimeFrame.self, from: data)
+            if frame.event == "phx_error" || frame.event == "phx_close" || frame.isError {
+              throw BackendError(status: 0, message: "Koneksi realtime terputus.")
+            }
+            if frame.event == "phx_reply", frame.ref == "heartbeat" { state.heartbeatPending = false }
+            if frame.subscriptionReady {
+              state.subscribed = true
+              retrySeconds = 1
+              onConnection(true)
+              onChange()
+            } else if frame.event == "postgres_changes" { onChange() }
+          }
+        } onCancel: {
+          socket.cancel(with: .goingAway, reason: nil)
+        }
+      } catch {}
+      onConnection(false)
+      if Task.isCancelled || !hasSession { return }
+      do { try await Task.sleep(for: .seconds(retrySeconds)) } catch { return }
+      retrySeconds = min(retrySeconds * 2, 30)
+    }
+    onConnection(false)
+  }
+
+  static func realtimeSubscriptions(userID: String) -> [JSONValue] {
+    [("chat_messages", "INSERT"), ("chat_reads", "INSERT"), ("user_sync_state", "INSERT"), ("user_sync_state", "UPDATE")].map { table, event in
+      var change: [String: JSONValue] = ["event": .string(event), "schema": .string("public"), "table": .string(table)]
+      if table != "chat_messages" { change["filter"] = .string("user_id=eq.\(userID)") }
+      return .object(change)
+    }
+  }
+
+  static func realtimeURL(_ configuration: BackendConfiguration) -> URL {
+    var components = URLComponents(url: configuration.url.appendingPathComponent("realtime/v1/websocket"), resolvingAgainstBaseURL: false)!
+    components.scheme = components.scheme == "https" ? "wss" : "ws"
+    components.queryItems = [URLQueryItem(name: "apikey", value: configuration.publishableKey), URLQueryItem(name: "vsn", value: "1.0.0")]
+    return components.url!
+  }
+
+  private func sendRealtime(
+    _ socket: URLSessionWebSocketTask, event: String, payload: [String: JSONValue] = [:],
+    topic: String = "realtime:grouply", reference: String = UUID().uuidString
+  ) async throws {
+    let frame: [String: JSONValue] = ["topic": .string(topic), "event": .string(event), "payload": .object(payload), "ref": .string(reference)]
+    let data = try Self.encoder().encode(frame)
+    try await socket.send(.string(String(decoding: data, as: UTF8.self)))
+  }
 
   init(
     configuration: BackendConfiguration, session: URLSession = .shared,

@@ -19,7 +19,7 @@
 
 ## Status dan verifikasi
 
-Per 17 Oktober 2026 tersedia demo dan Supabase lokal yang benar-benar terhubung ke SwiftUI. Server canonical ada di supabase/migrations; docs DDL tetap target arsitektur yang lebih luas. Auth password lokal, RLS dan workflow tiga akun teruji; Apple provider/perangkat nyata, cloud deployment, Realtime dan APNs belum diuji/terhubung. Jangan menyatakan layanan cloud/Apple/push bekerja tanpa bukti. Lihat docs/BACKEND_SETUP.md.
+Per 17 Oktober 2026 tersedia demo dan Supabase lokal yang benar-benar terhubung ke SwiftUI. Server canonical ada di supabase/migrations; docs DDL tetap target arsitektur yang lebih luas. Auth password lokal, RLS, workflow tiga akun dan Group Chat Realtime/unread/reconnect/revoke membership lintas client native teruji pada satu simulator + localhost. Apple provider/perangkat nyata, cloud deployment dan APNs belum diuji/terhubung. Jangan menyatakan layanan cloud/Apple/push bekerja tanpa bukti. Lihat docs/BACKEND_SETUP.md.
 
 Baca kode dan status Git sebelum melanjutkan; pertahankan implementasi yang sudah ada. Utamakan shared state lokal sederhana sampai integrasi cloud benar-benar diperlukan. Jalankan pemeriksaan domain dan build/simulator yang tersedia, laporkan terpisah dari uji multiakun/perangkat nyata. Jangan menambahkan kredensial ke source, log atau dokumen. Jangan push/deploy/mengubah secret atau data production tanpa otorisasi eksplisit. Commit/PR tidak memakai atribusi atau co-author AI.
 
@@ -46,5 +46,6 @@ Verifikasi: build simulator dan regresi akhir **13 core + 5 UI lulus** di iPhone
 - Public RPC grouply_snapshot/grouply_mutate membungkus helper privat; payload camelCase mengikuti StoreBackendActions.swift. Baca migration actual sebelum mengubah kontrak.
 - API lokal port55321, DB55322 agar tidak mengganggu proyek lain. scripts/backend_local.py setup menghasilkan akun/kredensial lokal privat di luar repo dan konfigurasi publik ignored.
 - Token/refresh token hanya Keychain. Test store memakai injectable token store untuk isolasi; jangan mengganti production storage dengan UserDefaults atau file. Simulator harus ad-hoc signed untuk Keychain.
-- Penghapusan akun server, Apple provider, Realtime, push dan moderasi operasional masih pekerjaan lanjutan; jangan klaim MVP beta selesai.
+- Realtime memakai URLSession WebSocket: INSERT chat_messages, INSERT chat_reads akun sendiri, INSERT/UPDATE user_sync_state akun sendiri. Event memicu snapshot; tidak subscribe DELETE/group_members. Background/logout menghentikan koneksi; foreground/reconnect memuat gap. markChatRead mengirim messageIDs yang diamati, bukan membaca pesan baru yang belum tampil.
+- Penghapusan akun server, Apple provider, Realtime cloud/perangkat nyata, push dan moderasi operasional masih pekerjaan lanjutan; jangan klaim MVP beta selesai.
 - Verifikasi backend 17 Oktober 2026: 23 tes native (termasuk 3 integrasi server/Keychain), 6 UI, 36 assertion SQL + direct-DML denial, HTTP tiga akun + race review lulus. Advisors/lint warn/error bersih. Artefak ada di docs/IMPLEMENTATION_STATUS.md. Jangan menyebut tes localhost sebagai bukti cloud/perangkat nyata.

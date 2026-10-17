@@ -47,6 +47,16 @@ Bukti slice backend: `artifacts/Grouply-Backend-Final.xcresult` (6 UI), `artifac
 
 Review tambahan menutup pesan gagal yang terlihat lintas persona, koordinator demo yang tidak terjangkau, dan cursor unread yang terpengaruh perubahan waktu simulasi. Layout tab dan status chip diperbaiki setelah pemeriksaan screenshot pada Dynamic Type terbesar. Perubahan akhir pada header Grup/Chat mengikuti layout sumber v3.1.
 
+## Realtime lokal — 17 Oktober 2026
+
+- WebSocket native tanpa dependency baru; heartbeat, refresh JWT, backoff, snapshot setelah subscription siap/reconnect dan stop saat background/logout.
+- INSERT pesan terotorisasi RLS, read markers akun sendiri serta revision pribadi untuk perubahan membership. DELETE/TRUNCATE tidak dipublikasikan.
+- Tes native lintas akun/sesi pada satu iPhone 17 Simulator iOS 26.4 + Supabase lokal membuktikan pesan/unread, read lintas sesi, gap recovery tanpa duplikasi, dan purge akses/pesan setelah membership dicabut. Ini bukan bukti dua perangkat fisik atau cloud.
+- Suite SQL rollback: **40 PASS notices + 23 RPC denial yang diharapkan**, termasuk observed-only read race, input malformed, own-marker RLS, revoke/leave/rejoin, dan publication scope. Migration diterapkan incremental pada DB lokal Grouply, tanpa reset.
+- Regresi native terbaru: **29 tes lulus, tanpa skipped**, termasuk parser/subscription, integrasi Realtime lokal, stale snapshot setelah expiry/cancellation, dan retry catchup tanpa event baru. Database lint lokal tidak menemukan schema errors.
+- Regresi akhir **6 tes UI lulus** (login, workflow, kirim chat, Dynamic Type). Bukti lokal: `build/Logs/Test/Test-Grouply-2026.10.17_10-55-20-+0700.xcresult`; log native/UI `/tmp/grouply-realtime-final.log`, SQL `/tmp/grouply-realtime-sql.log`, lint `/tmp/grouply-realtime-lint.log`. Log dan result bundle tidak masuk Git.
+- Snapshot penuh masih menjadi batas skalabilitas; belum diuji beban, kehilangan koneksi jaringan nyata berkepanjangan, atau APNs.
+
 ## Target cloud dan rilis yang belum tersedia
 
 Belum tersedia/terverifikasi: deployment cloud, provider Apple nyata, Realtime Group Chat lintas perangkat, APNs/pengingat lokal, domain/AASA/Universal Links, moderasi operasional, retention dan penghapusan akun server. Source migration aktual ada di `supabase/migrations`; DDL dokumen produk mencakup target yang lebih luas. Tidak ada proyek cloud atau database production yang diubah. Gate cloud/TestFlight tetap belum dicentang.

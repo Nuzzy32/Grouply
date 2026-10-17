@@ -50,8 +50,12 @@ struct RootView: View {
         .background(GLTheme.background)
       }
     }
-    .task { await store.restoreBackendSession() }
+    .task {
+      store.setBackendActive(scenePhase == .active)
+      await store.restoreBackendSession()
+    }
     .onChange(of: scenePhase) { _, phase in
+      store.setBackendActive(phase == .active)
       if phase == .active { Task { await store.refreshFromBackend() } }
     }
     .disabled(store.isBusy)

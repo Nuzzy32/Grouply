@@ -44,6 +44,37 @@ private func requestBody(_ request: URLRequest) -> Data {
   return data
 }
 final class BackendClientTests: XCTestCase {
+  @MainActor func testRealtimeURLAndSubscriptionsDoNotExposeTokensOrDeleteEvents() throws {
+    let config = BackendConfiguration(url: URL(string: "http://127.0.0.1:55321")!, publishableKey: "sb_publishable_test")
+    let url = SupabaseBackend.realtimeURL(config)
+    XCTAssertEqual(url.scheme, "ws")
+    XCTAssertEqual(url.port, 55321)
+    XCTAssertEqual(url.path, "/realtime/v1/websocket")
+    XCTAssertFalse(url.absoluteString.contains("access_token"))
+    let subscriptions = try JSONSerialization.jsonObject(with: JSONEncoder().encode(SupabaseBackend.realtimeSubscriptions(userID: "actor"))) as! [[String: String]]
+    XCTAssertEqual(subscriptions.count, 4)
+    XCTAssertFalse(subscriptions.contains { ["DELETE", "*"].contains($0["event"] ?? "") })
+    XCTAssertEqual(subscriptions.filter { $0["table"] != "chat_messages" }.map { $0["filter"] }, Array(repeating: "user_id=eq.actor", count: 3))
+    let secure = BackendConfiguration(url: URL(string: "https://example.supabase.co")!, publishableKey: "sb_publishable_test")
+    XCTAssertEqual(SupabaseBackend.realtimeURL(secure).scheme, "wss")
+  }
+
+  func testRealtimeFramesDistinguishAcknowledgementsErrorsAndChanges() throws {
+    for status in ["error", "timeout"] {
+      let frame = try JSONDecoder().decode(RealtimeFrame.self, from: Data("{\"event\":\"system\",\"payload\":{\"status\":\"\(status)\"}}".utf8))
+      XCTAssertTrue(frame.isError)
+      XCTAssertFalse(frame.isOK)
+    }
+    let joined = try JSONDecoder().decode(RealtimeFrame.self, from: Data(#"{"event":"phx_reply","ref":"join","payload":{"status":"ok"}}"#.utf8))
+    XCTAssertTrue(joined.isOK)
+    XCTAssertEqual(joined.ref, "join")
+    XCTAssertFalse(joined.subscriptionReady)
+    let ready = try JSONDecoder().decode(RealtimeFrame.self, from: Data(#"{"event":"system","payload":{"status":"ok","extension":"postgres_changes"}}"#.utf8))
+    XCTAssertTrue(ready.subscriptionReady)
+    let changed = try JSONDecoder().decode(RealtimeFrame.self, from: Data(#"{"event":"postgres_changes","payload":{"data":{"table":"chat_messages","record":{"id":"message"}}}}"#.utf8))
+    XCTAssertFalse(changed.isOK)
+    XCTAssertFalse(changed.isError)
+  }
   @MainActor func testOldUnauthorizedResponseCannotDeleteNewSession() async throws {
     let sharedStore = MemoryTokenStore()
     let config = URLSessionConfiguration.ephemeral
@@ -81,6 +112,149 @@ final class BackendClientTests: XCTestCase {
         url: URL(string: "https://example.supabase.co")!, publishableKey: "sb_publishable_test"),
       session: URLSession(configuration: config), tokenStore: store)
   }
+
+  @MainActor private func waitForBackendIdle(_ store: DemoStore) async throws {
+    for _ in 0..<200 {
+      if !store.isBusy { return }
+      try await Task.sleep(for: .milliseconds(10))
+    }
+    XCTFail("Backend operation did not finish")
+  }
+
+  @MainActor func testMutationSnapshotCannotRestoreExpiredAccountOrOverwriteExpiryError() async throws {
+    let snapshot = #"{"users":[],"groups":[],"projects":[],"tasks":[],"messages":[],"invites":[],"reports":[],"currentUserID":"expired-account","blockedUserIDs":[],"readMessageIDs":[]}"#
+    for status in [200, 500] {
+      let tokens = MemoryTokenStore()
+      let configuration = URLSessionConfiguration.ephemeral
+      configuration.protocolClasses = [HeldUnauthorizedProtocol.self]
+      let session = URLSession(configuration: configuration)
+      defer { session.invalidateAndCancel() }
+      let store = DemoStore(persist: false, backendFactory: {
+        SupabaseBackend(configuration: $0, session: session, tokenStore: tokens)
+      })
+      store.setBackendActive(false)
+      let held = expectation(description: "Mutation snapshot is pending (\(status))")
+      var snapshotCount = 0
+      var pending: HeldUnauthorizedProtocol?
+      HeldUnauthorizedProtocol.handler = { request in
+        switch request.request.url!.lastPathComponent {
+        case "token":
+          request.respond(status: 200, body: #"{"access_token":"token","refresh_token":"refresh","expires_in":3600,"user":{"id":"expired-account"}}"#)
+        case "grouply_mutate":
+          request.respond(status: 200, body: #"{"id":"saved"}"#)
+        default:
+          snapshotCount += 1
+          if snapshotCount == 2 {
+            pending = request
+            held.fulfill()
+          } else if snapshotCount == 1 {
+            request.respond(status: 200, body: snapshot)
+          } else {
+            request.respond(status: 401, body: #"{"message":"JWT expired"}"#)
+          }
+        }
+      }
+      defer { HeldUnauthorizedProtocol.handler = nil }
+      try await store.connectBackend(email: "member@example.org", password: "unused")
+      let mutation = Task { try await store.mutateBackend("updateProfile", [:]) }
+      await fulfillment(of: [held], timeout: 5)
+      let response = try XCTUnwrap(pending)
+      store.isBusy = false
+      let refreshed = await store.refreshFromBackend()
+      XCTAssertFalse(refreshed)
+      XCTAssertFalse(store.isCloudMode)
+      XCTAssertNil(store.currentUserID)
+      XCTAssertNil(tokens.data)
+      let expiryError = store.backendError
+      response.respond(status: status, body: status == 200 ? snapshot : #"{"message":"old snapshot failed"}"#)
+      do {
+        _ = try await mutation.value
+        XCTFail("Expired mutation must not finish successfully")
+      } catch is CancellationError {
+      } catch {
+        XCTFail("Expected cancellation, got \(error)")
+      }
+      XCTAssertFalse(store.isCloudMode)
+      XCTAssertNil(store.currentUserID)
+      XCTAssertEqual(store.backendError, expiryError)
+    }
+  }
+
+  @MainActor func testQueuedRealtimeRefreshRetriesFailuresWithoutAnotherEvent() async throws {
+    let tokens = MemoryTokenStore()
+    let backend = client(store: tokens)
+    let store = DemoStore(persist: false, backendFactory: { _ in backend })
+    store.setBackendActive(false)
+    defer { store.setBackendActive(false) }
+    let recovered = expectation(description: "Catchup retries until the snapshot succeeds")
+    var snapshotCount = 0
+    BackendURLProtocol.handler = { request in
+      if request.url!.lastPathComponent == "token" {
+        return (200, #"{"access_token":"token","refresh_token":"refresh","expires_in":3600,"user":{"id":"initial-account"}}"#)
+      }
+      snapshotCount += 1
+      if snapshotCount == 2 { throw URLError(.notConnectedToInternet) }
+      if snapshotCount == 3 { return (503, #"{"message":"temporarily unavailable"}"#) }
+      let actor = snapshotCount == 1 ? "initial-account" : "caught-up-account"
+      if snapshotCount == 4 { recovered.fulfill() }
+      return (200, "{\"users\":[],\"groups\":[],\"projects\":[],\"tasks\":[],\"messages\":[],\"invites\":[],\"reports\":[],\"currentUserID\":\"\(actor)\",\"blockedUserIDs\":[],\"readMessageIDs\":[]}")
+    }
+    try await store.connectBackend(email: "member@example.org", password: "unused")
+    store.queueRealtimeRefresh()
+    await fulfillment(of: [recovered], timeout: 8)
+    try await waitForBackendIdle(store)
+    XCTAssertEqual(snapshotCount, 4)
+    XCTAssertEqual(store.currentUserID, "caught-up-account")
+    XCTAssertNil(store.backendError)
+    XCTAssertTrue(store.isCloudMode)
+    XCTAssertTrue(backend.hasSession)
+  }
+
+  @MainActor func testCancelledMutationSnapshotDoesNotPublishRefreshError() async throws {
+    let tokens = MemoryTokenStore()
+    let configuration = URLSessionConfiguration.ephemeral
+    configuration.protocolClasses = [HeldUnauthorizedProtocol.self]
+    let session = URLSession(configuration: configuration)
+    defer { session.invalidateAndCancel() }
+    let store = DemoStore(persist: false, backendFactory: {
+      SupabaseBackend(configuration: $0, session: session, tokenStore: tokens)
+    })
+    store.setBackendActive(false)
+    let held = expectation(description: "Snapshot is pending before cancellation")
+    var snapshotCount = 0
+    HeldUnauthorizedProtocol.handler = { request in
+      switch request.request.url!.lastPathComponent {
+      case "token":
+        request.respond(status: 200, body: #"{"access_token":"token","refresh_token":"refresh","expires_in":3600,"user":{"id":"current-account"}}"#)
+      case "grouply_mutate":
+        request.respond(status: 200, body: #"{"id":"saved"}"#)
+      default:
+        snapshotCount += 1
+        if snapshotCount == 1 {
+          request.respond(status: 200, body: #"{"users":[],"groups":[],"projects":[],"tasks":[],"messages":[],"invites":[],"reports":[],"currentUserID":"current-account","blockedUserIDs":[],"readMessageIDs":[]}"#)
+        } else {
+          held.fulfill()
+        }
+      }
+    }
+    defer { HeldUnauthorizedProtocol.handler = nil }
+    try await store.connectBackend(email: "member@example.org", password: "unused")
+    let mutation = Task { try await store.mutateBackend("updateProfile", [:]) }
+    await fulfillment(of: [held], timeout: 5)
+    mutation.cancel()
+    do {
+      _ = try await mutation.value
+      XCTFail("Cancelled mutation must not finish successfully")
+    } catch is CancellationError {
+    } catch {
+      XCTFail("Expected cancellation, got \(error)")
+    }
+    XCTAssertEqual(store.currentUserID, "current-account")
+    XCTAssertNil(store.backendError)
+    XCTAssertTrue(store.isCloudMode)
+    XCTAssertFalse(store.isBusy)
+  }
+
   override func tearDown() {
     BackendURLProtocol.handler = nil
     super.tearDown()
@@ -232,11 +406,16 @@ final class BackendClientTests: XCTestCase {
 }
 
 private final class HeldUnauthorizedProtocol: URLProtocol {
+  static var handler: ((HeldUnauthorizedProtocol) -> Void)?
   static var pending: HeldUnauthorizedProtocol?
   static var onHold: (() -> Void)?
   override class func canInit(with request: URLRequest) -> Bool { true }
   override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
   override func startLoading() {
+    if let handler = Self.handler {
+      handler(self)
+      return
+    }
     if request.url!.path.contains("/rpc/") {
       Self.pending = self
       Self.onHold?()

@@ -13,6 +13,10 @@ struct ChatsView: View {
         VStack(alignment: .leading, spacing: 4) {
           Text("Chat").gl(34, .bold, em: -0.03)
           Text("Satu ruang obrolan untuk tiap grup").gl(15).foregroundStyle(GLTheme.secondary)
+          if store.isCloudMode && !store.realtimeConnected {
+            Text("Realtime belum tersambung. Tarik untuk memuat ulang.")
+              .gl(13).foregroundStyle(GLTheme.secondary)
+          }
         }
         if !store.myGroups.isEmpty {
           HStack(spacing: 8) {
@@ -217,6 +221,10 @@ struct ChatThread: View {
   var body: some View {
     let list = store.messages(groupID: groupID, taskID: taskID)
     VStack(alignment: .leading, spacing: 0) {
+      if taskID == nil, store.isCloudMode, !store.realtimeConnected {
+        Text("Realtime belum tersambung. Tarik untuk memuat ulang.")
+          .gl(13).foregroundStyle(GLTheme.secondary).padding(.vertical, 8)
+      }
       if store.simulatedOffline {
         HStack(spacing: 8) {
           GLIcon("icloud.slash", size: 18)

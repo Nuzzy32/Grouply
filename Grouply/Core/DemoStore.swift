@@ -23,6 +23,12 @@ import Observation
   var toast: (text: String, kind: GLToastKind)?
   @ObservationIgnored private var toastTask: Task<Void, Never>?
   @ObservationIgnored private var backend: SupabaseBackend?
+  @ObservationIgnored private var realtimeTask: Task<Void, Never>?
+  @ObservationIgnored private var realtimeRefreshTask: Task<Void, Never>?
+  @ObservationIgnored private var realtimeRefreshPending = false
+  @ObservationIgnored private var backendIsActive = true
+  @ObservationIgnored private var realtimeGeneration = 0
+  var realtimeConnected = false
   @ObservationIgnored private let backendFactory: (BackendConfiguration) -> SupabaseBackend
   var isCloudMode: Bool { backend != nil }
   var backendConfigured: Bool { BackendConfiguration.bundled != nil }
@@ -98,10 +104,15 @@ import Observation
     guard let actor = currentUserID, isMember(groupID: groupID) else { return }
     let sentIDs = messages.filter {
       $0.groupID == groupID && $0.taskID == nil && $0.delivery == .sent
+        && !(readMessageIDs[actor + ":" + groupID] ?? []).contains($0.id)
     }.map(\.id)
+    guard !sentIDs.isEmpty else { return }
+    if isCloudMode {
+      Task { await self.markReadOnBackend(groupID: groupID, messageIDs: sentIDs) }
+      return
+    }
     readMessageIDs[actor + ":" + groupID, default: []].formUnion(sentIDs)
     save()
-    if isCloudMode { Task { await self.markReadOnBackend(groupID: groupID) } }
   }
   func markRead(groupID: String) { markChatRead(groupID: groupID) }
   func progress(projectID: String) -> Double {
@@ -605,6 +616,61 @@ import Observation
 }
 
 extension DemoStore {
+  func setBackendActive(_ active: Bool) {
+    backendIsActive = active
+    stopRealtime()
+    if active { startRealtime() }
+  }
+
+  private func startRealtime() {
+    guard backendIsActive, realtimeTask == nil, let client = backend else { return }
+    let generation = realtimeGeneration
+    realtimeTask = Task { [weak self] in
+      await client.realtime(onConnection: { [weak self] connected in
+        guard let self, self.backend === client, self.realtimeGeneration == generation else { return }
+        self.realtimeConnected = connected
+        if !client.hasSession { self.clearExpiredBackend() }
+      }, onChange: { [weak self] in
+        guard let self, self.backend === client, self.realtimeGeneration == generation else { return }
+        self.queueRealtimeRefresh()
+      })
+    }
+  }
+
+  private func stopRealtime() {
+    realtimeGeneration += 1
+    realtimeTask?.cancel()
+    realtimeTask = nil
+    realtimeRefreshTask?.cancel()
+    realtimeRefreshTask = nil
+    realtimeRefreshPending = false
+    realtimeConnected = false
+  }
+
+  func queueRealtimeRefresh() {
+    guard let client = backend else { return }
+    realtimeRefreshPending = true
+    guard realtimeRefreshTask == nil else { return }
+    let generation = realtimeGeneration
+    realtimeRefreshTask = Task { [weak self] in
+      guard let self else { return }
+      defer { if self.realtimeGeneration == generation { self.realtimeRefreshTask = nil } }
+      var retrySeconds = 1
+      while self.realtimeRefreshPending, !Task.isCancelled, self.realtimeGeneration == generation, self.backend === client {
+        do { try await Task.sleep(for: .milliseconds(150)) } catch { return }
+        if self.isBusy { continue }
+        self.realtimeRefreshPending = false
+        if await self.refreshFromBackend() {
+          retrySeconds = 1
+        } else if !Task.isCancelled, self.realtimeGeneration == generation, self.backend === client {
+          self.realtimeRefreshPending = true
+          do { try await Task.sleep(for: .seconds(retrySeconds)) } catch { return }
+          retrySeconds = min(retrySeconds * 2, 30)
+        }
+      }
+    }
+  }
+
   func connectBackend(email: String, password: String) async throws {
     guard !isBusy else { throw DemoError(message: "Tunggu proses sebelumnya selesai.") }
     guard let config = BackendConfiguration.bundled else { throw DemoError(message: "Konfigurasi Supabase belum tersedia. Ikuti docs/BACKEND_SETUP.md.") }
@@ -615,6 +681,7 @@ extension DemoStore {
     let snapshot = try await client.snapshot()
     backend = client
     applyBackend(snapshot)
+    startRealtime()
   }
 
   func connectApple(idToken: String, nonce: String, fullName: String?) async throws {
@@ -630,6 +697,7 @@ extension DemoStore {
     let snapshot = try await client.snapshot()
     backend = client
     applyBackend(snapshot)
+    startRealtime()
   }
 
   func restoreBackendSession() async {
@@ -644,6 +712,7 @@ extension DemoStore {
         let snapshot = try await client.snapshot()
         backend = client
         applyBackend(snapshot)
+        startRealtime()
       }
     } catch { backendError = "Sesi server belum dapat dipulihkan: \(error.localizedDescription)" }
   }
@@ -651,6 +720,7 @@ extension DemoStore {
   func signOut() async throws {
     guard !isBusy else { throw DemoError(message: "Tunggu proses sebelumnya selesai.") }
     guard let client = backend else { localSignOut(); return }
+    stopRealtime()
     backend = nil
     loadSeed()
     currentUserID = nil
@@ -662,14 +732,22 @@ extension DemoStore {
     try await client.signOut()
   }
 
-  func refreshFromBackend() async {
-    guard let client = backend, !isBusy else { return }
+  @discardableResult func refreshFromBackend() async -> Bool {
+    guard let client = backend, !isBusy else { return false }
     isBusy = true
     defer { isBusy = false }
-    do { applyBackend(try await client.snapshot()) }
+    do {
+      let snapshot = try await client.snapshot()
+      guard backend === client, !Task.isCancelled else { return false }
+      guard client.hasSession else { clearExpiredBackend(); return false }
+      applyBackend(snapshot)
+      return true
+    }
     catch {
+      guard backend === client, !Task.isCancelled else { return false }
       backendError = "Gagal memuat data server: \(error.localizedDescription)"
       if !client.hasSession { clearExpiredBackend() }
+      return false
     }
   }
 
@@ -680,21 +758,31 @@ extension DemoStore {
     defer { isBusy = false }
     do {
       let result = try await client.mutate(action: action, payload: payload)
-      do { applyBackend(try await client.snapshot()) }
+      guard backend === client, client.hasSession, !Task.isCancelled else { throw CancellationError() }
+      do {
+        let snapshot = try await client.snapshot()
+        guard backend === client, client.hasSession, !Task.isCancelled else { throw CancellationError() }
+        applyBackend(snapshot)
+      }
       catch {
+        guard backend === client, !Task.isCancelled else { throw CancellationError() }
         backendError = "Perubahan tersimpan di server, tetapi tampilan belum diperbarui. Tarik untuk memuat ulang. \(error.localizedDescription)"
         if !client.hasSession { clearExpiredBackend() }
       }
       return result
     } catch {
-      if !client.hasSession { clearExpiredBackend() }
+      if backend === client, !client.hasSession { clearExpiredBackend() }
       throw error
     }
   }
 
-  func markReadOnBackend(groupID: String) async {
+  func markReadOnBackend(groupID: String, messageIDs: [String]) async {
     guard let client = backend else { return }
-    do { _ = try await client.mutate(action: "markChatRead", payload: ["groupID": .string(groupID)]) }
+    do {
+      _ = try await client.mutate(action: "markChatRead", payload: ["groupID": .string(groupID), "messageIDs": .array(messageIDs.map(JSONValue.string))])
+      guard backend === client, let actor = currentUserID else { return }
+      readMessageIDs[actor + ":" + groupID, default: []].formUnion(messageIDs)
+    }
     catch {
       if backend === client { backendError = "Penanda baca belum tersimpan di server: \(error.localizedDescription)" }
     }
@@ -749,6 +837,7 @@ extension DemoStore {
   }
 
   private func clearExpiredBackend() {
+    stopRealtime()
     backend = nil
     users = []; groups = []; projects = []; tasks = []; messages = []; invites = []; reports = []
     currentUserID = nil

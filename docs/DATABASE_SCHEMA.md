@@ -589,7 +589,7 @@ limit 100;
 
 RLS tetap berlaku saat query dibuat dari client Supabase session. Filter block menyembunyikan konten secara default; aksi Tampilkan perlu read path terotorisasi eksplisit sebelum backend dianggap lengkap.
 
-**Realtime (P0):** untuk Group Chat, aktifkan publikasi hanya untuk `chat_messages`; gunakan insert events dan re-fetch untuk gap recovery. RLS SELECT memastikan akses sesuai membership.
+**Realtime (P0):** implementasi lokal menerbitkan INSERT/UPDATE untuk `chat_messages`, `chat_reads`, dan `user_sync_state` saja. Client berlangganan INSERT pesan, INSERT read markers sendiri, serta INSERT/UPDATE revision akun sendiri. Revision tanpa payload grup menginvalidasi snapshot setelah membership berubah, termasuk akun yang dicabut; jangan menerbitkan DELETE membership. Re-fetch setelah subscription siap/reconnect memulihkan gap. RLS SELECT memastikan akses sesuai membership. Kontrak aktual ada di migration `20261017040000_realtime_group_chat.sql`.
 
 **Penting (P0):** Realtime bukan push saat aplikasi ditutup dan bukan jaminan semua event diterima. Cek permission baru setelah revoke membership, resubscribe pada perubahan JWT, dan berhentikan room UI saat akses dicabut.
 
