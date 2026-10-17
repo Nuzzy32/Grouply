@@ -9,15 +9,21 @@
 /* Begin PBXBuildFile section */
 		25FB78432E5B4240D99EB8DF /* GrouplyUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7AD0B1BD05ED78C025664F01 /* GrouplyUITests.swift */; };
 		2F75FA7C46DC2F3746F94276 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = F74146D536B5C537CCE5B857 /* Models.swift */; };
+		3AC4B625FA3A9A2DA35C8732 /* StoreBackendActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 313A1266965CD7D0C9C1D854 /* StoreBackendActions.swift */; };
 		3B34E9D026303524A9DC68FF /* ChatViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF318163A385CFCAC994304B /* ChatViews.swift */; };
 		41E340B2B032B87FFC6DBDCD /* DemoSeed.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78DA79A751B4CFCD641E6378 /* DemoSeed.swift */; };
+		43CFB66E010CBA552170E171 /* BackendUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2011CCB3D7346B332299CEA8 /* BackendUITests.swift */; };
 		45027909C09A7C252DC04696 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A716E4F97D83A02BFF13C5C2 /* RootView.swift */; };
+		51703C10F971F5B4D9357ED7 /* BackendLoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C51ABA9822009681AE15BCC /* BackendLoginView.swift */; };
 		6D5E200942530191CBC456AE /* ProjectViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07A817102BEEB4F8F18C1122 /* ProjectViews.swift */; };
 		7621A20866C590B8E1F7D637 /* GrouplyApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C174BC49886020C017DA52F /* GrouplyApp.swift */; };
 		828C32CEF6C3CFEE1631C808 /* GroupsViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26942441338AC3A73218190B /* GroupsViews.swift */; };
 		9484AECEC390F3ED87C3D8BF /* DemoStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E207230B62D8AE58B311DCD /* DemoStore.swift */; };
+		9A3C2E97DE227842E0B23A43 /* SupabaseBackend.swift in Sources */ = {isa = PBXBuildFile; fileRef = 24AA6141094F5508718FB0BA /* SupabaseBackend.swift */; };
+		AEE8E9A0F204FB9DF474F2D9 /* BackendClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 568DB3F898B90A38BE78D87C /* BackendClientTests.swift */; };
 		B8AE90FD9432A3E46BDB6AE2 /* DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 573E519682D87D6951F1BE71 /* DesignSystem.swift */; };
 		BA482E0F4A725AA007DB20A2 /* WorkflowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE1AB50F7F928E049E44BF6D /* WorkflowTests.swift */; };
+		D66C843A2973CB9344F63DAF /* BackendIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10A4A714FC6EBAF8F928EC2A /* BackendIntegrationTests.swift */; };
 		DA9CE0CB747AFBD0782C20BD /* TaskViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02B26E3E9959D95A9FBF22A3 /* TaskViews.swift */; };
 		E0954D161FD3683AB6EF30C2 /* ProfileViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = C04B8431AAF7F25D34E2E335 /* ProfileViews.swift */; };
 		ED41A4B9595C54F0C000604E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B5EE4629204EA74123DA08AC /* Assets.xcassets */; };
@@ -43,14 +49,22 @@
 /* Begin PBXFileReference section */
 		02B26E3E9959D95A9FBF22A3 /* TaskViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskViews.swift; sourceTree = "<group>"; };
 		07A817102BEEB4F8F18C1122 /* ProjectViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectViews.swift; sourceTree = "<group>"; };
+		10A4A714FC6EBAF8F928EC2A /* BackendIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendIntegrationTests.swift; sourceTree = "<group>"; };
+		2011CCB3D7346B332299CEA8 /* BackendUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendUITests.swift; sourceTree = "<group>"; };
+		24AA6141094F5508718FB0BA /* SupabaseBackend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseBackend.swift; sourceTree = "<group>"; };
 		26942441338AC3A73218190B /* GroupsViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupsViews.swift; sourceTree = "<group>"; };
+		313A1266965CD7D0C9C1D854 /* StoreBackendActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreBackendActions.swift; sourceTree = "<group>"; };
+		4C51ABA9822009681AE15BCC /* BackendLoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendLoginView.swift; sourceTree = "<group>"; };
+		568DB3F898B90A38BE78D87C /* BackendClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendClientTests.swift; sourceTree = "<group>"; };
 		573E519682D87D6951F1BE71 /* DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem.swift; sourceTree = "<group>"; };
+		59456CC2B458E36091D8B734 /* Grouply.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Grouply.entitlements; sourceTree = "<group>"; };
 		612D9F61EDCAB2B378AF15B3 /* GrouplyTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = GrouplyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		6C174BC49886020C017DA52F /* GrouplyApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrouplyApp.swift; sourceTree = "<group>"; };
 		6E207230B62D8AE58B311DCD /* DemoStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoStore.swift; sourceTree = "<group>"; };
 		741662F0D2FC049A0031DE90 /* Grouply.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Grouply.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		78DA79A751B4CFCD641E6378 /* DemoSeed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoSeed.swift; sourceTree = "<group>"; };
 		7AD0B1BD05ED78C025664F01 /* GrouplyUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrouplyUITests.swift; sourceTree = "<group>"; };
+		8FC4DBE476ABF24AA506453F /* App.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = App.xcconfig; sourceTree = "<group>"; };
 		A716E4F97D83A02BFF13C5C2 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		B5EE4629204EA74123DA08AC /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		B8D3744349FC79B165D78C73 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -65,14 +79,24 @@
 		0994E85D729E0ECFCA19B454 /* GrouplyUITests */ = {
 			isa = PBXGroup;
 			children = (
+				2011CCB3D7346B332299CEA8 /* BackendUITests.swift */,
 				7AD0B1BD05ED78C025664F01 /* GrouplyUITests.swift */,
 			);
 			path = GrouplyUITests;
 			sourceTree = "<group>";
 		};
+		0E56ECB48B49F63772E5E726 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				8FC4DBE476ABF24AA506453F /* App.xcconfig */,
+			);
+			path = Config;
+			sourceTree = "<group>";
+		};
 		3D98EDC4D2DA31C83C175B5B = {
 			isa = PBXGroup;
 			children = (
+				0E56ECB48B49F63772E5E726 /* Config */,
 				8552722CA8D1797000BD8014 /* Grouply */,
 				EE9A2BFB045A39029CC9972E /* GrouplyTests */,
 				0994E85D729E0ECFCA19B454 /* GrouplyUITests */,
@@ -99,6 +123,8 @@
 				6E207230B62D8AE58B311DCD /* DemoStore.swift */,
 				573E519682D87D6951F1BE71 /* DesignSystem.swift */,
 				F74146D536B5C537CCE5B857 /* Models.swift */,
+				313A1266965CD7D0C9C1D854 /* StoreBackendActions.swift */,
+				881021DA89D84620CF88245E /* Backend */,
 			);
 			path = Core;
 			sourceTree = "<group>";
@@ -114,9 +140,18 @@
 			path = Grouply;
 			sourceTree = "<group>";
 		};
+		881021DA89D84620CF88245E /* Backend */ = {
+			isa = PBXGroup;
+			children = (
+				24AA6141094F5508718FB0BA /* SupabaseBackend.swift */,
+			);
+			path = Backend;
+			sourceTree = "<group>";
+		};
 		BCE271CCCF53C4786B353ABC /* App */ = {
 			isa = PBXGroup;
 			children = (
+				4C51ABA9822009681AE15BCC /* BackendLoginView.swift */,
 				6C174BC49886020C017DA52F /* GrouplyApp.swift */,
 				A716E4F97D83A02BFF13C5C2 /* RootView.swift */,
 			);
@@ -127,6 +162,7 @@
 			isa = PBXGroup;
 			children = (
 				B5EE4629204EA74123DA08AC /* Assets.xcassets */,
+				59456CC2B458E36091D8B734 /* Grouply.entitlements */,
 				B8D3744349FC79B165D78C73 /* Info.plist */,
 			);
 			path = Resources;
@@ -145,6 +181,8 @@
 		EE9A2BFB045A39029CC9972E /* GrouplyTests */ = {
 			isa = PBXGroup;
 			children = (
+				568DB3F898B90A38BE78D87C /* BackendClientTests.swift */,
+				10A4A714FC6EBAF8F928EC2A /* BackendIntegrationTests.swift */,
 				DE1AB50F7F928E049E44BF6D /* WorkflowTests.swift */,
 			);
 			path = GrouplyTests;
@@ -268,6 +306,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				43CFB66E010CBA552170E171 /* BackendUITests.swift in Sources */,
 				25FB78432E5B4240D99EB8DF /* GrouplyUITests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -276,6 +315,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				51703C10F971F5B4D9357ED7 /* BackendLoginView.swift in Sources */,
 				3B34E9D026303524A9DC68FF /* ChatViews.swift in Sources */,
 				41E340B2B032B87FFC6DBDCD /* DemoSeed.swift in Sources */,
 				9484AECEC390F3ED87C3D8BF /* DemoStore.swift in Sources */,
@@ -286,6 +326,8 @@
 				E0954D161FD3683AB6EF30C2 /* ProfileViews.swift in Sources */,
 				6D5E200942530191CBC456AE /* ProjectViews.swift in Sources */,
 				45027909C09A7C252DC04696 /* RootView.swift in Sources */,
+				3AC4B625FA3A9A2DA35C8732 /* StoreBackendActions.swift in Sources */,
+				9A3C2E97DE227842E0B23A43 /* SupabaseBackend.swift in Sources */,
 				DA9CE0CB747AFBD0782C20BD /* TaskViews.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -294,6 +336,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AEE8E9A0F204FB9DF474F2D9 /* BackendClientTests.swift in Sources */,
+				D66C843A2973CB9344F63DAF /* BackendIntegrationTests.swift in Sources */,
 				BA482E0F4A725AA007DB20A2 /* WorkflowTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -316,6 +360,7 @@
 /* Begin XCBuildConfiguration section */
 		1EB34A1CF2A962646F82FEFD /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 8FC4DBE476ABF24AA506453F /* App.xcconfig */;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				GENERATE_INFOPLIST_FILE = YES;
@@ -333,8 +378,10 @@
 		};
 		2FAEC662B14CB8945EAB9D01 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 8FC4DBE476ABF24AA506453F /* App.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Grouply/Resources/Grouply.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				INFOPLIST_FILE = Grouply/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -349,6 +396,7 @@
 		};
 		311AD034FFEA8D8FE7CE84E1 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 8FC4DBE476ABF24AA506453F /* App.xcconfig */;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				GENERATE_INFOPLIST_FILE = YES;
@@ -366,6 +414,7 @@
 		};
 		49444F70C1774759650FE4EE /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 8FC4DBE476ABF24AA506453F /* App.xcconfig */;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				GENERATE_INFOPLIST_FILE = YES;
@@ -444,6 +493,7 @@
 		};
 		A7E0AC63668D9379BCCAF228 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 8FC4DBE476ABF24AA506453F /* App.xcconfig */;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				GENERATE_INFOPLIST_FILE = YES;
@@ -529,8 +579,10 @@
 		};
 		E88C0C03CFF8CC8533400646 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 8FC4DBE476ABF24AA506453F /* App.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Grouply/Resources/Grouply.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				INFOPLIST_FILE = Grouply/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (

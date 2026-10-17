@@ -17,6 +17,15 @@ targets:
     type: application
     platform: iOS
     sources: [Grouply]
+    configFiles:
+      Debug: Config/App.xcconfig
+      Release: Config/App.xcconfig
+    entitlements:
+      path: Grouply/Resources/Grouply.entitlements
+      properties:
+        com.apple.developer.applesignin: [Default]
+        application-identifier: $(AppIdentifierPrefix)$(PRODUCT_BUNDLE_IDENTIFIER)
+        keychain-access-groups: [$(AppIdentifierPrefix)$(PRODUCT_BUNDLE_IDENTIFIER)]
     info:
       path: Grouply/Resources/Info.plist
       properties:
@@ -24,6 +33,10 @@ targets:
         UILaunchScreen: {}
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         UIUserInterfaceStyle: Light
+        SUPABASE_URL: $(SUPABASE_URL)
+        SUPABASE_PUBLISHABLE_KEY: $(SUPABASE_PUBLISHABLE_KEY)
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
         CFBundleURLTypes:
           - CFBundleURLName: id.grouply.demo
             CFBundleURLSchemes: [grouply]
@@ -35,6 +48,9 @@ targets:
     type: bundle.unit-test
     platform: iOS
     sources: [GrouplyTests]
+    configFiles:
+      Debug: Config/App.xcconfig
+      Release: Config/App.xcconfig
     dependencies:
       - target: Grouply
     settings:
@@ -44,6 +60,9 @@ targets:
     type: bundle.ui-testing
     platform: iOS
     sources: [GrouplyUITests]
+    configFiles:
+      Debug: Config/App.xcconfig
+      Release: Config/App.xcconfig
     dependencies:
       - target: Grouply
     settings:
@@ -56,3 +75,5 @@ schemes:
         Grouply: all
     test:
       targets: [GrouplyTests, GrouplyUITests]
+      environmentVariables:
+        GROUPLY_LOCAL_ACCOUNTS_PATH: $(GROUPLY_LOCAL_ACCOUNTS_PATH)

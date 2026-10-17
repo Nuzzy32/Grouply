@@ -2,11 +2,13 @@ import Foundation
 
 extension DemoStore {
   func loadSeed() {
-    func day(_ offset: Int) -> Date {
+    // Demo clock: the prototype's "Jum, 16 Okt 19:30" mapped onto today.
+    func at(_ offset: Int, _ h: Int, _ m: Int) -> Date {
       Calendar.current.date(
         byAdding: .day, value: offset, to: Calendar.current.startOfDay(for: Date()))!
-        .addingTimeInterval(23 * 3600 + 59 * 60)
+        .addingTimeInterval(Double(h * 3600 + m * 60))
     }
+    func day(_ offset: Int) -> Date { at(offset, 23, 59) }
     users = [
       GLUser(id: "u1", name: "Alex", email: "alex.pratama@student.ac.id", tint: "#DED2FF"),
       GLUser(id: "u2", name: "Raka", email: "raka.aditya@student.ac.id", tint: "#C9F2D6"),
@@ -20,16 +22,16 @@ extension DemoStore {
       GLGroup(
         id: "g3", name: "Statistika · Kelompok 1",
         description: "Analisis data survei kebiasaan belajar.", course: "Statistika Dasar",
-        memberIDs: ["u6", "u7"], coordinatorID: "u6", tint: "#D8EAF4", icon: "chart.bar.fill"),
+        memberIDs: ["u6", "u7"], coordinatorID: "u6", tint: "#D8EAF4", icon: "chart.xyaxis.line"),
       GLGroup(
         id: "g1", name: "Basis Data · Kelompok 3",
         description: "Tugas besar Basis Data semester 3.", course: "Basis Data · IF-B",
         memberIDs: ["u1", "u2", "u3", "u4", "u5"], coordinatorID: "u1", tint: "#C9F2D6",
-        icon: "externaldrive.fill"),
+        icon: "cylinder.split.1x2"),
       GLGroup(
         id: "g2", name: "UI/UX Research", description: "Riset usability aplikasi kampus.",
         course: "Interaksi Manusia & Komputer", memberIDs: ["u1", "u3", "u5"], coordinatorID: "u3",
-        tint: "#DED2FF", icon: "sparkles"),
+        tint: "#DED2FF", icon: "circle.grid.2x2"),
     ]
     projects = [
       GLProject(
@@ -59,7 +61,7 @@ extension DemoStore {
       GLTask(
         id: "t3", projectID: "p1", title: "Tulis script DDL SQL",
         description: "Script CREATE TABLE untuk PostgreSQL, lengkap dengan constraint dan index.",
-        assigneeID: "u1", reviewerID: "u4", dueAt: day(3), status: .needsRevision),
+        assigneeID: "u1", reviewerID: "u4", dueAt: at(3, 12, 0), status: .needsRevision),
       GLTask(
         id: "t11", projectID: "p1", title: "Kamus data",
         description: "Dokumentasikan setiap atribut: tipe data, panjang, dan contoh nilai.",
@@ -104,68 +106,84 @@ extension DemoStore {
     tasks[tasks.firstIndex { $0.id == "t1" }!].submissions = [
       GLSubmission(
         revision: 1, authorID: "u2",
-        note: "ERD v1 dengan 9 entity. Tolong cek apakah Fine perlu jadi entity sendiri.",
-        links: ["https://drive.google.com/file/d/erd-v1"],
-        createdAt: day(-2).addingTimeInterval(-8 * 3600))
+        note:
+          "ERD v1 dengan 9 entity. Relasi Member–Loan 1:N. Tolong cek apakah Fine perlu jadi entity sendiri.",
+        links: ["https://drive.google.com/file/d/erd-v1"], createdAt: at(-2, 15, 20))
     ]
     tasks[tasks.firstIndex { $0.id == "t3" }!].submissions = [
       GLSubmission(
         revision: 1, authorID: "u1", note: "DDL v1, 9 tabel dengan primary key.",
-        links: ["https://github.com/kelompok3/perpus-ddl"], createdAt: day(-1),
+        links: ["https://github.com/kelompok3/perpus-ddl"], createdAt: at(-1, 21, 5),
         decision: "changes_requested",
         feedback:
-          "Tambahkan ON DELETE untuk FK di tabel Loan dan CHECK tanggal kembali ≥ tanggal pinjam.",
+          "Tambahkan ON DELETE untuk FK di tabel Loan, dan CHECK tanggal kembali ≥ tanggal pinjam.",
         reviewerID: "u4")
     ]
+    let approved: [String: (String, Date)] = [
+      "t4": ("Rangkuman 5 jurnal.", at(-5, 12, 0)), "t6": ("Narasi 4 use case.", at(-3, 12, 0)),
+      "t12": ("Draft 4 halaman.", at(-11, 12, 0)), "t13": ("Sudah sesuai masukan.", at(-7, 12, 0)),
+      "t7": ("5 partisipan sudah terjadwal.", at(-3, 12, 0)),
+    ]
     for i in tasks.indices where tasks[i].status == .done {
+      let (note, date) = approved[tasks[i].id] ?? ("Hasil pekerjaan selesai.", tasks[i].dueAt)
       tasks[i].submissions = [
         GLSubmission(
-          revision: 1, authorID: tasks[i].assigneeID,
-          note: "Hasil pekerjaan selesai dan sudah disetujui.", links: [],
-          createdAt: tasks[i].dueAt.addingTimeInterval(-86400), decision: "approved",
-          reviewerID: tasks[i].reviewerID)
+          revision: 1, authorID: tasks[i].assigneeID, note: note, links: [], createdAt: date,
+          decision: "approved", reviewerID: tasks[i].reviewerID)
       ]
     }
+    func msg(
+      _ g: String, _ task: String?, _ from: String, _ text: String, _ date: Date,
+      _ kind: String = "text", _ target: String? = nil
+    ) -> GLMessage {
+      GLMessage(
+        groupID: g, taskID: task, senderID: from, text: text, createdAt: date, kind: kind,
+        targetTaskID: target)
+    }
     messages = [
-      GLMessage(
-        groupID: "g1", taskID: nil, senderID: "u3",
-        text: "Guys, deadline ERD hari Minggu ya. Jangan mepet.",
-        createdAt: day(-1).addingTimeInterval(-4 * 3600)),
-      GLMessage(
-        groupID: "g1", taskID: nil, senderID: "u2", text: "Siap, aku lanjut ERD malam ini.",
-        createdAt: day(-1).addingTimeInterval(-3 * 3600)),
-      GLMessage(
-        groupID: "g1", taskID: nil, senderID: "u4",
-        text: "Lex, cek feedback-ku di tugas DDL ya. Minor kok.",
-        createdAt: day(0).addingTimeInterval(-15 * 3600)),
-      GLMessage(
-        groupID: "g1", taskID: nil, senderID: "u1", text: "Oke, nanti malam aku benerin.",
-        createdAt: day(0).addingTimeInterval(-14 * 3600)),
-      GLMessage(
-        groupID: "g2", taskID: nil, senderID: "u3",
-        text: "Alex, script wawancara jangan lupa ya, sesi 2 hari Senin.",
-        createdAt: day(0).addingTimeInterval(-13 * 3600)),
-      GLMessage(
-        groupID: "g3", taskID: nil, senderID: "u7",
-        text: "Halo! Nanti kita bagi tugas analisis ya.", createdAt: day(-1)),
-      GLMessage(
-        groupID: "g1", taskID: "t1", senderID: "u3",
-        text: "Fine mending jadi entity sendiri, biar denda per hari gampang dihitung.",
-        createdAt: day(-2)),
-      GLMessage(
-        groupID: "g1", taskID: "t1", senderID: "u2",
-        text: "Udah aku kirim ya, tinggal nunggu review.", createdAt: day(-1)),
-      GLMessage(
-        groupID: "g1", taskID: "t2", senderID: "u3",
-        text: "Sertakan tabel sebelum dan sesudah normalisasi ya.", createdAt: day(-1)),
-      GLMessage(
-        groupID: "g1", taskID: "t3", senderID: "u4",
-        text: "Sisanya udah oke, tinggal constraint aja.",
-        createdAt: day(0).addingTimeInterval(-15 * 3600)),
+      msg("g1", nil, "u2", "mengirim hasil", at(-2, 15, 20), "activity", "t1"),
+      msg("g1", nil, "u3", "Guys, deadline ERD hari Minggu ya. Jangan mepet.", at(-1, 19, 40)),
+      msg("g1", nil, "u2", "Siap, aku lanjut ERD malam ini.", at(-1, 20, 14)),
+      msg("g1", nil, "u1", "mengirim hasil", at(-1, 21, 5), "activity", "t3"),
+      msg("g1", nil, "u4", "meminta revisi", at(0, 8, 40), "activity", "t3"),
+      msg("g1", nil, "u4", "Lex, cek feedback-ku di tugas DDL ya. Minor kok.", at(0, 8, 42)),
+      msg("g1", nil, "u1", "Oke, nanti malam aku benerin.", at(0, 9, 15)),
+      msg(
+        "g1", nil, "u5", "Template slide aku taruh sini: https://canva.com/design/perpus-k3",
+        at(0, 12, 10)),
+      msg("g1", nil, "u2", "ERD-ku udah 2 hari nunggu review nih", at(0, 18, 55)),
+      msg("g1", nil, "u3", "Nanti malam call bentar bisa? 15 menit aja.", at(0, 19, 2)),
+      msg("g2", nil, "u1", "menyetujui", at(-3, 16, 0), "activity", "t7"),
+      msg("g2", nil, "u5", "Makasih Alex! Jadwal sesi aku share besok.", at(-3, 16, 4)),
+      msg("g2", nil, "u3", "Sesi 1 lancar. Catatan lengkap: https://notion.so/sesi-1-krs", at(0, 10, 20)),
+      msg("g2", nil, "u3", "Alex, script wawancara jangan lupa ya, sesi 2 hari Senin.", at(0, 10, 21)),
+      msg("g3", nil, "u6", "membuat grup", at(-1, 9, 0), "system"),
+      msg("g3", nil, "u7", "Halo! Nanti kita bagi tugas analisis ya.", at(-1, 9, 12)),
+      msg(
+        "g1", "t1", "u3", "Fine mending jadi entity sendiri, biar denda per hari gampang dihitung.",
+        at(-2, 13, 2)),
+      msg("g1", "t1", "u2", "mengirim revisi 1", at(-2, 15, 20), "system", "t1"),
+      msg("g1", "t1", "u2", "Udah aku kirim ya, tinggal nunggu review.", at(-2, 15, 21)),
+      msg("g1", "t2", "u3", "Sertakan tabel sebelum dan sesudah normalisasi ya.", at(-1, 10, 14)),
+      msg("g1", "t3", "u1", "mengirim revisi 1", at(-1, 21, 5), "system", "t3"),
+      msg("g1", "t3", "u4", "meminta revisi", at(0, 8, 40), "system", "t3"),
+      msg("g1", "t3", "u4", "Sisanya udah oke, tinggal constraint aja.", at(0, 8, 41)),
     ]
-    // Demo history must precede the wall clock so new local messages become unread immediately.
-    for i in messages.indices {
-      messages[i].createdAt = Date().addingTimeInterval(Double(i - messages.count) * 3600)
+    // Seed history must precede the wall clock so new local messages sort after it.
+    if let latest = messages.map(\.createdAt).max(), latest > Date() {
+      let shift = Date().addingTimeInterval(-60).timeIntervalSince(latest)
+      for i in messages.indices { messages[i].createdAt.addTimeInterval(shift) }
+    }
+    // Unread counts from the prototype: everything else in the group chat is already read.
+    readMessageIDs = [:]
+    for (key, unread) in ["u1:g1": 2, "u2:g1": 1, "u3:g1": 0, "u4:g1": 3, "u5:g1": 0,
+      "u1:g2": 0, "u3:g2": 1, "u5:g2": 0, "u6:g3": 0, "u7:g3": 0]
+    {
+      let parts = key.split(separator: ":").map(String.init)
+      let thread = messages.filter { $0.groupID == parts[1] && $0.taskID == nil }
+      let fromOthers = thread.filter { $0.senderID != parts[0] }.map(\.id)
+      let unreadIDs = Set(fromOthers.suffix(unread))
+      readMessageIDs[key] = Set(thread.map(\.id)).subtracting(unreadIDs)
     }
     invites = [
       GLInvite(id: "i1", groupID: "g3", code: "STAT-K1Q", createdAt: day(-1), expiresAt: day(6)),

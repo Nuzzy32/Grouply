@@ -17,7 +17,9 @@ Model konseptual tambahan / perubahan (tanpa infrastruktur baru):
 
 ## Status implementasi dan batas verifikasi
 
-Per 16 Oktober 2026, implementasi **native iOS SwiftUI dengan data demo lokal** tersedia sebagai demo lokal dari prototype v3.1. Spesifikasi P0 di dokumen ini adalah target produk, bukan klaim fitur cloud telah aktif. Supabase live, Sign in with Apple production, Realtime lintas perangkat, APNs, Universal Links/domain, moderasi operasional, dan penghapusan akun server **belum disiapkan atau diverifikasi**. Demo persona bukan autentikasi atau bukti isolasi multiakun.
+**Implementasi aktual:** tiga migration pada `supabase/migrations/` adalah sumber SQL runnable. Slice lokal memakai `groups.coordinator_id`, `group_members` untuk membership, serta `group_id/task_id` langsung pada `chat_messages` tanpa tabel room terpisah. Undangan dan laporan berada di schema `private`. Dua RPC publik `grouply_snapshot`/`grouply_mutate` menyajikan kontrak aplikasi; nama RPC per aksi dan tabel tambahan pada blueprint di bawah adalah target lanjutan. Auth, isolasi RLS, review transactional, undangan, dan batas frekuensi sudah diuji lokal. [Setup dan bukti](BACKEND_SETUP.md).
+
+Per 17 Oktober 2026 tersedia dua mode: demo lokal dan **server Supabase lokal**. Server memakai Auth, PostgreSQL, RLS, RPC transactional dan integrasi SwiftUI async; workflow tiga akun telah diuji melalui SQL, HTTP dan client native. Deployment cloud, login Apple dengan provider nyata, Realtime, APNs, Universal Links, moderasi operasional dan penghapusan akun server belum diverifikasi/tersedia. Lihat [Backend Setup](BACKEND_SETUP.md) untuk implementasi aktual; bagian lain mendeskripsikan target produk P0.
 
 
 ## 1. Prinsip dan batasan

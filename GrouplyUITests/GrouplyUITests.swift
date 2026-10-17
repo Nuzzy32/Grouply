@@ -24,7 +24,7 @@ final class GrouplyUITests: XCTestCase {
     screenshot("03-Chat")
     app.buttons["tab-3"].tap()
     XCTAssertTrue(
-      app.staticTexts["Satu langkah kecil, progres bareng."].waitForExistence(timeout: 5))
+      app.staticTexts["4 terbuka · 1 menunggu review kamu"].waitForExistence(timeout: 5))
     screenshot("04-Tugas-Saya")
     app.buttons["tab-0"].tap()
     let erd = app.staticTexts["Draft diagram ERD"].firstMatch
@@ -86,15 +86,15 @@ final class GrouplyUITests: XCTestCase {
     name.tap()
     name.typeText("Tim Demo Native")
     app.buttons["group-save"].tap()
-    XCTAssertTrue(app.navigationBars["Detail grup"].waitForExistence(timeout: 5))
+    XCTAssertTrue(app.buttons["create-project"].waitForExistence(timeout: 5))
     XCTAssertTrue(app.staticTexts["Tim Demo Native"].waitForExistence(timeout: 5))
-    app.buttons["Buat proyek"].tap()
+    app.buttons["create-project"].tap()
     let title = app.textFields["project-title"]
     XCTAssertTrue(title.waitForExistence(timeout: 5))
     title.tap()
     title.typeText("Proyek Perdana")
-    app.buttons["Buat Proyek"].tap()
-    XCTAssertTrue(app.navigationBars["Detail Proyek"].waitForExistence(timeout: 5))
+    app.buttons["project-save"].tap()
+    XCTAssertTrue(app.buttons["add-task"].waitForExistence(timeout: 5))
     XCTAssertTrue(app.staticTexts["Proyek Perdana"].waitForExistence(timeout: 5))
     screenshot("10-Proyek-Baru")
   }

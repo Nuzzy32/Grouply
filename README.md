@@ -2,7 +2,7 @@
 
 Native iPhone implementation of the supplied Grouply v3.1 prototype, using **SwiftUI, iOS 17+, and the Soft Future design system**. Interface language: Bahasa Indonesia.
 
-**Current delivery: runnable local demo.** It stores changes on this device and lets you switch between Alex, Raka, Nadia, and Dimas. It does not connect to Supabase or authenticate an Apple account. Demo role checks exercise the workflow; they are not server authorization.
+**Current delivery: native demo plus a working local Supabase backend.** Demo personas remain available separately. The server mode uses actual Supabase Auth, RLS and transactional RPC for groups, projects, tasks, submissions and reviews. It has not been deployed to Supabase cloud; Apple-provider sign-in still needs developer configuration and real-device verification.
 
 ## Run
 
@@ -10,7 +10,7 @@ Native iPhone implementation of the supplied Grouply v3.1 prototype, using **Swi
 2. Select the `Grouply` scheme and an iPhone simulator.
 3. Run, then choose a demo persona on the welcome screen.
 
-No credentials, external packages, developer team, or network connection are needed for the simulator demo. To run on a physical iPhone, select your own signing team in Xcode.
+No credentials or network are needed for demo mode. For actual local server accounts, follow [backend setup](docs/BACKEND_SETUP.md). To run on a physical iPhone, select your own signing team in Xcode.
 
 The Xcode project is checked in. If changing target configuration, update `project.yml` then regenerate with `xcodegen generate` (XcodeGen is a development tool, not an app dependency).
 
@@ -36,18 +36,20 @@ With an available iPhone simulator:
 ```sh
 xcodebuild -project Grouply.xcodeproj -scheme Grouply \
   -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
-  -derivedDataPath build test CODE_SIGNING_ALLOWED=NO
+  -derivedDataPath build test CODE_SIGN_IDENTITY=- CODE_SIGNING_ALLOWED=YES
 ```
 
 `GrouplyTests` checks workflow, stale versions, role/membership, self-review, readonly projects, archive restoration, invitations, retry deduplication, unread state, persistence and recovery. `GrouplyUITests` exercises the four tabs, review approval, assignee submission, group messaging, and large Dynamic Type. UI-test launches use a fresh in-memory seed, preserving the user's saved demo.
 
 Verified on 16 October 2026: **13 domain tests + 5 UI tests passed** on iPhone 17 Pro Simulator, and **4 UI tests passed** on iPhone SE (3rd generation), both on iOS 26.4. The UI suite also verifies automatic detail navigation after creating a group and project. Physical-device and minimum-iOS-17 runtime testing remain outstanding. See [implementation status](docs/IMPLEMENTATION_STATUS.md) and [screenshots](docs/screenshots/).
 
-## Cloud and release work still required
+Backend verification on 17 October 2026: **23 native tests and 6 UI tests passed**, plus 36 SQL assertions, direct-DML denial, and a real three-account HTTP workflow with concurrent-review rejection. The signed simulator Keychain test passes; cloud and physical-device validation remain outstanding.
 
-The product specification targets Supabase, Sign in with Apple, Realtime Group Chat, APNs, local deadline reminders, and HTTPS Universal Links. Those services are **not implemented or validated by this local demo**. Notification switches are explicitly marked as example preferences; reports are stored locally and do not reach a moderator. The demo share link is not a production invitation or a public Universal Link.
+## Server mode and release work
 
-Before a shared beta: implement and test the documented migrations/RLS/RPC with two real accounts, connect the SwiftUI data layer to Supabase, configure Apple sign-in and APNs, host a real domain/AASA file, and provide operational moderation, retention and server account deletion. Do not deploy the demo store as a security boundary or put service-role/APNs secrets in the app.
+The server mode now connects to Supabase Auth and the migration-backed PostgreSQL API. It stores sessions in Keychain, refreshes tokens, and waits for authorized server mutations before updating the UI. The native Apple sign-in exchange is implemented but remains unverified with the Apple provider. [Backend setup](docs/BACKEND_SETUP.md) explains configuration, accounts, migrations and security tests.
+
+Before a shared beta: deploy to an explicitly selected cloud project, validate Apple sign-in on a real iPhone, connect Realtime/APNs/local reminders, host a domain/AASA file, and provide operational moderation, retention and server account deletion. Notification switches remain example preferences. Server reports are stored privately but do not reach a moderator yet. Never put service-role/APNs secrets in the app.
 
 ## Project map
 

@@ -19,7 +19,7 @@
 
 ## Status dan verifikasi
 
-Per 16 Oktober 2026 native demo tersedia sebagai demo lokal. Persona/demo state bukan autentikasi production, Realtime multi-device, APNs atau server persistence. Backend Supabase live belum disiapkan; diagram, DDL dan RPC di docs adalah blueprint. Jangan menyatakan layanan tersebut bekerja tanpa bukti live.
+Per 17 Oktober 2026 tersedia demo dan Supabase lokal yang benar-benar terhubung ke SwiftUI. Server canonical ada di supabase/migrations; docs DDL tetap target arsitektur yang lebih luas. Auth password lokal, RLS dan workflow tiga akun teruji; Apple provider/perangkat nyata, cloud deployment, Realtime dan APNs belum diuji/terhubung. Jangan menyatakan layanan cloud/Apple/push bekerja tanpa bukti. Lihat docs/BACKEND_SETUP.md.
 
 Baca kode dan status Git sebelum melanjutkan; pertahankan implementasi yang sudah ada. Utamakan shared state lokal sederhana sampai integrasi cloud benar-benar diperlukan. Jalankan pemeriksaan domain dan build/simulator yang tersedia, laporkan terpisah dari uji multiakun/perangkat nyata. Jangan menambahkan kredensial ke source, log atau dokumen. Jangan push/deploy/mengubah secret atau data production tanpa otorisasi eksplisit. Commit/PR tidak memakai atribusi atau co-author AI.
 
@@ -35,7 +35,16 @@ Baca kode dan status Git sebelum melanjutkan; pertahankan implementasi yang suda
 ```sh
 xcodebuild -project Grouply.xcodeproj -scheme Grouply \
   -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
-  -derivedDataPath build test CODE_SIGNING_ALLOWED=NO
+  -derivedDataPath build test CODE_SIGN_IDENTITY=- CODE_SIGNING_ALLOWED=YES
 ```
 
 Verifikasi: build simulator dan regresi akhir **13 core + 5 UI lulus** di iPhone 17 Pro, iOS 26.4; 4 UI smoke tests juga lulus pada iPhone SE generasi 3. Lihat `docs/IMPLEMENTATION_STATUS.md` untuk bukti dan catatan handoff. Basic label aksesibilitas adalah implementasi kode, bukan audit VoiceOver fisik. Belum ada pengujian perangkat nyata, runtime minimum iOS 17, layanan jaringan live, atau bukti keamanan server multiakun.
+
+## Integrasi server lokal
+
+- DemoStore kini menyediakan demo dan bridge async server; semua mutasi UI menunggu server, tanpa fallback mutasi lokal dalam mode cloud. Cloud state tidak dipersist ke JSON demo.
+- Public RPC grouply_snapshot/grouply_mutate membungkus helper privat; payload camelCase mengikuti StoreBackendActions.swift. Baca migration actual sebelum mengubah kontrak.
+- API lokal port55321, DB55322 agar tidak mengganggu proyek lain. scripts/backend_local.py setup menghasilkan akun/kredensial lokal privat di luar repo dan konfigurasi publik ignored.
+- Token/refresh token hanya Keychain. Test store memakai injectable token store untuk isolasi; jangan mengganti production storage dengan UserDefaults atau file. Simulator harus ad-hoc signed untuk Keychain.
+- Penghapusan akun server, Apple provider, Realtime, push dan moderasi operasional masih pekerjaan lanjutan; jangan klaim MVP beta selesai.
+- Verifikasi backend 17 Oktober 2026: 23 tes native (termasuk 3 integrasi server/Keychain), 6 UI, 36 assertion SQL + direct-DML denial, HTTP tiga akun + race review lulus. Advisors/lint warn/error bersih. Artefak ada di docs/IMPLEMENTATION_STATUS.md. Jangan menyebut tes localhost sebagai bukti cloud/perangkat nyata.

@@ -13,7 +13,7 @@
 
 ## Status implementasi dan batas verifikasi
 
-Per 16 Oktober 2026, implementasi **native iOS SwiftUI dengan data demo lokal** tersedia sebagai demo lokal dari prototype v3.1. Spesifikasi P0 di dokumen ini adalah target produk, bukan klaim fitur cloud telah aktif. Supabase live, Sign in with Apple production, Realtime lintas perangkat, APNs, Universal Links/domain, moderasi operasional, dan penghapusan akun server **belum disiapkan atau diverifikasi**. Demo persona bukan autentikasi atau bukti isolasi multiakun.
+Per 17 Oktober 2026 tersedia dua mode: demo lokal dan **server Supabase lokal**. Server memakai Auth, PostgreSQL, RLS, RPC transactional dan integrasi SwiftUI async; workflow tiga akun telah diuji melalui SQL, HTTP dan client native. Deployment cloud, login Apple dengan provider nyata, Realtime, APNs, Universal Links, moderasi operasional dan penghapusan akun server belum diverifikasi/tersedia. Lihat [Backend Setup](BACKEND_SETUP.md) untuk implementasi aktual; bagian lain mendeskripsikan target produk P0.
 
 
 ## 1. Prinsip pengerjaan

@@ -10,7 +10,7 @@ enum TaskStatus: String, Codable, CaseIterable, Identifiable {
   var label: String {
     switch self {
     case .todo: "Belum dimulai"
-    case .inProgress: "Dikerjakan"
+    case .inProgress: "Sedang dikerjakan"
     case .inReview: "Menunggu review"
     case .needsRevision: "Perlu revisi"
     case .done: "Selesai"
@@ -19,10 +19,10 @@ enum TaskStatus: String, Codable, CaseIterable, Identifiable {
   var icon: String {
     switch self {
     case .todo: "circle"
-    case .inProgress: "play.circle"
+    case .inProgress: "arrow.triangle.2.circlepath"
     case .inReview: "eye"
     case .needsRevision: "arrow.uturn.backward"
-    case .done: "checkmark.circle.fill"
+    case .done: "checkmark.circle"
     }
   }
 }
