@@ -10,7 +10,7 @@ Client baru berada di `flutter/`. Source SwiftUI, proyek Xcode native, backend, 
 
 - Empat tab Beranda, Grup, Chat, Tugas Saya dan profil, menggunakan identitas Soft Future serta app icon Grouply yang sudah ada.
 - Demo lokal tersimpan terpisah dengan persona, group/project/task CRUD, assignment, start, submission append-only, review/revisi, archive/restore, invitations, coordinator/membership, diskusi, unread, laporan, block/unblock, dan penghapusan identitas demo.
-- Client Supabase Auth email/password untuk akun yang sudah ada; sesi/PKCE melalui secure storage. SharedPreferences menyimpan demo dan penanda signed-out nonrahasia, bukan token. Konfigurasi menolak secret/service-role key dan HTTP remote.
+- Client Supabase Auth email/password untuk login dan pendaftaran akun baru; sesi/PKCE melalui secure storage. SharedPreferences menyimpan demo dan penanda signed-out nonrahasia, bukan token. Konfigurasi menolak secret/service-role key dan HTTP remote.
 - RPC `grouply_snapshot` / `grouply_mutate` memakai nama action dan payload camelCase dari client Swift. Mode backend menunggu server dan tidak melakukan fallback mutasi demo ketika jaringan gagal.
 - Realtime group chat, sinkronisasi read IDs, refresh foreground/reconnect, pembatasan membership, optimistic version check tugas, dan ID pesan stabil untuk retry. Read receipts hanya menandai pesan yang teramati di viewport.
 - Deep link lokal `grouply://task/<id>` memeriksa keberadaan tugas dan membership setelah autentikasi; state navigasi dibersihkan ketika akun berganti.
@@ -58,7 +58,7 @@ Verifikasi: `flutter analyze` bersih; `flutter test` 126 lulus, 1 integrasi loka
 
 ## Belum merupakan pengganti rilis penuh
 
-- Login Apple, pendaftaran, pemulihan kata sandi dan jalur auth produksi Android belum dipasang/disahkan. Flutter saat ini memakai akun email/password yang sudah tersedia.
+- Login Apple, pemulihan kata sandi dan jalur auth produksi Android belum dipasang/disahkan. Pendaftaran email/password tersedia; Flutter dapat membuat akun baru dengan konfirmasi email sesuai konfigurasi server.
 - Push APNs/FCM, domain universal/app links, moderasi operasional produksi, dan kebijakan retensi masih memerlukan konfigurasi/validasi.
 - Belum ada migrasi otomatis snapshot demo/sesi dari sandbox Swift ke Flutter. Bundle ID keduanya `id.grouply.app`: jangan mengganti instalasi pengguna yang berisi data tanpa backup/rencana migrasi. Uji Flutter menggunakan simulator iPhone 17 terpisah dari simulator utama Swift iPhone 17 Pro.
 - Draf gagal chat dipertahankan selama layar terbuka, bukan offline write queue atau draft lintas restart. Demo tidak menyinkronkan data ke akun lain.

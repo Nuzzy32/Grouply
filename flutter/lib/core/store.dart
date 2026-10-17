@@ -188,6 +188,46 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
+  Future<bool> signUp(String name, String email, String password) async {
+    if (loading || _mutating) {
+      throw const GrouplyException('Tunggu proses sebelumnya selesai.');
+    }
+    final generation = ++_generation;
+    demoMode = false;
+    _clear();
+    error = null;
+    loading = true;
+    _notify();
+    try {
+      var signedIn = false;
+      await _session(() async {
+        await _backend.disconnect();
+        signedIn = await _backend.signUp(name.trim(), email.trim(), password);
+      });
+      if (generation != _generation || _disposed) return false;
+      if (!signedIn) {
+        _clear();
+        return false;
+      }
+      await refresh();
+      await _connect();
+      return true;
+    } catch (_) {
+      if (generation == _generation) {
+        _clear();
+        error = 'Tidak dapat mendaftar. Periksa data dan koneksi.';
+      }
+      throw const GrouplyException(
+        'Tidak dapat mendaftar. Periksa data dan koneksi.',
+      );
+    } finally {
+      if (generation == _generation) {
+        loading = false;
+        _notify();
+      }
+    }
+  }
+
   Future<void> signOut() async {
     final wasDemo = demoMode;
     final generation = ++_generation;
