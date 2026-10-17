@@ -23,6 +23,7 @@
 		AEE8E9A0F204FB9DF474F2D9 /* BackendClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 568DB3F898B90A38BE78D87C /* BackendClientTests.swift */; };
 		B8AE90FD9432A3E46BDB6AE2 /* DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 573E519682D87D6951F1BE71 /* DesignSystem.swift */; };
 		BA482E0F4A725AA007DB20A2 /* WorkflowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE1AB50F7F928E049E44BF6D /* WorkflowTests.swift */; };
+		C341165F74B5FAA3D316D4AD /* DeadlineReminders.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD8FA222B3C6AB216B297F49 /* DeadlineReminders.swift */; };
 		D66C843A2973CB9344F63DAF /* BackendIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10A4A714FC6EBAF8F928EC2A /* BackendIntegrationTests.swift */; };
 		DA9CE0CB747AFBD0782C20BD /* TaskViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02B26E3E9959D95A9FBF22A3 /* TaskViews.swift */; };
 		E0954D161FD3683AB6EF30C2 /* ProfileViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = C04B8431AAF7F25D34E2E335 /* ProfileViews.swift */; };
@@ -70,6 +71,7 @@
 		B8D3744349FC79B165D78C73 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		C04B8431AAF7F25D34E2E335 /* ProfileViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileViews.swift; sourceTree = "<group>"; };
 		CF318163A385CFCAC994304B /* ChatViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatViews.swift; sourceTree = "<group>"; };
+		DD8FA222B3C6AB216B297F49 /* DeadlineReminders.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeadlineReminders.swift; sourceTree = "<group>"; };
 		DE1AB50F7F928E049E44BF6D /* WorkflowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkflowTests.swift; sourceTree = "<group>"; };
 		E0A3CAFF06ED02CE5C9B1A0D /* GrouplyUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = GrouplyUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		F74146D536B5C537CCE5B857 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
@@ -119,6 +121,7 @@
 		66B446E5BB27B3431E1D3B2A /* Core */ = {
 			isa = PBXGroup;
 			children = (
+				DD8FA222B3C6AB216B297F49 /* DeadlineReminders.swift */,
 				78DA79A751B4CFCD641E6378 /* DemoSeed.swift */,
 				6E207230B62D8AE58B311DCD /* DemoStore.swift */,
 				573E519682D87D6951F1BE71 /* DesignSystem.swift */,
@@ -317,6 +320,7 @@
 			files = (
 				51703C10F971F5B4D9357ED7 /* BackendLoginView.swift in Sources */,
 				3B34E9D026303524A9DC68FF /* ChatViews.swift in Sources */,
+				C341165F74B5FAA3D316D4AD /* DeadlineReminders.swift in Sources */,
 				41E340B2B032B87FFC6DBDCD /* DemoSeed.swift in Sources */,
 				9484AECEC390F3ED87C3D8BF /* DemoStore.swift in Sources */,
 				B8AE90FD9432A3E46BDB6AE2 /* DesignSystem.swift in Sources */,
