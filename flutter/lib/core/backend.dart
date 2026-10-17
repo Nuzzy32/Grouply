@@ -11,6 +11,13 @@ abstract class GrouplyBackend {
   Stream<String?> get authChanges;
   Future<void> initialize();
   Future<void> signIn(String email, String password);
+
+  /// Returns false when the server wants the email confirmed before a session.
+  Future<bool> signUp(String name, String email, String password);
+  Future<void> sendPasswordReset(String email);
+
+  /// Verifies the emailed recovery code, then sets the new password.
+  Future<void> resetPassword(String email, String code, String password);
   Future<void> signOut();
   Future<Map<String, dynamic>> snapshot();
   Future<Map<String, dynamic>> mutate(
@@ -235,12 +242,53 @@ class SupabaseGrouplyBackend implements GrouplyBackend {
   Future<void> signIn(String email, String password) async {
     await initialize();
     await _sdk.auth.signInWithPassword(email: email, password: password);
+    await _persistOrSignOut();
+  }
+
+  Future<void> _persistOrSignOut() async {
     try {
       await _flushStorage();
     } catch (_) {
       await signOut();
       rethrow;
     }
+  }
+
+  @override
+  Future<bool> signUp(String name, String email, String password) async {
+    await initialize();
+    final response = await _sdk.auth.signUp(
+      email: email,
+      password: password,
+      data: {'name': name},
+    );
+    if (response.session == null) return false;
+    await _persistOrSignOut();
+    return true;
+  }
+
+  @override
+  Future<void> sendPasswordReset(String email) async {
+    await initialize();
+    await _sdk.auth.resetPasswordForEmail(email);
+  }
+
+  @override
+  Future<void> resetPassword(String email, String code, String password) async {
+    await initialize();
+    await _sdk.auth.verifyOTP(
+      email: email,
+      token: code,
+      type: OtpType.recovery,
+    );
+    try {
+      await _sdk.auth.updateUser(UserAttributes(password: password));
+    } catch (_) {
+      // The code is spent; do not leave a session whose password never changed.
+      await signOut();
+      rethrow;
+    }
+    await _persistOrSignOut();
   }
 
   @override

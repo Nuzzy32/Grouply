@@ -13,7 +13,7 @@ struct BackendLoginView: View {
       Form {
         Section {
           Text("Kerja bareng, di akunmu sendiri.").font(.title2.bold())
-          Text("Data grup dan tugas disimpan di Supabase. Akun ini terpisah dari persona demo.")
+          Text("Data grup dan tugas disimpan di Supabase.")
             .font(.subheadline).foregroundStyle(GLTheme.secondary)
         }
         if store.backendConfigured {
@@ -72,7 +72,7 @@ struct BackendLoginView: View {
               Text("Akun pengujian · Debug")
             } footer: {
               Text(
-                "Untuk uji dua akun lokal. Ini memakai Supabase Auth sungguhan, bukan pergantian persona. Jalankan scripts/backend_local.py untuk menyiapkan akun lokal."
+                "Untuk uji dua akun lokal dengan Supabase Auth. Jalankan scripts/backend_local.py untuk menyiapkan akun lokal."
               )
             }
           #endif

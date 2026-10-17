@@ -1,4 +1,9 @@
-part of 'store.dart';
+import 'dart:async';
+import 'dart:convert';
+import 'dart:math';
+
+import 'package:grouply/core/backend.dart';
+import 'package:grouply/core/store.dart';
 
 /// Swift `profilePersonas` (prototype `PERSONAS`).
 const demoPersonas = [
@@ -11,7 +16,152 @@ const demoPersonas = [
   (id: 'u7', role: 'Anggota'),
 ];
 
-extension DemoWorkflow on GrouplyStore {
+/// Test-only backend holding the former in-app demo: the Swift seed (u1–u7)
+/// and a local copy of the server workflow rules, so widget tests can drive
+/// the real store through `snapshot`/`mutate` without a network.
+class DemoBackend implements GrouplyBackend {
+  DemoBackend({DateTime Function()? clock}) : _clock = clock ?? DateTime.now {
+    _seed();
+    _actor = '';
+  }
+
+  final DateTime Function() _clock;
+  final _changes = StreamController<String?>.broadcast(sync: true);
+  List<JsonMap> users = [],
+      groups = [],
+      projects = [],
+      tasks = [],
+      messages = [],
+      invites = [],
+      reports = [];
+  String _actor = '';
+  Map<String, List<String>> _blocks = {}, _reads = {};
+
+  /// Sends from the current actor are stored as `failed`, like the old demo.
+  bool simulateSendFailure = false;
+
+  /// Next sendMessage throws, like a dropped connection in cloud mode.
+  bool offline = false;
+  int mutations = 0;
+
+  JsonMap? _find(List<JsonMap> rows, String id) {
+    for (final row in rows) {
+      if (row.text('id') == id) return row;
+    }
+    return null;
+  }
+
+  JsonMap? user(String id) => _find(users, id);
+  JsonMap? group(String id) => _find(groups, id);
+  JsonMap? project(String id) => _find(projects, id);
+  JsonMap? task(String id) => _find(tasks, id);
+
+  static dynamic _copy(Object? value) => jsonDecode(jsonEncode(value));
+
+  @override
+  bool get configured => true;
+  @override
+  String? get currentUserID => _actor.isEmpty ? null : _actor;
+  @override
+  Stream<String?> get authChanges => _changes.stream;
+  @override
+  Future<void> initialize() async {}
+
+  /// Signs in as a seed persona; the email field is the user ID (e.g. `u1`).
+  @override
+  Future<void> signIn(String email, String password) async {
+    final row = user(email);
+    if (row == null || row.text('email').isEmpty) {
+      throw const GrouplyException('Pengguna demo tidak valid.');
+    }
+    _actor = email;
+    _changes.add(_actor);
+  }
+
+  @override
+  Future<bool> signUp(String name, String email, String password) =>
+      throw UnimplementedError();
+  @override
+  Future<void> sendPasswordReset(String email) => throw UnimplementedError();
+  @override
+  Future<void> resetPassword(String email, String code, String password) =>
+      throw UnimplementedError();
+
+  @override
+  Future<void> signOut() async {
+    _actor = '';
+    _changes.add(null);
+  }
+
+  @override
+  Future<JsonMap> snapshot() async => {
+    'currentUserID': _actor,
+    'users': _copy(users),
+    'groups': _copy(groups),
+    'projects': _copy(projects),
+    'tasks': _copy(tasks),
+    'messages': _copy(messages),
+    'invites': _copy(invites),
+    'reports': _copy(reports),
+    'blockedUserIDs': [...?_blocks[_actor]],
+    'readMessageIDs': [...?_reads[_actor]],
+  };
+
+  @override
+  Future<JsonMap> mutate(String action, JsonMap payload) async {
+    mutations++;
+    if (offline && action == 'sendMessage') {
+      throw StateError('offline');
+    }
+    final actor = _actor;
+    final backup = jsonEncode({
+      'users': users,
+      'groups': groups,
+      'projects': projects,
+      'tasks': tasks,
+      'messages': messages,
+      'invites': invites,
+      'reports': reports,
+      'blocks': _blocks,
+      'reads': _reads,
+    });
+    try {
+      final result =
+          _copy(_demoMutate(action, _copy(payload) as JsonMap)) as JsonMap;
+      // Like the server, a deleted account keeps its session until sign-out.
+      if (action == 'deleteAccount') _actor = actor;
+      return result;
+    } catch (_) {
+      final saved = jsonDecode(backup) as JsonMap;
+      List<JsonMap> rows(String key) =>
+          (saved[key] as List).map((row) => row as JsonMap).toList();
+      users = rows('users');
+      groups = rows('groups');
+      projects = rows('projects');
+      tasks = rows('tasks');
+      messages = rows('messages');
+      invites = rows('invites');
+      reports = rows('reports');
+      Map<String, List<String>> lists(String key) => (saved[key] as Map).map(
+        (id, value) => MapEntry(id as String, (value as List).cast<String>()),
+      );
+      _blocks = lists('blocks');
+      _reads = lists('reads');
+      rethrow;
+    }
+  }
+
+  @override
+  Future<void> connect(void Function() onChange) async {}
+  @override
+  Future<void> disconnect() async {}
+  @override
+  Future<void> foreground() async {}
+  @override
+  void dispose() {
+    unawaited(_changes.close());
+  }
+
   String _demoID() {
     final random = Random.secure();
     final bytes = List<int>.generate(16, (_) => random.nextInt(256));
@@ -50,10 +200,10 @@ extension DemoWorkflow on GrouplyStore {
 
   JsonMap _demoMember(String id, {bool coordinator = false}) {
     final row = group(id);
-    if (row == null || !row.ids('memberIDs').contains(currentUserID)) {
+    if (row == null || !row.ids('memberIDs').contains(_actor)) {
       _demoFail('Kamu bukan anggota grup ini.');
     }
-    if (coordinator && row.text('coordinatorID') != currentUserID) {
+    if (coordinator && row.text('coordinatorID') != _actor) {
       _demoFail('Hanya koordinator yang dapat melakukan tindakan ini.');
     }
     return row;
@@ -108,7 +258,7 @@ extension DemoWorkflow on GrouplyStore {
         'id': _demoID(),
         'groupID': groupID,
         'taskID': thread,
-        'senderID': currentUserID,
+        'senderID': _actor,
         'text': thread == null ? groupText : system,
         'createdAt': _clock().toUtc().toIso8601String(),
         'kind': thread == null ? 'activity' : 'system',
@@ -615,7 +765,7 @@ extension DemoWorkflow on GrouplyStore {
           if (!unreadIDs.contains(row['id'])) row.text('id'),
       ];
     }
-    currentUserID = 'u1';
+    _actor = 'u1';
     assert(
       tasks.every(
         (row) =>
@@ -626,20 +776,8 @@ extension DemoWorkflow on GrouplyStore {
     );
   }
 
-  /// Swift `DemoStore.reset()`: back to seed data and the Welcome screen.
-  Future<void> resetDemo() async {
-    if (!demoMode || loading || _mutating) {
-      throw const GrouplyException('Tunggu proses sebelumnya selesai.');
-    }
-    simulateSendFailure = false;
-    _demoWritable = true;
-    _seed();
-    await _saveDemo();
-    await signOut();
-  }
-
   JsonMap _demoMutate(String action, JsonMap payload) {
-    final actor = currentUserID;
+    final actor = _actor;
     if (actor.isEmpty ||
         user(actor) == null ||
         user(actor)!.text('name') == 'Pengguna dihapus') {
@@ -1225,7 +1363,7 @@ extension DemoWorkflow on GrouplyStore {
         for (final blocked in _blocks.values) {
           blocked.removeWhere((id) => id == actor);
         }
-        currentUserID = '';
+        _actor = '';
         return {'deleted': true};
       default:
         _demoFail('Tindakan tidak dikenal: $action.');

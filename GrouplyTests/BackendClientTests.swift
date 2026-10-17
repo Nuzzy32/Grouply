@@ -48,7 +48,7 @@ final class BackendClientTests: XCTestCase {
     for cleanupFails in [false, true] {
       let tokens = MemoryTokenStore()
       let backend = client(store: tokens)
-      let store = DemoStore(persist: false, backendFactory: { _ in backend })
+      let store = DemoStore(backendFactory: { _ in backend })
       store.setBackendActive(false)
       var deletionCount = 0
       var snapshotCount = 0
@@ -122,7 +122,7 @@ final class BackendClientTests: XCTestCase {
   }
 
   @MainActor func testDeletedIdentityAndLegacyReportDecode() throws {
-    let store = DemoStore(persist: false)
+    let store = DemoStore()
     XCTAssertEqual(store.displayName(""), "Pengguna terhapus")
     let data = Data(#"{"id":"r","messageID":"m","reporterID":"u","reason":"spam","createdAt":"2026-10-17T00:00:00Z"}"#.utf8)
     let report = try SupabaseBackend.decoder().decode(GLReport.self, from: data)
@@ -214,7 +214,7 @@ final class BackendClientTests: XCTestCase {
       configuration.protocolClasses = [HeldUnauthorizedProtocol.self]
       let session = URLSession(configuration: configuration)
       defer { session.invalidateAndCancel() }
-      let store = DemoStore(persist: false, backendFactory: {
+      let store = DemoStore(backendFactory: {
         SupabaseBackend(configuration: $0, session: session, tokenStore: tokens)
       })
       store.setBackendActive(false)
@@ -268,7 +268,7 @@ final class BackendClientTests: XCTestCase {
   @MainActor func testQueuedRealtimeRefreshRetriesFailuresWithoutAnotherEvent() async throws {
     let tokens = MemoryTokenStore()
     let backend = client(store: tokens)
-    let store = DemoStore(persist: false, backendFactory: { _ in backend })
+    let store = DemoStore(backendFactory: { _ in backend })
     store.setBackendActive(false)
     defer { store.setBackendActive(false) }
     let recovered = expectation(description: "Catchup retries until the snapshot succeeds")
@@ -301,7 +301,7 @@ final class BackendClientTests: XCTestCase {
     configuration.protocolClasses = [HeldUnauthorizedProtocol.self]
     let session = URLSession(configuration: configuration)
     defer { session.invalidateAndCancel() }
-    let store = DemoStore(persist: false, backendFactory: {
+    let store = DemoStore(backendFactory: {
       SupabaseBackend(configuration: $0, session: session, tokenStore: tokens)
     })
     store.setBackendActive(false)
@@ -487,6 +487,35 @@ final class BackendClientTests: XCTestCase {
     XCTAssertEqual(nonce.raw.count, 64)
     XCTAssertEqual(nonce.hashed.count, 64)
     XCTAssertNotEqual(nonce.raw, nonce.hashed)
+  }
+
+  @MainActor func testUnconfirmedSendKeepsPrivateFailedDraftAcrossSnapshots() async throws {
+    let backend = client(store: MemoryTokenStore())
+    let store = DemoStore(backendFactory: { _ in backend })
+    store.setBackendActive(false)
+    var offline = true
+    BackendURLProtocol.handler = { request in
+      switch request.url!.lastPathComponent {
+      case "token":
+        return (200, #"{"access_token":"token","refresh_token":"refresh","expires_in":3600,"user":{"id":"actor"}}"#)
+      case "grouply_snapshot":
+        return (200, ##"{"users":[],"groups":[{"id":"g1","name":"Grup","description":"","course":"","memberIDs":["actor","other"],"coordinatorID":"actor","tint":"#D8EAF4","icon":"person.3"}],"projects":[],"tasks":[],"messages":[],"invites":[],"reports":[],"currentUserID":"actor","blockedUserIDs":[],"readMessageIDs":[]}"##)
+      default:
+        if offline { throw URLError(.notConnectedToInternet) }
+        return (200, #"{"id":"draft"}"#)
+      }
+    }
+    try await store.connectBackend(email: "actor@example.org", password: "unused")
+    let id = try await store.sendMessage(groupID: "g1", text: "Draft", clientID: "draft")
+    XCTAssertEqual(id, "draft")
+    XCTAssertEqual(store.messages(groupID: "g1").first { $0.id == id }?.delivery, .failed)
+    XCTAssertNotNil(store.backendError)
+    offline = false
+    await store.refreshFromBackend()
+    XCTAssertEqual(store.messages.filter { $0.id == id }.map(\.delivery), [.failed])
+    store.currentUserID = "other"
+    XCTAssertFalse(store.messages(groupID: "g1").contains { $0.id == id })
+    XCTAssertEqual(store.unreadCount(groupID: "g1"), 0)
   }
 }
 

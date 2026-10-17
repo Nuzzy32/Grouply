@@ -149,18 +149,6 @@ class _GrouplyAppState extends State<GrouplyApp> {
   );
 }
 
-/// Swift `profilePersonas` with the seed's names/tints, shown before a demo
-/// snapshot is loaded.
-const _personas = [
-  (id: 'u1', name: 'Alex', tint: '#DED2FF', role: 'Koordinator'),
-  (id: 'u2', name: 'Raka', tint: '#C9F2D6', role: 'Pelaksana'),
-  (id: 'u3', name: 'Nadia', tint: '#F9E9BE', role: 'Reviewer'),
-  (id: 'u4', name: 'Dimas', tint: '#D8EAF4', role: 'Anggota'),
-  (id: 'u5', name: 'Sinta', tint: '#F6CED1', role: 'Anggota'),
-  (id: 'u6', name: 'Bima', tint: '#C9F2D6', role: 'Koordinator'),
-  (id: 'u7', name: 'Laras', tint: '#D8EAF4', role: 'Anggota'),
-];
-
 /// Swift `WelcomeView.restoring`.
 class _Restoring extends StatelessWidget {
   const _Restoring();
@@ -206,30 +194,9 @@ class _Welcome extends StatefulWidget {
 }
 
 class _WelcomeState extends State<_Welcome> {
-  bool _busy = false;
-  String? _error;
-
-  Future<void> _persona(String id, String name) async {
-    if (_busy) return;
-    setState(() {
-      _busy = true;
-      _error = null;
-    });
-    try {
-      final store = widget.store;
-      await store.startDemo();
-      if (store.currentUserID != id) await store.switchDemoUser(id);
-      if (mounted) showGLToast(context, 'Masuk sebagai $name');
-    } catch (error) {
-      if (mounted) setState(() => _error = error.toString());
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final error = _error ?? widget.store.error;
+    final error = widget.store.error;
     return Scaffold(
       backgroundColor: GLTheme.background,
       body: SafeArea(
@@ -268,7 +235,7 @@ class _WelcomeState extends State<_Welcome> {
             ),
             const SizedBox(height: 18),
             GLTap.card(
-              onTap: _busy ? null : () => showLoginSheet(context, widget.store),
+              onTap: () => showLoginSheet(context, widget.store),
               child: Container(
                 height: 56,
                 alignment: Alignment.center,
@@ -279,56 +246,15 @@ class _WelcomeState extends State<_Welcome> {
                 ),
               ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Akun Supabase terpisah dari persona demo di bawah.',
-              textAlign: TextAlign.center,
-              style: gl(12, w400, 0, GLTheme.secondary),
-            ),
-            const SizedBox(height: 18),
-            Row(
-              children: [
-                Container(
-                  height: 22,
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  alignment: Alignment.center,
-                  decoration: const ShapeDecoration(
-                    color: GLTheme.butter,
-                    shape: StadiumBorder(),
-                  ),
-                  child: Text('DEMO', style: gl(11, w700, 0.06)),
-                ),
-                const SizedBox(width: 6),
-                Text('Masuk cepat sebagai', style: gl(13, w600)),
-                if (_busy) ...[
-                  const SizedBox(width: 8),
-                  const CupertinoActivityIndicator(radius: 7),
-                ],
-              ],
-            ),
-            const SizedBox(height: 8),
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final width = (constraints.maxWidth - 8) / 2;
-                return Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    for (final persona in _personas)
-                      SizedBox(
-                        width: width,
-                        child: _PersonaButton(
-                          name: persona.name,
-                          tint: persona.tint,
-                          role: persona.role,
-                          onTap: _busy
-                              ? null
-                              : () => _persona(persona.id, persona.name),
-                        ),
-                      ),
-                  ],
-                );
-              },
+            const SizedBox(height: 10),
+            GLOutlineButton(
+              key: const Key('welcome-signup'),
+              title: 'Belum punya akun? Daftar',
+              height: 56,
+              radius: 18,
+              fontSize: 16,
+              onPressed: () =>
+                  showLoginSheet(context, widget.store, signUp: true),
             ),
             if (error != null) ...[
               const SizedBox(height: 18),
@@ -356,54 +282,6 @@ class _WelcomeState extends State<_Welcome> {
       ),
     );
   }
-}
-
-class _PersonaButton extends StatelessWidget {
-  const _PersonaButton({
-    required this.name,
-    required this.tint,
-    required this.role,
-    required this.onTap,
-  });
-  final String name;
-  final String tint;
-  final String role;
-  final VoidCallback? onTap;
-  @override
-  Widget build(BuildContext context) => GLTap(
-    onTap: onTap,
-    label: 'Masuk demo sebagai $name, $role',
-    child: Container(
-      constraints: const BoxConstraints(minHeight: 48),
-      padding: const EdgeInsets.fromLTRB(6, 6, 10, 6),
-      decoration: glBox(Colors.white, 16, border: GLTheme.border),
-      child: Row(
-        children: [
-          GLAvatar(user: {'name': name, 'tint': tint}, size: 32, fontSize: 11),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: gl(14, w600),
-                ),
-                Text(
-                  role,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: gl(12, w400, 0, GLTheme.secondary),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
 }
 
 /// Three tilted preview cards (Swift `previewCards`, 220pt tall).
@@ -532,58 +410,78 @@ class _PreviewCards extends StatelessWidget {
   );
 }
 
-/// Swift `BackendLoginView` — inset-grouped form in a sheet. The Flutter
-/// client has no Sign in with Apple yet, so only email/password is offered.
-Future<void> showLoginSheet(BuildContext context, GrouplyStore store) =>
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      backgroundColor: const Color(0xFFF2F2F7),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
-      ),
-      builder: (_) => _LoginSheet(store: store),
-    );
+/// Account sheet in the same Soft Future style as the other GL sheets:
+/// Masuk / Daftar toggle, labelled white fields, and an emailed-code reset.
+/// The Flutter client has no Sign in with Apple yet.
+Future<void> showLoginSheet(
+  BuildContext context,
+  GrouplyStore store, {
+  bool signUp = false,
+}) => showGLSheet<void>(
+  context,
+  title: 'Akun Grouply',
+  subtitle: 'Data grup dan tugas tersimpan aman di server Grouply.',
+  builder: (_) => _LoginSheet(store: store, signUp: signUp),
+);
 
 class _LoginSheet extends StatefulWidget {
-  const _LoginSheet({required this.store});
+  const _LoginSheet({required this.store, this.signUp = false});
   final GrouplyStore store;
+  final bool signUp;
   @override
   State<_LoginSheet> createState() => _LoginSheetState();
 }
 
+enum _AuthMode { signIn, signUp, forgot }
+
 class _LoginSheetState extends State<_LoginSheet> {
+  final _name = TextEditingController();
   final _email = TextEditingController();
   final _password = TextEditingController();
-  bool _busy = false;
-  String? _error;
+  final _code = TextEditingController();
+  var _mode = _AuthMode.signIn;
+  bool _busy = false, _codeSent = false, _showPassword = false;
+  String? _error, _notice;
+
+  static const _minPassword = 8;
 
   @override
   void initState() {
     super.initState();
-    _email.addListener(_changed);
-    _password.addListener(_changed);
+    if (widget.signUp) _mode = _AuthMode.signUp;
+    for (final field in [_name, _email, _password, _code]) {
+      field.addListener(_changed);
+    }
   }
 
   void _changed() => setState(() {});
 
   @override
   void dispose() {
-    _email.dispose();
-    _password.dispose();
+    for (final field in [_name, _email, _password, _code]) {
+      field.dispose();
+    }
     super.dispose();
   }
 
-  Future<void> _signIn() async {
+  void _switch(_AuthMode mode) => setState(() {
+    _mode = mode;
+    _codeSent = false;
+    _showPassword = false;
+    _error = null;
+    _notice = null;
+    _password.clear();
+    _code.clear();
+  });
+
+  Future<void> _run(Future<void> Function() action) async {
     setState(() {
       _busy = true;
       _error = null;
+      _notice = null;
     });
     try {
-      await widget.store.signIn(_email.text.trim(), _password.text);
-      _password.clear();
-      if (mounted) Navigator.of(context).pop();
+      await action();
     } catch (error) {
       if (mounted) setState(() => _error = error.toString());
     } finally {
@@ -591,169 +489,408 @@ class _LoginSheetState extends State<_LoginSheet> {
     }
   }
 
-  Widget _section(List<Widget> rows, {String? header, String? footer}) =>
-      Padding(
-        padding: const EdgeInsets.only(bottom: 22),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (header != null)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 7),
-                child: Text(
-                  header.toUpperCase(),
-                  style: gl(13, w400, 0, const Color(0xFF6D6D72)),
+  void _done() {
+    _password.clear();
+    if (mounted) Navigator.of(context).pop();
+  }
+
+  Future<void> _signIn() => _run(() async {
+    await widget.store.signIn(_email.text.trim(), _password.text);
+    _done();
+  });
+
+  Future<void> _signUp() => _run(() async {
+    final signedIn = await widget.store.signUp(
+      _name.text,
+      _email.text,
+      _password.text,
+    );
+    if (signedIn) return _done();
+    if (!mounted) return;
+    _switch(_AuthMode.signIn);
+    setState(
+      () => _notice =
+          'Akun dibuat. Buka email konfirmasi yang kami kirim, lalu masuk.',
+    );
+  });
+
+  Future<void> _sendCode() => _run(() async {
+    await widget.store.sendPasswordReset(_email.text);
+    if (!mounted) return;
+    setState(() {
+      _codeSent = true;
+      _notice =
+          'Jika ${_email.text.trim()} terdaftar, kode 6 digit sudah dikirim. Cek juga folder spam.';
+    });
+  });
+
+  Future<void> _resetPassword() => _run(() async {
+    await widget.store.resetPassword(_email.text, _code.text, _password.text);
+    _done();
+  });
+
+  bool get _emailValid =>
+      RegExp(r'^\S+@\S+\.\S+$').hasMatch(_email.text.trim());
+  bool get _passwordStrong => _password.text.length >= _minPassword;
+
+  bool get _ready => switch (_mode) {
+    _AuthMode.signIn => _email.text.isNotEmpty && _password.text.isNotEmpty,
+    _AuthMode.signUp =>
+      _name.text.trim().isNotEmpty && _emailValid && _passwordStrong,
+    _AuthMode.forgot =>
+      _emailValid &&
+          (!_codeSent || (_code.text.trim().length >= 6 && _passwordStrong)),
+  };
+
+  VoidCallback get _submit => switch (_mode) {
+    _AuthMode.signIn => _signIn,
+    _AuthMode.signUp => _signUp,
+    _AuthMode.forgot => _codeSent ? _resetPassword : _sendCode,
+  };
+
+  void _submitIfReady() => _ready && !_busy ? _submit() : null;
+
+  Widget _input(
+    String key,
+    TextEditingController controller,
+    String hint, {
+    TextInputType? keyboard,
+    Iterable<String>? autofill,
+    int? maxLength,
+    bool last = false,
+    bool password = false,
+    TextStyle? style,
+    TextAlign align = TextAlign.start,
+    TextCapitalization capitalization = TextCapitalization.none,
+  }) => TextField(
+    key: Key(key),
+    controller: controller,
+    enabled: !_busy,
+    obscureText: password && !_showPassword,
+    keyboardType: keyboard,
+    autocorrect: false,
+    enableSuggestions: !password,
+    autofillHints: autofill,
+    maxLength: maxLength,
+    textAlign: align,
+    textCapitalization: capitalization,
+    textInputAction: last ? TextInputAction.done : TextInputAction.next,
+    onSubmitted: last ? (_) => _submitIfReady() : null,
+    cursorColor: GLTheme.ink,
+    style: style ?? gl(16, w400, 0, GLTheme.ink),
+    decoration: glInputDecoration(hint: hint).copyWith(
+      suffixIcon: password
+          ? GLTap(
+              label: _showPassword
+                  ? 'Sembunyikan kata sandi'
+                  : 'Tampilkan kata sandi',
+              onTap: () => setState(() => _showPassword = !_showPassword),
+              child: SizedBox(
+                width: 48,
+                height: 48,
+                child: GLIcon(
+                  _showPassword ? 'eye.slash' : 'eye',
+                  size: 20,
+                  color: GLTheme.secondary,
                 ),
               ),
-            Container(
-              decoration: glBox(Colors.white, 10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  for (var i = 0; i < rows.length; i++) ...[
-                    if (i > 0)
-                      const Padding(
-                        padding: EdgeInsets.only(left: 16),
-                        child: GLHairline(color: Color(0xFFE5E5EA)),
-                      ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 11,
-                      ),
-                      child: rows[i],
+            )
+          : null,
+    ),
+  );
+
+  Widget _link(String key, String text, VoidCallback onTap) => GLTap(
+    key: Key(key),
+    onTap: _busy ? null : onTap,
+    child: Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+      child: Text(
+        text,
+        textAlign: TextAlign.center,
+        style: gl(15, w600).copyWith(decoration: TextDecoration.underline),
+      ),
+    ),
+  );
+
+  /// Masuk / Daftar toggle, styled like the project filter pills.
+  Widget _modeToggle() => Container(
+    height: 52,
+    padding: const EdgeInsets.all(4),
+    decoration: const ShapeDecoration(
+      color: Colors.white,
+      shape: StadiumBorder(side: BorderSide(color: GLTheme.border)),
+    ),
+    child: Row(
+      children: [
+        for (final (mode, label, key) in [
+          (_AuthMode.signIn, 'Masuk', 'auth-to-signin'),
+          (_AuthMode.signUp, 'Daftar', 'auth-to-signup'),
+        ])
+          Expanded(
+            child: Semantics(
+              selected: _mode == mode,
+              button: true,
+              child: GLTap(
+                key: Key(key),
+                onTap: _busy || _mode == mode ? null : () => _switch(mode),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeOut,
+                  alignment: Alignment.center,
+                  decoration: ShapeDecoration(
+                    color: _mode == mode ? GLTheme.ink : Colors.transparent,
+                    shape: const StadiumBorder(),
+                  ),
+                  child: Text(
+                    label,
+                    style: gl(
+                      15,
+                      w600,
+                      0,
+                      _mode == mode ? Colors.white : GLTheme.secondary,
                     ),
-                  ],
-                ],
+                  ),
+                ),
               ),
             ),
-            if (footer != null)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 7, 16, 0),
-                child: Text(
-                  footer,
-                  style: gl(13, w400, 0, const Color(0xFF6D6D72)),
-                ),
-              ),
-          ],
-        ),
-      );
-
-  InputDecoration get _plain => const InputDecoration(
-    border: InputBorder.none,
-    isDense: true,
-    contentPadding: EdgeInsets.symmetric(vertical: 2),
+          ),
+      ],
+    ),
   );
+
+  Widget _passwordRule() => Row(
+    children: [
+      GLIcon(
+        _passwordStrong ? 'checkmark.circle' : 'info.circle',
+        size: 16,
+        color: _passwordStrong ? const Color(0xFF1E7A43) : GLTheme.secondary,
+      ),
+      const SizedBox(width: 6),
+      Text(
+        'Minimal $_minPassword karakter',
+        style: gl(
+          13,
+          w500,
+          0,
+          _passwordStrong ? const Color(0xFF1E7A43) : GLTheme.secondary,
+        ),
+      ),
+    ],
+  );
+
+  List<Widget> _accountForm() {
+    final signUp = _mode == _AuthMode.signUp;
+    return [
+      _modeToggle(),
+      if (_notice != null)
+        GLNotice(
+          key: const Key('backend-login-notice'),
+          text: _notice!,
+          color: GLTheme.mint,
+          icon: 'checkmark.circle',
+        ),
+      if (signUp)
+        GLField(
+          'Nama',
+          required: true,
+          trailing: 'Terlihat oleh anggota grup',
+          child: _input(
+            'backend-name',
+            _name,
+            'Contoh: Ayu Lestari',
+            autofill: const [AutofillHints.name],
+            maxLength: 80,
+            capitalization: TextCapitalization.words,
+          ),
+        ),
+      GLField(
+        'Email',
+        required: signUp,
+        child: _input(
+          'backend-email',
+          _email,
+          'nama@kampus.ac.id',
+          keyboard: TextInputType.emailAddress,
+          autofill: const [AutofillHints.username],
+        ),
+      ),
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          GLField(
+            'Kata sandi',
+            required: signUp,
+            child: _input(
+              'backend-password',
+              _password,
+              signUp ? 'Buat kata sandi' : 'Kata sandi akunmu',
+              autofill: [
+                signUp ? AutofillHints.newPassword : AutofillHints.password,
+              ],
+              password: true,
+              last: true,
+            ),
+          ),
+          const SizedBox(height: 8),
+          if (signUp)
+            _passwordRule()
+          else
+            Align(
+              alignment: Alignment.centerRight,
+              child: _link('auth-to-forgot', 'Lupa kata sandi?', () {
+                _switch(_AuthMode.forgot);
+              }),
+            ),
+        ],
+      ),
+      if (_error != null)
+        GLFormError(_error!, key: const Key('backend-login-error')),
+      GLSubmitButton(
+        key: Key('backend-${_mode.name}'),
+        title: signUp
+            ? (_busy ? 'Membuat akun…' : 'Buat akun')
+            : (_busy ? 'Masuk…' : 'Masuk'),
+        busy: _busy,
+        onPressed: _ready ? _submit : null,
+      ),
+      Text(
+        signUp
+            ? 'Dengan mendaftar, kamu bisa membuat grup atau bergabung lewat kode undangan.'
+            : 'Login Apple belum tersedia di versi Android/Flutter.',
+        textAlign: TextAlign.center,
+        style: gl(13, w400, 0, GLTheme.secondary, 3),
+      ),
+    ];
+  }
+
+  List<Widget> _forgotForm() => [
+    Row(
+      children: [
+        GLTap(
+          key: const Key('auth-back'),
+          label: 'Kembali ke Masuk',
+          onTap: _busy ? null : () => _switch(_AuthMode.signIn),
+          child: Container(
+            width: 44,
+            height: 44,
+            decoration: const BoxDecoration(
+              color: Color(0xFFECEEEB),
+              shape: BoxShape.circle,
+            ),
+            child: const GLIcon('arrow.left', size: 20),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Atur ulang kata sandi', style: gl(18, w700, -0.01)),
+              const SizedBox(height: 2),
+              Text(
+                _codeSent
+                    ? 'Langkah 2 dari 2 · Masukkan kode'
+                    : 'Langkah 1 dari 2 · Kirim kode ke email',
+                style: gl(13, w500, 0, GLTheme.secondary),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+    if (_notice != null)
+      GLNotice(
+        key: const Key('backend-login-notice'),
+        text: _notice!,
+        color: GLTheme.mint,
+        icon: 'checkmark.circle',
+      ),
+    if (!_codeSent)
+      GLField(
+        'Email akun',
+        required: true,
+        child: _input(
+          'backend-email',
+          _email,
+          'nama@kampus.ac.id',
+          keyboard: TextInputType.emailAddress,
+          autofill: const [AutofillHints.username],
+          last: true,
+        ),
+      )
+    else ...[
+      GLField(
+        'Kode dari email',
+        required: true,
+        child: _input(
+          'backend-code',
+          _code,
+          '••••••',
+          keyboard: TextInputType.number,
+          autofill: const [AutofillHints.oneTimeCode],
+          maxLength: 10,
+          align: TextAlign.center,
+          style: gl(22, w700, 0.3, GLTheme.ink),
+        ),
+      ),
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          GLField(
+            'Kata sandi baru',
+            required: true,
+            child: _input(
+              'backend-password',
+              _password,
+              'Buat kata sandi baru',
+              autofill: const [AutofillHints.newPassword],
+              password: true,
+              last: true,
+            ),
+          ),
+          const SizedBox(height: 8),
+          _passwordRule(),
+        ],
+      ),
+    ],
+    if (_error != null)
+      GLFormError(_error!, key: const Key('backend-login-error')),
+    GLSubmitButton(
+      key: Key(_codeSent ? 'backend-forgot-code' : 'backend-forgot'),
+      title: _codeSent
+          ? (_busy ? 'Menyimpan…' : 'Simpan kata sandi')
+          : (_busy ? 'Mengirim…' : 'Kirim kode'),
+      busy: _busy,
+      onPressed: _ready ? _submit : null,
+    ),
+    if (_codeSent)
+      Center(child: _link('auth-resend', 'Kirim ulang kode', _sendCode)),
+  ];
 
   @override
   Widget build(BuildContext context) {
-    final configured = widget.store.configured;
-    final ready = _email.text.isNotEmpty && _password.text.isNotEmpty;
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          SizedBox(
-            height: 56,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Text('Masuk Akun', style: gl(17, w600)),
-                Positioned(
-                  left: 16,
-                  child: GLTap(
-                    onTap: _busy ? null : () => Navigator.of(context).pop(),
-                    child: Text(
-                      'Batal',
-                      style: gl(17, w400, 0, const Color(0xFF007AFF)),
-                    ),
-                  ),
-                ),
-              ],
+    final children = !widget.store.configured
+        ? const [
+            GLNotice(
+              text:
+                  'Konfigurasi server belum tersedia. Ikuti flutter/README.md, lalu build ulang aplikasinya.',
             ),
-          ),
-          Flexible(
-            child: ListView(
-              shrinkWrap: true,
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-              children: [
-                _section([
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Kerja bareng, di akunmu sendiri.',
-                        style: gl(22, w700),
-                      ),
-                    ],
-                  ),
-                  Text(
-                    'Data grup dan tugas disimpan di Supabase. Akun ini terpisah dari persona demo.',
-                    style: gl(15, w400, 0, GLTheme.secondary),
-                  ),
-                ]),
-                if (configured)
-                  _section(
-                    [
-                      TextField(
-                        key: const Key('backend-email'),
-                        controller: _email,
-                        enabled: !_busy,
-                        keyboardType: TextInputType.emailAddress,
-                        autocorrect: false,
-                        autofillHints: const [AutofillHints.username],
-                        textInputAction: TextInputAction.next,
-                        style: gl(17),
-                        decoration: _plain.copyWith(hintText: 'Email akun'),
-                      ),
-                      TextField(
-                        key: const Key('backend-password'),
-                        controller: _password,
-                        enabled: !_busy,
-                        obscureText: true,
-                        autofillHints: const [AutofillHints.password],
-                        style: gl(17),
-                        decoration: _plain.copyWith(hintText: 'Kata sandi'),
-                        onSubmitted: (_) => ready && !_busy ? _signIn() : null,
-                      ),
-                      _busy
-                          ? const SizedBox(
-                              height: 58,
-                              child: Center(
-                                child: CupertinoActivityIndicator(),
-                              ),
-                            )
-                          : GLPrimaryButton(
-                              key: const Key('backend-signin'),
-                              title: 'Masuk ke Server',
-                              icon: 'arrow.right',
-                              onPressed: ready ? _signIn : null,
-                            ),
-                    ],
-                    header: 'Akun email',
-                    footer:
-                        'Gunakan akun email yang sudah terdaftar. Login Apple, pendaftaran, dan pemulihan akun belum tersedia di versi Android/Flutter.',
-                  )
-                else
-                  _section([
-                    const GLNotice(
-                      text:
-                          'Konfigurasi server belum tersedia. Ikuti flutter/README.md, lalu build ulang aplikasinya.',
-                    ),
-                  ]),
-                if (_error != null)
-                  _section([
-                    Text(
-                      _error!,
-                      key: const Key('backend-login-error'),
-                      style: gl(17, w400, 0, const Color(0xFFFF3B30)),
-                    ),
-                  ]),
-              ],
-            ),
-          ),
-        ],
+          ]
+        : _mode == _AuthMode.forgot
+        ? _forgotForm()
+        : _accountForm();
+    return PopScope(
+      canPop: !_busy,
+      child: AutofillGroup(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (final child in children) ...[
+              if (child != children.first) const SizedBox(height: 16),
+              child,
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -805,7 +942,7 @@ class _ShellState extends State<_Shell> {
           Column(
             children: [
               // Swift `safeAreaInset(edge: .top)` server error strip.
-              if (!store.demoMode && error != null && error != _dismissedError)
+              if (error != null && error != _dismissedError)
                 Container(
                   width: double.infinity,
                   color: GLTheme.butter,
@@ -1124,20 +1261,14 @@ class _Home extends StatelessWidget {
       Row(
         children: [
           Icon(
-            glSymbol(
-              store.demoMode
-                  ? 'iphone'
-                  : 'externaldrive.connected.to.line.below',
-            ),
+            glSymbol('externaldrive.connected.to.line.below'),
             size: 13,
             color: GLTheme.secondary,
           ),
           const SizedBox(width: 6),
           Flexible(
             child: Text(
-              store.demoMode
-                  ? 'Demo lokal · data contoh'
-                  : 'Akun server · Supabase',
+              'Akun server · Supabase',
               style: gl(12, w500, 0, GLTheme.secondary),
             ),
           ),
@@ -1146,8 +1277,6 @@ class _Home extends StatelessWidget {
       if (myGroups.isEmpty)
         _emptyGroups()
       else ...[
-        if (store.demoMode && store.error != null)
-          GLNotice(text: store.error!, color: GLTheme.coral),
         _attentionCard(context, attention),
         if (reviews.isNotEmpty) _reviewCard(context, reviews, now),
         Column(

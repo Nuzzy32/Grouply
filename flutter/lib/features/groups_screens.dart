@@ -52,36 +52,9 @@ String _grInviteStatus(GrouplyStore store, JsonMap invite) {
   return 'valid';
 }
 
-/// Prototype `doJoin` messages, checked before the store call.
-String? _grJoinError(GrouplyStore store, String code) {
-  if (!store.demoMode) return code.trim().isEmpty ? 'Isi kode undangan.' : null;
-  if (code.isEmpty) return 'Masukkan kode undangan.';
-  final invite = store.invites
-      .where((row) => row.text('code').toUpperCase() == code)
-      .firstOrNull;
-  if (invite == null) {
-    return 'Kode tidak ditemukan. Periksa lagi huruf dan angkanya.';
-  }
-  final status = _grInviteStatus(store, invite);
-  final group = store.group(invite.text('groupID'));
-  if (status == 'nogroup') {
-    return 'Undangan tidak berlaku. Grupnya sudah tidak ada.';
-  }
-  if (_member(store, group)) return 'Kamu sudah bergabung dengan grup ini.';
-  if (status == 'revoked') {
-    return 'Undangan tidak berlaku. Minta kode baru ke koordinator.';
-  }
-  if (status == 'expired') {
-    return 'Undangan kedaluwarsa sejak ${GLFormat.date(invite.date('expiresAt') ?? DateTime.now())}. Minta kode baru ke koordinator.';
-  }
-  if (status == 'used') {
-    return 'Undangan tidak berlaku. Kode sudah mencapai batas pemakaian.';
-  }
-  if (group!.ids('memberIDs').length >= _maxMembers) {
-    return 'Grup ini sudah penuh (8 anggota).';
-  }
-  return null;
-}
+/// The server validates invites; the client only rejects an empty code.
+String? _grJoinError(String code) =>
+    code.trim().isEmpty ? 'Isi kode undangan.' : null;
 
 /// Button whose accessibility label replaces its visible text.
 Widget _grButton({
@@ -343,9 +316,7 @@ mixin _GroupActions<T extends _WorkspaceScreen> on _WorkspaceState<T> {
         ),
         const SizedBox(height: 16),
         Text(
-          store.demoMode
-              ? 'Demo: ganti persona di panel demo, lalu buka Grup → Gabung dengan kode. Kode prototipe dibuat acak secara lokal, bukan kode aman produksi.'
-              : 'Bagikan kode ini kepada anggota yang ingin bergabung. Kode berlaku 7 hari dan sekali pakai.',
+          'Bagikan kode ini kepada anggota yang ingin bergabung. Kode berlaku 7 hari dan sekali pakai.',
           style: gl(13, w400, 0, GLTheme.secondary, 3),
         ),
       ],
@@ -597,7 +568,7 @@ mixin _GroupActions<T extends _WorkspaceScreen> on _WorkspaceState<T> {
     final ok = count == 1
         ? await confirm(
             'Kamu anggota terakhir',
-            'Kalau kamu keluar, $name beserta proyek, tugas, dan chat-nya dihapus dari data demo. Di versi produksi, data diproses sesuai kebijakan retensi.',
+            'Kalau kamu keluar, $name tidak punya anggota lagi dan tidak bisa dibuka siapa pun. Undangannya ikut dicabut.',
             ok: 'Keluar & hapus grup',
             destructive: true,
           )
@@ -1923,24 +1894,6 @@ class _GroupFormSheetState extends State<_GroupFormSheet> {
     super.dispose();
   }
 
-  /// Demo sample codes (Swift lists its seed codes; ours come from the seed).
-  List<(String, String)> get samples => [
-    for (final invite in store.invites.where(
-      (i) =>
-          i.text('code').isNotEmpty &&
-          !_member(store, store.group(i.text('groupID'))),
-    ))
-      (
-        invite.text('code'),
-        switch (_grInviteStatus(store, invite)) {
-          'valid' => 'valid',
-          'used' => 'sudah dipakai',
-          'expired' => 'kedaluwarsa',
-          _ => 'dinonaktifkan',
-        },
-      ),
-  ].take(4).toList();
-
   Future<void> _submit(String action, JsonMap payload, String success) async {
     if (saving || store.loading) return;
     setState(() {
@@ -1986,11 +1939,10 @@ class _GroupFormSheetState extends State<_GroupFormSheet> {
     final raw = code.text.trim();
     final parts = raw.split('/invite/');
     final token = parts.length > 1 ? parts[1] : raw;
-    // Cloud tokens are case-sensitive hex; demo codes are uppercase.
-    final parsed = store.demoMode ? token.toUpperCase() : token;
-    final problem = _grJoinError(store, parsed);
+    // Cloud tokens are case-sensitive hex; send them as typed.
+    final problem = _grJoinError(token);
     if (problem != null) return setState(() => error = problem);
-    _submit('joinGroup', {'code': parsed}, 'Kamu bergabung ke {group}');
+    _submit('joinGroup', {'code': token}, 'Kamu bergabung ke {group}');
   }
 
   Widget _field(
@@ -2042,54 +1994,6 @@ class _GroupFormSheetState extends State<_GroupFormSheet> {
                 style: gl(18, w600, 0.06, GLTheme.ink),
               ),
             ),
-            if (store.demoMode && samples.isNotEmpty)
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        height: 20,
-                        padding: const EdgeInsets.symmetric(horizontal: 7),
-                        alignment: Alignment.center,
-                        decoration: const ShapeDecoration(
-                          color: GLTheme.butter,
-                          shape: StadiumBorder(),
-                        ),
-                        child: Text('DEMO', style: gl(11, w700)),
-                      ),
-                      const SizedBox(width: 6),
-                      Text('Coba kode contoh', style: gl(13, w600)),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: [
-                      for (final (value, label) in samples)
-                        GLTap(
-                          onTap: () => setState(() {
-                            code.text = value;
-                            error = null;
-                          }),
-                          child: Container(
-                            height: 40,
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            alignment: Alignment.center,
-                            decoration: const ShapeDecoration(
-                              color: Colors.white,
-                              shape: StadiumBorder(
-                                side: BorderSide(color: GLTheme.border),
-                              ),
-                            ),
-                            child: Text('$value · $label', style: gl(13, w600)),
-                          ),
-                        ),
-                    ],
-                  ),
-                ],
-              ),
             if (error != null) GLFormError(error!),
             GLSubmitButton(
               key: const Key('group-save'),

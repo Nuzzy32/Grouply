@@ -249,6 +249,11 @@ otp_expiry = 3600
 # subject = "You have been invited"
 # content_path = "./supabase/templates/invite.html"
 
+# The Flutter client resets passwords with the emailed code, not a link.
+[auth.email.template.recovery]
+subject = "Kode atur ulang kata sandi Grouply"
+content_path = "./supabase/templates/recovery.html"
+
 # Uncomment to customize notification email template
 # [auth.email.notification.password_changed]
 # enabled = true

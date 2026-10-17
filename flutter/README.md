@@ -10,7 +10,7 @@ flutter pub get
 flutter run
 ```
 
-Tanpa konfigurasi, aplikasi menawarkan **demo lokal**. Demo tidak terhubung ke akun atau data server, dan snapshot demo Swift tidak diimpor otomatis.
+Mode demo sudah dihapus. Tanpa konfigurasi backend, sheet akun hanya menampilkan pemberitahuan bahwa server belum dikonfigurasi. Tes widget memakai fake backend `test/demo_backend.dart` yang tidak ikut dibundel.
 
 Untuk akun email yang sudah terdaftar pada backend:
 
@@ -37,8 +37,8 @@ APK debug: `build/app/outputs/flutter-apk/app-debug.apk`. Ini artefak pengujian,
 
 ## Batas migrasi
 
-- Login Flutter memakai email/password akun yang sudah tersedia; Apple sign-in, pendaftaran, dan pemulihan akun belum diport. Ini bukan pengganti penuh jalur login produksi Swift.
+- Login Flutter memakai email/password, termasuk daftar akun dan atur ulang kata sandi lewat kode 6 digit dari email (`supabase/templates/recovery.html`). Apple sign-in belum diport. Ini bukan pengganti penuh jalur login produksi Swift.
 - Push notification/APNs/FCM belum disambungkan. Jangan menganggap preferensi atau layar sebagai bukti pengiriman notifikasi.
 - Deep link lokal `grouply://task/<id>` memeriksa akses setelah login. Domain universal/app links belum dikonfigurasi.
-- Bundle/application ID Flutter adalah `id.grouply.app`. Memasang versi iOS Flutter dapat menggantikan aplikasi Swift dengan ID yang sama; data demo/sesi tidak dimigrasikan otomatis. Gunakan simulator terpisah atau backup sebelum mengganti instalasi.
+- Bundle/application ID Flutter adalah `id.grouply.app`. Memasang versi iOS Flutter dapat menggantikan aplikasi Swift dengan ID yang sama; sesi tidak dimigrasikan otomatis. Gunakan simulator terpisah atau backup sebelum mengganti instalasi.
 - Keberhasilan build dan unit/widget test bukan bukti cloud, login provider, realtime antarperangkat, atau kesiapan beta. Lihat catatan verifikasi aktual di `../docs/FLUTTER_MIGRATION.md`.

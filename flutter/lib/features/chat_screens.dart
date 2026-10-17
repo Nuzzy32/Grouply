@@ -762,7 +762,6 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         await _showChatSheet<void>(
           context,
           (_) => _ModerationDialog(
-            cloud: !store.demoMode,
             onSubmit: (reason) async {
               final actor = store.currentUserID;
               if (!_canAccess) throw const GrouplyException('Akses ditolak.');
@@ -1452,33 +1451,6 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                 final width = constraints.maxWidth - 32;
                 // Forward-ordered thread entries; the list is reversed so it anchors at the bottom.
                 final entries = <Widget Function()>[
-                  if (store.demoMode && store.simulateSendFailure)
-                    () => Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 10,
-                          horizontal: 14,
-                        ),
-                        decoration: glBox(GLTheme.butter, 16),
-                        child: Row(
-                          children: [
-                            const GLIcon(
-                              'icloud.slash',
-                              size: 18,
-                              color: GLTheme.ink,
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                'Kamu sedang offline. Pesan akan gagal terkirim.',
-                                style: gl(14, w500),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
                   for (var i = 0; i < messages.length; i++) ...[
                     if (i == 0 ||
                         _day(_at(messages[i - 1])) != _day(_at(messages[i])))
@@ -1688,8 +1660,7 @@ class _MessageSheet extends StatelessWidget {
 
 /// `ChatReportSheet` — reason radio list, optional details, done state.
 class _ModerationDialog extends StatefulWidget {
-  const _ModerationDialog({required this.cloud, required this.onSubmit});
-  final bool cloud;
+  const _ModerationDialog({required this.onSubmit});
   final Future<void> Function(String reason) onSubmit;
 
   @override
@@ -1850,9 +1821,7 @@ class _ModerationDialogState extends State<_ModerationDialog> {
         ),
         const SizedBox(height: 12),
         Text(
-          widget.cloud
-              ? 'Laporan masuk antrean privat untuk ditinjau operator berwenang. Belum ada jaminan waktu respons.'
-              : 'Terima kasih sudah menjaga grup tetap nyaman. Ini simulasi pelaporan lokal.',
+          'Laporan masuk antrean privat untuk ditinjau operator berwenang. Belum ada jaminan waktu respons.',
           textAlign: TextAlign.center,
           style: gl(15, w400, 0, GLTheme.text3, 4),
         ),
@@ -1862,9 +1831,7 @@ class _ModerationDialogState extends State<_ModerationDialog> {
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
             child: Text(
-              widget.cloud
-                  ? 'Laporan berhasil tersimpan di server.'
-                  : 'Simulasi: laporan hanya disimpan di prototipe ini dan tidak dikirim ke moderator sungguhan.',
+              'Laporan berhasil tersimpan di server.',
               textAlign: TextAlign.center,
               style: gl(13, w400, 0, GLTheme.secondary, 3),
             ),

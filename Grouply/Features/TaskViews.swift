@@ -532,13 +532,9 @@ struct TaskDetailView: View {
     guard !refreshing else { return }
     refreshing = true
     Task {
-      if store.isCloudMode {
-        await store.refreshFromBackend()
-      } else {
-        try? await Task.sleep(for: .milliseconds(900))
-      }
+      await store.refreshFromBackend()
       refreshing = false
-      if store.simulatedOffline || store.backendError != nil {
+      if store.backendError != nil {
         store.flash("Gagal memuat ulang. Kamu sedang offline.", .err)
       } else {
         store.flash("Komentar sudah terbaru")
@@ -898,9 +894,7 @@ private struct TaskActionsSheet: View {
   }
   private var shareText: String {
     "\(task.title) · \(task.status.label)\ngrouply://task/\(task.id)\n"
-      + (store.isCloudMode
-        ? "Buka dengan GROUPLY menggunakan akun anggota grup."
-        : "Tautan demo lokal; perangkat penerima perlu memiliki data demo yang sama.")
+      + "Buka dengan GROUPLY menggunakan akun anggota grup."
   }
   private func row(_ label: String, _ sub: String, _ icon: String, action: @escaping () -> Void) -> some View {
     Button(action: action) { rowLabel(label, sub, icon) }.buttonStyle(GLRowButtonStyle())

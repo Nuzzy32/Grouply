@@ -629,10 +629,6 @@ private struct GroupFormView: View {
   @State private var course = ""
   @State private var code = ""
   @State private var error: String?
-  private let samples = [
-    ("STAT-K1Q", "valid"), ("BD3-USED", "sudah dipakai"), ("UIX-OLD1", "kedaluwarsa"),
-    ("BD3-OFF9", "dinonaktifkan"),
-  ]
 
   var body: some View {
     Group {
@@ -666,27 +662,6 @@ private struct GroupFormView: View {
           .textInputAutocapitalization(.characters).autocorrectionDisabled()
           .glInput(height: 54).accessibilityIdentifier("join-code")
       }
-      if !store.isCloudMode {
-        VStack(alignment: .leading, spacing: 6) {
-          HStack(spacing: 6) {
-            Text("DEMO").gl(11, .bold).padding(.horizontal, 7).frame(height: 20)
-              .background(GLTheme.butter, in: Capsule())
-            Text("Coba kode contoh").gl(13, .semibold)
-          }
-          GroupsFlow(spacing: 6) {
-            ForEach(samples, id: \.0) { sample in
-              Button {
-                code = sample.0
-                error = nil
-              } label: {
-                Text("\(sample.0) · \(sample.1)").gl(13, .semibold).padding(.horizontal, 12).frame(height: 40)
-                  .background(.white, in: Capsule())
-                  .overlay(Capsule().strokeBorder(GLTheme.border))
-              }.buttonStyle(.plain)
-            }
-          }
-        }
-      }
       if let error { GLFormError(text: error) }
       GLSubmitButton(title: store.isBusy ? "Bergabung…" : "Gabung", busy: store.isBusy, action: join)
         .accessibilityIdentifier("group-save")
@@ -712,8 +687,7 @@ private struct GroupFormView: View {
 
   private func join() {
     let raw = code.trimmingCharacters(in: .whitespacesAndNewlines)
-    let token = raw.components(separatedBy: "/invite/").dropFirst().first ?? raw
-    let parsed = store.isCloudMode ? token : token.uppercased()
+    let parsed = raw.components(separatedBy: "/invite/").dropFirst().first ?? raw
     if let message = store.groupsJoinError(code: parsed) { return error = message }
     error = nil
     Task {
@@ -782,11 +756,7 @@ private struct GroupInviteSheet: View {
             } label: { share }.buttonStyle(.plain)
           }
         }
-        Text(
-          store.isCloudMode
-            ? "Bagikan kode ini kepada anggota yang ingin bergabung. Kode berlaku 7 hari dan sekali pakai."
-            : "Demo: ganti persona di panel demo, lalu buka Grup → Gabung dengan kode. Kode prototipe dibuat acak secara lokal, bukan kode aman produksi."
-        ).gl(13).lineSpacing(3).foregroundStyle(GLTheme.secondary)
+        Text("Bagikan kode ini kepada anggota yang ingin bergabung. Kode berlaku 7 hari dan sekali pakai.").gl(13).lineSpacing(3).foregroundStyle(GLTheme.secondary)
       }
     }
   }
@@ -937,43 +907,6 @@ private struct GroupsPressStyle: ButtonStyle {
   }
 }
 
-/// Minimal wrapping row (CSS `flex-wrap:wrap`).
-private struct GroupsFlow: Layout {
-  var spacing: CGFloat
-  func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-    let width = proposal.width ?? .infinity
-    var x: CGFloat = 0, y: CGFloat = 0, rowH: CGFloat = 0, maxX: CGFloat = 0
-    for s in subviews {
-      let size = s.sizeThatFits(.unspecified)
-      if x > 0 && x + size.width > width {
-        x = 0
-        y += rowH + spacing
-        rowH = 0
-      }
-      x += size.width + spacing
-      rowH = max(rowH, size.height)
-      maxX = max(maxX, x - spacing)
-    }
-    return CGSize(width: maxX, height: y + rowH)
-  }
-  func placeSubviews(
-    in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()
-  ) {
-    var x = bounds.minX, y = bounds.minY, rowH: CGFloat = 0
-    for s in subviews {
-      let size = s.sizeThatFits(.unspecified)
-      if x > bounds.minX && x + size.width > bounds.maxX {
-        x = bounds.minX
-        y += rowH + spacing
-        rowH = 0
-      }
-      s.place(at: CGPoint(x: x, y: y), proposal: ProposedViewSize(size))
-      x += size.width + spacing
-      rowH = max(rowH, size.height)
-    }
-  }
-}
-
 extension DemoStore {
   /// Unfinished tasks assigned to `userID` in this group's projects.
   func groupsActiveTaskCount(groupID: String, userID: String) -> Int {
@@ -992,23 +925,9 @@ extension DemoStore {
     if invite.useCount >= invite.maxUses { return "used" }
     return "valid"
   }
-  /// Prototype `doJoin` messages, checked before the store call (which still enforces the rules).
+  /// Empty-code check before the server call; the server enforces the invite rules.
   func groupsJoinError(code: String) -> String? {
-    if isCloudMode { return code.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Isi kode undangan." : nil }
-    if code.isEmpty { return "Masukkan kode undangan." }
-    guard let invite = invites.first(where: { $0.code.uppercased() == code }) else {
-      return "Kode tidak ditemukan. Periksa lagi huruf dan angkanya."
-    }
-    let status = groupsInviteStatus(invite)
-    if status == "nogroup" { return "Undangan tidak berlaku. Grupnya sudah tidak ada." }
-    if isMember(groupID: invite.groupID) { return "Kamu sudah bergabung dengan grup ini." }
-    if status == "revoked" { return "Undangan tidak berlaku. Minta kode baru ke koordinator." }
-    if status == "expired" {
-      return "Undangan kedaluwarsa sejak \(GLFormat.date(invite.expiresAt)). Minta kode baru ke koordinator."
-    }
-    if status == "used" { return "Undangan tidak berlaku. Kode sudah mencapai batas pemakaian." }
-    if (group(invite.groupID)?.memberIDs.count ?? 0) >= 8 { return "Grup ini sudah penuh (8 anggota)." }
-    return nil
+    code.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Isi kode undangan." : nil
   }
   /// Prototype `invite(gid)`: permission/capacity checks, then a fresh 7-day code.
   func groupsCreateInvite(_ groupID: String) async -> GLInvite? {
@@ -1058,7 +977,7 @@ extension DemoStore {
       return GLConfirmation(
         title: "Kamu anggota terakhir",
         text:
-          "Kalau kamu keluar, \(g.name) beserta proyek, tugas, dan chat-nya dihapus dari data demo. Di versi produksi, data diproses sesuai kebijakan retensi.",
+          "Kalau kamu keluar, \(g.name) beserta proyek, tugas, dan chat-nya tidak bisa kamu buka lagi. Data diproses sesuai kebijakan retensi.",
         ok: "Keluar & hapus grup", destructive: true, run: { _ = leave() })
     }
     return GLConfirmation(

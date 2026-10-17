@@ -1267,11 +1267,7 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
     setState(() => refreshing = true);
     var failed = false;
     try {
-      if (store.demoMode) {
-        await Future<void>.delayed(const Duration(milliseconds: 900));
-      } else {
-        await store.refresh();
-      }
+      await store.refresh();
     } catch (_) {
       failed = true;
     }
@@ -2055,7 +2051,7 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
             text:
                 '${current.text('title')} · ${GLStatus.label(current.text('status'))}\n'
                 'grouply://task/${current.text('id')}\n'
-                '${store.demoMode ? 'Tautan demo lokal; perangkat penerima perlu memiliki data demo yang sama.' : 'Buka dengan GROUPLY menggunakan akun anggota grup.'}',
+                'Buka dengan GROUPLY menggunakan akun anggota grup.',
           ),
         );
         feedback('Tautan tugas disalin');

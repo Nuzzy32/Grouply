@@ -7,11 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		25FB78432E5B4240D99EB8DF /* GrouplyUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7AD0B1BD05ED78C025664F01 /* GrouplyUITests.swift */; };
 		2F75FA7C46DC2F3746F94276 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = F74146D536B5C537CCE5B857 /* Models.swift */; };
 		3AC4B625FA3A9A2DA35C8732 /* StoreBackendActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 313A1266965CD7D0C9C1D854 /* StoreBackendActions.swift */; };
 		3B34E9D026303524A9DC68FF /* ChatViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF318163A385CFCAC994304B /* ChatViews.swift */; };
-		41E340B2B032B87FFC6DBDCD /* DemoSeed.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78DA79A751B4CFCD641E6378 /* DemoSeed.swift */; };
 		43CFB66E010CBA552170E171 /* BackendUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2011CCB3D7346B332299CEA8 /* BackendUITests.swift */; };
 		45027909C09A7C252DC04696 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A716E4F97D83A02BFF13C5C2 /* RootView.swift */; };
 		51703C10F971F5B4D9357ED7 /* BackendLoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C51ABA9822009681AE15BCC /* BackendLoginView.swift */; };
@@ -62,8 +60,6 @@
 		6C174BC49886020C017DA52F /* GrouplyApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrouplyApp.swift; sourceTree = "<group>"; };
 		6E207230B62D8AE58B311DCD /* DemoStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoStore.swift; sourceTree = "<group>"; };
 		741662F0D2FC049A0031DE90 /* Grouply.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Grouply.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		78DA79A751B4CFCD641E6378 /* DemoSeed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoSeed.swift; sourceTree = "<group>"; };
-		7AD0B1BD05ED78C025664F01 /* GrouplyUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrouplyUITests.swift; sourceTree = "<group>"; };
 		8FC4DBE476ABF24AA506453F /* App.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = App.xcconfig; sourceTree = "<group>"; };
 		A716E4F97D83A02BFF13C5C2 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		B5EE4629204EA74123DA08AC /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -80,7 +76,6 @@
 			isa = PBXGroup;
 			children = (
 				2011CCB3D7346B332299CEA8 /* BackendUITests.swift */,
-				7AD0B1BD05ED78C025664F01 /* GrouplyUITests.swift */,
 			);
 			path = GrouplyUITests;
 			sourceTree = "<group>";
@@ -119,7 +114,6 @@
 		66B446E5BB27B3431E1D3B2A /* Core */ = {
 			isa = PBXGroup;
 			children = (
-				78DA79A751B4CFCD641E6378 /* DemoSeed.swift */,
 				6E207230B62D8AE58B311DCD /* DemoStore.swift */,
 				573E519682D87D6951F1BE71 /* DesignSystem.swift */,
 				F74146D536B5C537CCE5B857 /* Models.swift */,
@@ -307,7 +301,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				43CFB66E010CBA552170E171 /* BackendUITests.swift in Sources */,
-				25FB78432E5B4240D99EB8DF /* GrouplyUITests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -317,7 +310,6 @@
 			files = (
 				51703C10F971F5B4D9357ED7 /* BackendLoginView.swift in Sources */,
 				3B34E9D026303524A9DC68FF /* ChatViews.swift in Sources */,
-				41E340B2B032B87FFC6DBDCD /* DemoSeed.swift in Sources */,
 				9484AECEC390F3ED87C3D8BF /* DemoStore.swift in Sources */,
 				B8AE90FD9432A3E46BDB6AE2 /* DesignSystem.swift in Sources */,
 				7621A20866C590B8E1F7D637 /* GrouplyApp.swift in Sources */,
