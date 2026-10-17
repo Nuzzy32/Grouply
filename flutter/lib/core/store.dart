@@ -228,6 +228,54 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
+  Future<void> requestPasswordReset(String email) async {
+    try {
+      await _backend.requestPasswordReset(email.trim());
+    } catch (_) {
+      throw const GrouplyException(
+        'Kode pemulihan belum dapat dikirim. Coba lagi nanti.',
+      );
+    }
+  }
+
+  Future<void> recoverPassword(
+    String email,
+    String token,
+    String password,
+  ) async {
+    if (loading || _mutating) {
+      throw const GrouplyException('Tunggu proses sebelumnya selesai.');
+    }
+    final generation = ++_generation;
+    demoMode = false;
+    _clear();
+    error = null;
+    loading = true;
+    _notify();
+    try {
+      await _session(() async {
+        await _backend.disconnect();
+        await _backend.recoverPassword(email.trim(), token.trim(), password);
+      });
+      if (generation != _generation || _disposed) return;
+      await refresh();
+      await _connect();
+    } catch (_) {
+      if (generation == _generation) {
+        _clear();
+        error = 'Kode salah atau sudah kedaluwarsa. Minta kode baru.';
+      }
+      throw const GrouplyException(
+        'Kode salah atau sudah kedaluwarsa. Minta kode baru.',
+      );
+    } finally {
+      if (generation == _generation) {
+        loading = false;
+        _notify();
+      }
+    }
+  }
+
   Future<void> signOut() async {
     final wasDemo = demoMode;
     final generation = ++_generation;

@@ -557,9 +557,13 @@ class _LoginSheetState extends State<_LoginSheet> {
   final _name = TextEditingController();
   final _email = TextEditingController();
   final _password = TextEditingController();
+  final _recoveryCode = TextEditingController();
   bool _busy = false;
   bool _registering = false;
+  bool _recovering = false;
+  bool _recoverySent = false;
   String? _error;
+  String? _info;
 
   @override
   void initState() {
@@ -567,6 +571,7 @@ class _LoginSheetState extends State<_LoginSheet> {
     _name.addListener(_changed);
     _email.addListener(_changed);
     _password.addListener(_changed);
+    _recoveryCode.addListener(_changed);
   }
 
   void _changed() => setState(() {});
@@ -576,6 +581,7 @@ class _LoginSheetState extends State<_LoginSheet> {
     _name.dispose();
     _email.dispose();
     _password.dispose();
+    _recoveryCode.dispose();
     super.dispose();
   }
 
@@ -583,6 +589,7 @@ class _LoginSheetState extends State<_LoginSheet> {
     setState(() {
       _busy = true;
       _error = null;
+      _info = null;
     });
     try {
       await widget.store.signIn(_email.text.trim(), _password.text);
@@ -616,6 +623,7 @@ class _LoginSheetState extends State<_LoginSheet> {
     setState(() {
       _busy = true;
       _error = null;
+      _info = null;
     });
     try {
       final signedIn = await widget.store.signUp(
@@ -624,7 +632,7 @@ class _LoginSheetState extends State<_LoginSheet> {
         _password.text,
       );
       if (!signedIn) {
-        if (mounted) setState(() => _error = 'Cek email untuk konfirmasi.');
+        if (mounted) setState(() => _info = 'Cek email untuk konfirmasi.');
         return;
       }
       if (mounted) Navigator.of(context).pop();
@@ -633,6 +641,70 @@ class _LoginSheetState extends State<_LoginSheet> {
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  Future<void> _requestRecovery() async {
+    final email = _email.text.trim();
+    if (email.isEmpty) {
+      setState(() => _error = 'Email wajib diisi.');
+      return;
+    }
+    setState(() {
+      _busy = true;
+      _error = null;
+      _info = null;
+    });
+    try {
+      await widget.store.requestPasswordReset(email);
+      if (mounted) {
+        setState(() {
+          _recoverySent = true;
+          _info = 'Jika email terdaftar, kode telah dikirim';
+        });
+      }
+    } catch (error) {
+      if (mounted) setState(() => _error = error.toString());
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _recoverPassword() async {
+    if (_recoveryCode.text.trim().length != 6) {
+      setState(() => _error = 'Masukkan kode 6 digit.');
+      return;
+    }
+    if (_password.text.length < 6) {
+      setState(() => _error = 'Kata sandi minimal 6 karakter.');
+      return;
+    }
+    setState(() {
+      _busy = true;
+      _error = null;
+      _info = null;
+    });
+    try {
+      await widget.store.recoverPassword(
+        _email.text.trim(),
+        _recoveryCode.text.trim(),
+        _password.text,
+      );
+      if (mounted) Navigator.of(context).pop();
+    } catch (error) {
+      if (mounted) setState(() => _error = error.toString());
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  void _switchMode({bool registering = false, bool recovering = false}) {
+    setState(() {
+      _registering = registering;
+      _recovering = recovering;
+      _recoverySent = false;
+      _error = null;
+      _info = null;
+    });
   }
 
   Widget _section(List<Widget> rows, {String? header, String? footer}) =>
@@ -704,20 +776,19 @@ class _LoginSheetState extends State<_LoginSheet> {
               alignment: Alignment.center,
               children: [
                 Text(
-                  _registering ? 'Daftar Akun' : 'Masuk Akun',
+                  _recovering
+                      ? 'Pulihkan Akun'
+                      : (_registering ? 'Daftar Akun' : 'Masuk Akun'),
                   style: gl(17, w600),
                 ),
                 Positioned(
                   right: 16,
                   child: GLTap(
-                    onTap: _busy
-                        ? null
-                        : () => setState(() {
-                            _registering = !_registering;
-                            _error = null;
-                          }),
+                    onTap: _busy ? null : () => _switchMode(),
                     child: Text(
-                      _registering ? 'Masuk' : 'Daftar',
+                      _recovering
+                          ? 'Masuk'
+                          : (_registering ? 'Masuk' : 'Daftar'),
                       style: gl(17, w400, 0, const Color(0xFF007AFF)),
                     ),
                   ),
@@ -778,16 +849,46 @@ class _LoginSheetState extends State<_LoginSheet> {
                         style: gl(17),
                         decoration: _plain.copyWith(hintText: 'Email akun'),
                       ),
-                      TextField(
-                        key: const Key('backend-password'),
-                        controller: _password,
-                        enabled: !_busy,
-                        obscureText: true,
-                        autofillHints: const [AutofillHints.password],
-                        style: gl(17),
-                        decoration: _plain.copyWith(hintText: 'Kata sandi'),
-                        onSubmitted: (_) => ready && !_busy ? _signIn() : null,
-                      ),
+                      if (_recovering && _recoverySent)
+                        TextField(
+                          key: const Key('backend-recovery-code'),
+                          controller: _recoveryCode,
+                          enabled: !_busy,
+                          keyboardType: TextInputType.number,
+                          textInputAction: TextInputAction.next,
+                          style: gl(17),
+                          decoration: _plain.copyWith(hintText: 'Kode 6 digit'),
+                        ),
+                      if (!_recovering || _recoverySent)
+                        TextField(
+                          key: const Key('backend-password'),
+                          controller: _password,
+                          enabled: !_busy,
+                          obscureText: true,
+                          autofillHints: const [AutofillHints.password],
+                          style: gl(17),
+                          decoration: _plain.copyWith(
+                            hintText: _recovering
+                                ? 'Kata sandi baru'
+                                : 'Kata sandi',
+                          ),
+                          onSubmitted: (_) => ready && !_busy
+                              ? (_recovering ? _recoverPassword : _signIn)
+                              : null,
+                        ),
+                      if (!_recovering)
+                        GLTap(
+                          onTap: _busy
+                              ? null
+                              : () => _switchMode(recovering: true),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: Text(
+                              'Lupa kata sandi?',
+                              style: gl(15, w500, 0, const Color(0xFF007AFF)),
+                            ),
+                          ),
+                        ),
                       _busy
                           ? const SizedBox(
                               height: 58,
@@ -797,23 +898,35 @@ class _LoginSheetState extends State<_LoginSheet> {
                             )
                           : GLPrimaryButton(
                               key: Key(
-                                _registering
-                                    ? 'backend-signup'
-                                    : 'backend-signin',
+                                _recovering
+                                    ? 'backend-recovery'
+                                    : (_registering
+                                          ? 'backend-signup'
+                                          : 'backend-signin'),
                               ),
-                              title: _registering
-                                  ? 'Daftar ke Server'
-                                  : 'Masuk ke Server',
+                              title: _recovering
+                                  ? (_recoverySent
+                                        ? 'Ubah Kata Sandi'
+                                        : 'Kirim Kode')
+                                  : (_registering
+                                        ? 'Daftar ke Server'
+                                        : 'Masuk ke Server'),
                               icon: 'arrow.right',
-                              onPressed: ready
-                                  ? (_registering ? _signUp : _signIn)
-                                  : null,
+                              onPressed: _recovering
+                                  ? (_recoverySent
+                                        ? _recoverPassword
+                                        : _requestRecovery)
+                                  : (ready
+                                        ? (_registering ? _signUp : _signIn)
+                                        : null),
                             ),
                     ],
                     header: 'Akun email',
-                    footer: _registering
-                        ? 'Buat akun email baru. Pemulihan akun belum tersedia di versi Android/Flutter.'
-                        : 'Gunakan akun email yang sudah terdaftar. Login Apple dan pemulihan akun belum tersedia di versi Android/Flutter.',
+                    footer: _recovering
+                        ? 'Masukkan kode dari email, lalu buat kata sandi baru.'
+                        : (_registering
+                              ? 'Buat akun email baru.'
+                              : 'Gunakan akun email yang sudah terdaftar.'),
                   )
                 else
                   _section([
@@ -828,6 +941,14 @@ class _LoginSheetState extends State<_LoginSheet> {
                       _error!,
                       key: const Key('backend-login-error'),
                       style: gl(17, w400, 0, const Color(0xFFFF3B30)),
+                    ),
+                  ]),
+                if (_info != null)
+                  _section([
+                    Text(
+                      _info!,
+                      key: const Key('backend-login-info'),
+                      style: gl(17, w400, 0, const Color(0xFF007AFF)),
                     ),
                   ]),
               ],

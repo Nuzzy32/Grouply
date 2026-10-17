@@ -12,6 +12,8 @@ abstract class GrouplyBackend {
   Future<void> initialize();
   Future<void> signIn(String email, String password);
   Future<bool> signUp(String name, String email, String password);
+  Future<void> requestPasswordReset(String email);
+  Future<void> recoverPassword(String email, String token, String password);
   Future<void> signOut();
   Future<Map<String, dynamic>> snapshot();
   Future<Map<String, dynamic>> mutate(
@@ -259,6 +261,28 @@ class SupabaseGrouplyBackend implements GrouplyBackend {
       rethrow;
     }
     return response.session != null;
+  }
+
+  @override
+  Future<void> requestPasswordReset(String email) async {
+    await initialize();
+    await _sdk.auth.resetPasswordForEmail(email);
+  }
+
+  @override
+  Future<void> recoverPassword(
+    String email,
+    String token,
+    String password,
+  ) async {
+    await initialize();
+    await _sdk.auth.verifyOTP(
+      type: OtpType.recovery,
+      email: email,
+      token: token,
+    );
+    await _sdk.auth.updateUser(UserAttributes(password: password));
+    await _flushStorage();
   }
 
   @override

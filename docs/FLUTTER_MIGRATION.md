@@ -58,7 +58,7 @@ Verifikasi: `flutter analyze` bersih; `flutter test` 126 lulus, 1 integrasi loka
 
 ## Belum merupakan pengganti rilis penuh
 
-- Login Apple, pemulihan kata sandi dan jalur auth produksi Android belum dipasang/disahkan. Pendaftaran email/password tersedia; Flutter dapat membuat akun baru dengan konfirmasi email sesuai konfigurasi server.
+- Login Apple dan jalur auth produksi Android belum dipasang/disahkan. Pendaftaran email/password serta pemulihan kata sandi melalui kode OTP email tersedia sesuai konfigurasi server.
 - Push APNs/FCM, domain universal/app links, moderasi operasional produksi, dan kebijakan retensi masih memerlukan konfigurasi/validasi.
 - Belum ada migrasi otomatis snapshot demo/sesi dari sandbox Swift ke Flutter. Bundle ID keduanya `id.grouply.app`: jangan mengganti instalasi pengguna yang berisi data tanpa backup/rencana migrasi. Uji Flutter menggunakan simulator iPhone 17 terpisah dari simulator utama Swift iPhone 17 Pro.
 - Draf gagal chat dipertahankan selama layar terbuka, bukan offline write queue atau draft lintas restart. Demo tidak menyinkronkan data ke akun lain.

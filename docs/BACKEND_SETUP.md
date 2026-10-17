@@ -25,6 +25,10 @@ Untuk mencoba server di aplikasi, pilih **Masuk dengan Akun**. Pada build Debug 
 
 Di simulator, gunakan signing ad hoc agar Keychain memiliki identitas aplikasi. Build unsigned (`CODE_SIGNING_ALLOWED=NO`) tidak dapat membuktikan Keychain bekerja.
 
+### Email pendaftaran dan pemulihan
+
+Template email pemulihan lokal berada di `supabase/templates/recovery.html` dan didaftarkan di `supabase/config.toml`. Terapkan template yang sama ke konfigurasi Auth proyek cloud sebelum menguji reset password di cloud; `{{ .Token }}` harus ditampilkan sebagai kode OTP enam digit. Client meminta email reset, memverifikasi kode OTP, lalu langsung memasukkan pengguna setelah kata sandi baru tersimpan. Respons pengiriman selalu netral: `Jika email terdaftar, kode telah dikirim`.
+
 ```sh
 xcodebuild -project Grouply.xcodeproj -scheme Grouply \
   -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
