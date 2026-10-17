@@ -508,6 +508,32 @@ void main() {
     },
   );
 
+  testWidgets('project detail lists recent task activity newest first', (
+    tester,
+  ) async {
+    await _show(tester, ProjectScreen(store: store, projectID: 'p1'));
+    await tester.drag(
+      find
+          .byWidgetPredicate(
+            (w) => w is Scrollable && w.axisDirection == AxisDirection.down,
+          )
+          .first,
+      const Offset(0, -3000),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Aktivitas terbaru'), findsOneWidget);
+    final revision = find.text('Dimas meminta revisi');
+    final resubmit = find.text('Kamu mengirim revisi 1');
+    expect(revision, findsOneWidget);
+    expect(resubmit, findsOneWidget);
+    expect(find.text('Tulis script DDL SQL · 08:40'), findsOneWidget);
+    expect(
+      tester.getTopLeft(revision).dy < tester.getTopLeft(resubmit).dy,
+      isTrue,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'project restore preserves completed status before explicit reopen',
     (tester) async {

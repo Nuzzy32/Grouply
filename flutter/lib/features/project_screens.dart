@@ -20,6 +20,19 @@ const _pjOrder = ['done', 'in_review', 'in_progress', 'needs_revision', 'todo'];
 List<JsonMap> _pjTasks(GrouplyStore store, String projectID) =>
     store.tasks.where((t) => t.text('projectID') == projectID).toList();
 
+DateTime _pjAt(JsonMap m) =>
+    m.date('createdAt') ?? DateTime.fromMillisecondsSinceEpoch(0);
+
+/// `DemoStore.projectActivity` — task-thread events for a project's tasks,
+/// newest first. Demo stores them as kind "system", the server as "activity".
+List<JsonMap> _pjActivity(GrouplyStore store, String projectID) {
+  final ids = _pjTasks(store, projectID).map((t) => t.text('id')).toSet();
+  return store.messages
+      .where((m) => m.text('kind') != 'text' && ids.contains(m.text('taskID')))
+      .toList()
+    ..sort((a, b) => _pjAt(b).compareTo(_pjAt(a)));
+}
+
 /// `DemoStore.reviewWaitHours` — hours since the active submission was sent.
 int? _pjReviewWaitHours(JsonMap task) {
   if (task.text('status') != 'in_review') return null;
@@ -290,8 +303,64 @@ class _ProjectState extends _WorkspaceState<ProjectScreen> {
               ),
           ],
         ),
+        ..._activity(p),
       ],
     );
+  }
+
+  // MARK: Activity
+
+  /// Latest task events in this project; each row opens its task.
+  List<Widget> _activity(JsonMap p) {
+    final events = _pjActivity(store, p.text('id')).take(8).toList();
+    if (events.isEmpty) return const [];
+    return [
+      Padding(
+        padding: const EdgeInsets.only(top: 12),
+        child: Semantics(
+          header: true,
+          child: Text('Aktivitas terbaru', style: gl(22, w700, -0.02)),
+        ),
+      ),
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+        decoration: glBox(Colors.white, 20, border: GLTheme.border),
+        child: Column(
+          children: [
+            for (final m in events)
+              GLTap(
+                onTap: () =>
+                    open(TaskScreen(store: store, taskID: m.text('taskID'))),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  child: Row(
+                    spacing: 10,
+                    children: [
+                      const GLIcon('bolt', size: 16, color: GLTheme.text3),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          spacing: 1,
+                          children: [
+                            Text(
+                              '${_pjDisplayName(store, m.text('senderID'))} ${m.text('text')}',
+                              style: gl(14, w500),
+                            ),
+                            Text(
+                              '${store.task(m.text('taskID'))?.text('title') ?? 'Tugas'} · ${GLFormat.activityStamp(_pjAt(m), DateTime.now())}',
+                              style: gl(13, w400, 0, GLTheme.secondary),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    ];
   }
 
   /// Horizontal scroller whose content may slide into the 20pt screen margin
