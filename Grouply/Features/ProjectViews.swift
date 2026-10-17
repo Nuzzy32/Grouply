@@ -162,6 +162,7 @@ struct ProjectDetailView: View {
             .frame(maxWidth: .infinity).padding(.vertical, 24)
           }
         }
+        activity(p)
       }
       .padding(.horizontal, 20).padding(.top, 4).padding(.bottom, 32)
     }
@@ -184,6 +185,36 @@ struct ProjectDetailView: View {
       }
     }
     .glConfirm($confirm)
+  }
+
+  // MARK: Activity
+
+  /// Latest task events in this project; each row opens its task.
+  @ViewBuilder private func activity(_ p: GLProject) -> some View {
+    let events = store.projectActivity(p.id).prefix(8)
+    if !events.isEmpty {
+      Text("Aktivitas terbaru").gl(22, .bold, em: -0.02).padding(.top, 12)
+        .accessibilityAddTraits(.isHeader)
+      VStack(spacing: 0) {
+        ForEach(Array(events)) { m in
+          NavigationLink(value: Route.task(m.taskID ?? "")) {
+            HStack(spacing: 10) {
+              GLIcon("bolt", size: 16).foregroundStyle(GLTheme.text3)
+              VStack(alignment: .leading, spacing: 1) {
+                Text("\(store.displayName(m.senderID)) \(m.text)").gl(14, .medium)
+                Text(
+                  "\(m.taskID.flatMap(store.task)?.title ?? "Tugas") · \(GLFormat.activityStamp(m.createdAt, now: store.now))"
+                ).gl(13).foregroundStyle(GLTheme.secondary)
+              }.frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(.vertical, 10).contentShape(Rectangle())
+          }.buttonStyle(.plain).accessibilityElement(children: .combine)
+        }
+      }
+      .padding(.horizontal, 14).padding(.vertical, 4)
+      .background(.white, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+      .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).strokeBorder(GLTheme.border))
+    }
   }
 
   // MARK: Banners & hero

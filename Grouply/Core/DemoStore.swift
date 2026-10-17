@@ -875,6 +875,13 @@ extension DemoStore {
     if id.isEmpty { return "Pengguna terhapus" }
     return id == currentUserID ? "Kamu" : user(id)?.name ?? "Anggota"
   }
+  /// Task-thread events (submit/review/assign…) for a project's tasks, newest first.
+  /// Demo stores them as kind "system", the server as kind "activity"; both carry the task ID.
+  func projectActivity(_ projectID: String) -> [GLMessage] {
+    let ids = Set(tasks(in: projectID).map(\.id))
+    return messages.filter { $0.kind != "text" && $0.taskID.map(ids.contains) == true }
+      .sorted { $0.createdAt > $1.createdAt }
+  }
   /// Hours since the active submission was sent, while a task waits in review.
   func reviewWaitHours(_ task: GLTask) -> Int? {
     guard task.status == .inReview, let sent = task.submissions.last?.createdAt else { return nil }

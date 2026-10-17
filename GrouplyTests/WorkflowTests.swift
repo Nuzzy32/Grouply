@@ -251,4 +251,17 @@ final class WorkflowTests: XCTestCase {
     XCTAssertEqual(plan.map(\.id).sorted(), ["deadline-open", "deadline-revise"])
     XCTAssertEqual(plan.first { $0.id == "deadline-open" }?.fireAt, now.addingTimeInterval(2 * 86400))
   }
+
+  @MainActor func testProjectActivityListsOnlyThisProjectsTaskEventsNewestFirst() async throws {
+    let store = DemoStore(persist: false)
+    store.signIn(as: "u1")
+    let before = store.projectActivity("p1").count
+    try await store.submitWork(
+      taskID: "t3", note: "Constraint diperbaiki", links: ["https://example.org/ddl"],
+      expectedVersion: 1)
+    let events = store.projectActivity("p1")
+    XCTAssertEqual(events.count, before + 1)
+    XCTAssertEqual(events.first?.taskID, "t3")
+    XCTAssertTrue(events.allSatisfy { $0.kind != "text" && store.task($0.taskID ?? "")?.projectID == "p1" })
+  }
 }
