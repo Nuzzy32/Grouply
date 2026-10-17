@@ -1,0 +1,4 @@
+// Copy to Local.xcconfig (ignored by Git), then use your project's public values.
+// The empty $() prevents xcconfig from treating the URL slashes as a comment.
+SUPABASE_URL = https:/$()/YOUR_PROJECT.supabase.co
+SUPABASE_PUBLISHABLE_KEY = sb_publishable_REPLACE_ME

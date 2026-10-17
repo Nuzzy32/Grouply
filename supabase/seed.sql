@@ -1,0 +1,1 @@
+-- No shared credentials or demonstration users are seeded into deployment databases.

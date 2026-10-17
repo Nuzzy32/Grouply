@@ -9,3 +9,8 @@ xcuserdata/
 !.env.example
 Config/Local.xcconfig
 artifacts/
+__pycache__/
+*.pyc
+supabase/.temp/
+supabase/.branches/
+supabase/workspace.sql

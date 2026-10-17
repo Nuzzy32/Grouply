@@ -1,0 +1,4 @@
+// Only the public URL and publishable key belong in the app bundle.
+SUPABASE_URL =
+SUPABASE_PUBLISHABLE_KEY =
+#include? "Local.xcconfig"
