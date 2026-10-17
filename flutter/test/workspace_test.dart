@@ -526,7 +526,8 @@ void main() {
     final resubmit = find.text('Kamu mengirim revisi 1');
     expect(revision, findsOneWidget);
     expect(resubmit, findsOneWidget);
-    expect(find.text('Tulis script DDL SQL · 08:40'), findsOneWidget);
+    // Stamp text depends on the clock ("08:40" vs "Kemarin"), so match the title only.
+    expect(find.textContaining('Tulis script DDL SQL · '), findsNWidgets(2));
     expect(
       tester.getTopLeft(revision).dy < tester.getTopLeft(resubmit).dy,
       isTrue,
