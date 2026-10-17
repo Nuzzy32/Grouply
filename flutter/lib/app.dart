@@ -554,14 +554,17 @@ class _LoginSheet extends StatefulWidget {
 }
 
 class _LoginSheetState extends State<_LoginSheet> {
+  final _name = TextEditingController();
   final _email = TextEditingController();
   final _password = TextEditingController();
   bool _busy = false;
+  bool _registering = false;
   String? _error;
 
   @override
   void initState() {
     super.initState();
+    _name.addListener(_changed);
     _email.addListener(_changed);
     _password.addListener(_changed);
   }
@@ -570,6 +573,7 @@ class _LoginSheetState extends State<_LoginSheet> {
 
   @override
   void dispose() {
+    _name.dispose();
     _email.dispose();
     _password.dispose();
     super.dispose();
@@ -583,6 +587,46 @@ class _LoginSheetState extends State<_LoginSheet> {
     try {
       await widget.store.signIn(_email.text.trim(), _password.text);
       _password.clear();
+      if (mounted) Navigator.of(context).pop();
+    } catch (error) {
+      if (mounted) setState(() => _error = error.toString());
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _signUp() async {
+    final name = _name.text.trim();
+    if (name.isEmpty) {
+      setState(() => _error = 'Nama wajib diisi.');
+      return;
+    }
+    if (name.length > 80) {
+      setState(() => _error = 'Nama maksimal 80 karakter.');
+      return;
+    }
+    if (_email.text.trim().isEmpty) {
+      setState(() => _error = 'Email wajib diisi.');
+      return;
+    }
+    if (_password.text.length < 6) {
+      setState(() => _error = 'Kata sandi minimal 6 karakter.');
+      return;
+    }
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final signedIn = await widget.store.signUp(
+        name,
+        _email.text.trim(),
+        _password.text,
+      );
+      if (!signedIn) {
+        if (mounted) setState(() => _error = 'Cek email untuk konfirmasi.');
+        return;
+      }
       if (mounted) Navigator.of(context).pop();
     } catch (error) {
       if (mounted) setState(() => _error = error.toString());
@@ -659,7 +703,25 @@ class _LoginSheetState extends State<_LoginSheet> {
             child: Stack(
               alignment: Alignment.center,
               children: [
-                Text('Masuk Akun', style: gl(17, w600)),
+                Text(
+                  _registering ? 'Daftar Akun' : 'Masuk Akun',
+                  style: gl(17, w600),
+                ),
+                Positioned(
+                  right: 16,
+                  child: GLTap(
+                    onTap: _busy
+                        ? null
+                        : () => setState(() {
+                            _registering = !_registering;
+                            _error = null;
+                          }),
+                    child: Text(
+                      _registering ? 'Masuk' : 'Daftar',
+                      style: gl(17, w400, 0, const Color(0xFF007AFF)),
+                    ),
+                  ),
+                ),
                 Positioned(
                   left: 16,
                   child: GLTap(
@@ -696,6 +758,15 @@ class _LoginSheetState extends State<_LoginSheet> {
                 if (configured)
                   _section(
                     [
+                      if (_registering)
+                        TextField(
+                          key: const Key('backend-name'),
+                          controller: _name,
+                          enabled: !_busy,
+                          textInputAction: TextInputAction.next,
+                          style: gl(17),
+                          decoration: _plain.copyWith(hintText: 'Nama lengkap'),
+                        ),
                       TextField(
                         key: const Key('backend-email'),
                         controller: _email,
@@ -725,15 +796,24 @@ class _LoginSheetState extends State<_LoginSheet> {
                               ),
                             )
                           : GLPrimaryButton(
-                              key: const Key('backend-signin'),
-                              title: 'Masuk ke Server',
+                              key: Key(
+                                _registering
+                                    ? 'backend-signup'
+                                    : 'backend-signin',
+                              ),
+                              title: _registering
+                                  ? 'Daftar ke Server'
+                                  : 'Masuk ke Server',
                               icon: 'arrow.right',
-                              onPressed: ready ? _signIn : null,
+                              onPressed: ready
+                                  ? (_registering ? _signUp : _signIn)
+                                  : null,
                             ),
                     ],
                     header: 'Akun email',
-                    footer:
-                        'Gunakan akun email yang sudah terdaftar. Login Apple, pendaftaran, dan pemulihan akun belum tersedia di versi Android/Flutter.',
+                    footer: _registering
+                        ? 'Buat akun email baru. Pemulihan akun belum tersedia di versi Android/Flutter.'
+                        : 'Gunakan akun email yang sudah terdaftar. Login Apple dan pemulihan akun belum tersedia di versi Android/Flutter.',
                   )
                 else
                   _section([

@@ -11,6 +11,7 @@ abstract class GrouplyBackend {
   Stream<String?> get authChanges;
   Future<void> initialize();
   Future<void> signIn(String email, String password);
+  Future<bool> signUp(String name, String email, String password);
   Future<void> signOut();
   Future<Map<String, dynamic>> snapshot();
   Future<Map<String, dynamic>> mutate(
@@ -241,6 +242,23 @@ class SupabaseGrouplyBackend implements GrouplyBackend {
       await signOut();
       rethrow;
     }
+  }
+
+  @override
+  Future<bool> signUp(String name, String email, String password) async {
+    await initialize();
+    final response = await _sdk.auth.signUp(
+      email: email,
+      password: password,
+      data: {'name': name},
+    );
+    try {
+      await _flushStorage();
+    } catch (_) {
+      if (response.session != null) await signOut();
+      rethrow;
+    }
+    return response.session != null;
   }
 
   @override
