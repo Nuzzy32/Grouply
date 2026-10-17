@@ -79,6 +79,15 @@ struct GLReport: Codable, Equatable, Identifiable {
   var id: String = UUID().uuidString
   var messageID, reporterID, reason: String
   var createdAt: Date
+  var status: String? = nil
+  var reviewedAt: Date? = nil
+  var statusLabel: String {
+    switch status {
+    case "dismissed": "Selesai ditinjau"
+    case "removed": "Pesan dihapus moderator"
+    default: "Menunggu peninjauan"
+    }
+  }
 }
 struct DemoError: LocalizedError {
   let message: String

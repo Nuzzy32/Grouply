@@ -71,10 +71,34 @@ Tes `testRealtimeMessagesUnreadReconnectAndMembershipRevocation` membuktikan pen
 
 `shortcut:` snapshot memuat seluruh data terotorisasi untuk slice awal; ganti dengan query berhalaman sebelum riwayat grup membesar. Ini belum merupakan uji beban atau readiness beta publik.
 
+## Milestone E lokal: laporan, blokir, dan hapus akun
+
+Migration `20261017050000_milestone_e_safety.sql` menambahkan status laporan privat (`pending`, `dismissed`, `removed`), peninjauan operator, dan penghapusan akun transactional. Migration additive `20261017060000_milestone_e_lock_order.sql` memperbaiki urutan lock, dan `20261017070000_milestone_e_snapshot_identity.sql` memastikan reviewer historis terhapus diserialisasi sebagai identitas kosong. Ketiganya wajib diterapkan. Pengujian dan CLI berikut hanya untuk Supabase lokal Grouply, bukan production.
+
+```sh
+python3 scripts/moderation_local.py queue
+python3 scripts/moderation_local.py review <REPORT_UUID> dismissed --note "Tidak melanggar aturan grup"
+python3 scripts/moderation_local.py review <REPORT_UUID> removed --note "Konten melanggar aturan grup"
+python3 scripts/milestone_e_local.py --run
+python3 scripts/moderation_local.py check-locks
+```
+
+CLI operator mengambil service-role key dari status Supabase lokal tanpa mencetak/menyimpannya. Output antrean berisi alasan dan isi pesan yang dilaporkan; jangan membagikan output tersebut. Endpoint `grouply_moderation(action,payload)` hanya dapat dipanggil service role, bukan akun aplikasi atau claim metadata buatan pengguna. `removed` mengganti isi pesan dengan penanda moderasi, bukan menghapus tugas, versi submission, atau histori review. Keputusan akhir identik dapat diulang; keputusan berbeda terhadap laporan yang selesai ditolak. Tidak ada operator yang otomatis bertugas, SLA, email notifikasi, atau dashboard moderation production.
+
+`check-locks` membuat dua akun disposable acak, memakai dua sesi PostgreSQL untuk mengamati blocking aktual, lalu membersihkan fixture miliknya sendiri. Lima interleaving menguji assignment saat mutasi anggota menunggu, serta deletion melawan dismiss/remove untuk pelapor aktif/mantan anggota. Perubahan race di-rollback; jangan arahkan skrip ke database lain. Tidak ada reset atau penghapusan akun lama.
+
+`reportMessage` memvalidasi membership, menolak laporan pesan sendiri, menyimpan satu laporan per pelapor/pesan, dan membatasi laporan baru lima per menit. Pelapor hanya melihat alasan/status laporannya sendiri; catatan operator tidak ditampilkan. Block/unblock tetap berupa penyembunyian pesan untuk akun sendiri (bukan mengeluarkan anggota, mencegah semua pengiriman, atau menghapus konten). Revision pribadi memperbarui sesi lain akun yang sama.
+
+`deleteAccount` menghapus Auth, profil, membership, read markers, dan blokir pribadi serta mengosongkan FK identitas pada histori bersama. RPC/RLS tidak memberi akses kepada JWT lama; refresh/login akun tersebut tidak dapat digunakan lagi. App hanya menganggap penghapusan sukses setelah menerima `deleted: true`, kemudian membersihkan Keychain dan state tanpa mengambil snapshot akun yang sudah dihapus. Kegagalan jaringan tanpa konfirmasi bukan bukti penghapusan berhasil; muat ulang/masuk kembali untuk memastikan status sebelum mencoba lagi.
+
+Prasyarat penghapusan: transfer koordinator bila ada anggota lain, lalu alihkan semua tugas non-`done` sebagai pelaksana/reviewer, termasuk proyek arsip. Tidak ada reassignment otomatis. Bila hanya tersisa satu anggota, grup dan riwayat dipertahankan tanpa coordinator/membership; undangan dicabut. Riwayat tidak otomatis dialihkan ke pengguna lain. Pesan/hasil kerja/review tetap ada dengan identitas kosong yang ditampilkan sebagai “Pengguna terhapus”; isi kontribusi bisa masih mengandung informasi pribadi yang ditulis pengguna. Ini bukan penghapusan konten menyeluruh dan kebijakan retensi belum disahkan untuk rilis publik.
+
+Alur Apple belum teruji; pencabutan token Sign in with Apple belum diimplementasikan. Jangan menganggap deletion lokal akun password sebagai bukti kesiapan penghapusan akun Apple/App Review. Tugas selesai dengan peserta yang telah dihapus tidak dapat dibuka kembali; buat tugas pengganti dengan peserta aktif.
+
 ## Menghubungkan proyek cloud nanti
 
 Salin `Config/Local.xcconfig.example` dan isi URL HTTPS serta publishable key proyek sendiri. Jangan masukkan service-role key, APNs key, refresh token atau password ke bundle. Jangan jalankan migration pada cloud sebelum target proyek dan perubahan disetujui.
 
 Sign in with Apple sudah memiliki tombol native, nonce aman, pertukaran id_token, dan entitlement. Pemakaiannya masih membutuhkan signing team/capability Apple yang valid dan konfigurasi provider Apple di Supabase. Alur Apple belum diuji dengan akun/perangkat nyata. Lihat [panduan Apple Supabase](https://supabase.com/docs/guides/auth/social-login/auth-apple).
 
-Belum tersedia/teruji: deployment cloud, Realtime pada jaringan nyata/dua perangkat fisik, APNs/local reminders, domain/AASA Universal Links, penghapusan akun server, pengiriman laporan ke moderator, serta kebijakan retention yang disahkan. Aksi yang belum didukung server menampilkan error; tidak jatuh kembali ke mutasi demo.
+Belum tersedia/teruji: deployment cloud, Realtime pada jaringan nyata/dua perangkat fisik, APNs/local reminders, domain/AASA Universal Links, pencabutan token Apple, operator moderasi production dan kebijakan retention yang disahkan. Aksi yang belum didukung server menampilkan error; tidak jatuh kembali ke mutasi demo.

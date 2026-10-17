@@ -22,7 +22,7 @@ Setup dan perintah pengujian ada di [Backend Setup](BACKEND_SETUP.md). Cloud sta
 - Profil/persona, simulasi offline/waktu, anonimisasi akun demo dan reset; snapshot JSON atomik dengan cadangan file tidak terbaca.
 - Share Sheet dan rute lokal `grouply://task/<id>` dengan validasi akses.
 
-State persona dan JSON lokal bukan autentikasi server. Mode Supabase memakai Auth dan otorisasi server terpisah. Switch notifikasi tetap preferensi contoh, laporan belum dikirim kepada moderator, dan tautan lokal bukan Universal Link publik.
+State persona dan JSON lokal bukan autentikasi server. Mode Supabase memakai Auth dan otorisasi server terpisah. Switch notifikasi tetap preferensi contoh, laporan privat tersedia bagi operator lewat CLI lokal (tanpa pengiriman email/SLA), dan tautan lokal bukan Universal Link publik.
 
 ## Verifikasi
 
@@ -57,6 +57,18 @@ Review tambahan menutup pesan gagal yang terlihat lintas persona, koordinator de
 - Regresi akhir **6 tes UI lulus** (login, workflow, kirim chat, Dynamic Type). Bukti lokal: `build/Logs/Test/Test-Grouply-2026.10.17_10-55-20-+0700.xcresult`; log native/UI `/tmp/grouply-realtime-final.log`, SQL `/tmp/grouply-realtime-sql.log`, lint `/tmp/grouply-realtime-lint.log`. Log dan result bundle tidak masuk Git.
 - Snapshot penuh masih menjadi batas skalabilitas; belum diuji beban, kehilangan koneksi jaringan nyata berkepanjangan, atau APNs.
 
+## Milestone E lokal — 17 Oktober 2026
+
+- Laporan privat memiliki status pending/dismissed/removed; hanya service role dapat meninjau lewat RPC/CLI lokal. Tidak ada email/SLA/operator production otomatis. Report sendiri ditolak; dedup dan limit lima laporan baru/menit berlaku di server.
+- Block/unblock memperbarui revision pribadi lintas sesi; placeholder yang pernah dibuka kembali disembunyikan saat status blokir berubah.
+- Hapus akun password menghapus Auth/sesi/profil dan data pribadi, mempertahankan histori bersama tanpa referensi identitas akun. Konten historis masih bisa memuat informasi pribadi; kebijakan retensi belum disahkan. Tugas non-done termasuk arsip dan peran koordinator menjadi prasyarat, tanpa reassignment otomatis. Grup satu anggota dipertahankan tanpa akses anggota dan undangannya dicabut.
+- Client mensyaratkan respons `deleted: true`, membersihkan sesi/state tanpa snapshot berikutnya, dan melaporkan kegagalan pembersihan Keychain secara eksplisit. Tugas selesai dengan peserta terhapus tidak dapat dibuka kembali; buat tugas pengganti.
+- Regresi native **34 tes lulus**, termasuk empat integrasi localhost, report/block lintas sesi dan delete client; **7 tes UI lulus**, termasuk prasyarat hapus akun demo. Tes ulang final: `build/Logs/Test/Test-Grouply-2026.10.17_14-29-57-+0700.xcresult`, log `/tmp/grouply-e-verified-final.log`. Ini satu simulator iOS 26.4 + localhost, bukan perangkat fisik/cloud atau uji UI penghapusan akun live.
+- Self-check script HTTP lulus: menolak target nonlokal, memvalidasi fixture miliknya sendiri, membersihkan profil via RPC, menolak fallback admin saat status tidak pasti, dan memulihkan login fixture yang gagal. Bukti live HTTP dan concurrency dicatat terpisah setelah dijalankan.
+- Migration `050000` dan koreksi additive `060000` diterapkan incremental lokal, tanpa reset. SQL Milestone E **54 PASS** dan regresi workflow **40 PASS notices + denial checks**, keduanya rollback; lint lokal tingkat warning tidak menemukan schema errors.
+- Lima interleaving dua worker direproduksi sebagai deadlock pada `050000`, lalu **5/5 lulus** pada `060000`: assignment/member mutation dan deletion/moderation dismissed/removed bagi pelapor aktif/mantan anggota. Actor memakai `FOR NO KEY UPDATE`; deletion mengunci konten sebelum sync/trigger membership/blokir. Ini regresi kasus terarah, bukan uji beban atau bukti bebas seluruh deadlock. Fresh database replay tidak dijalankan.
+- Tes HTTP lokal **5 skenario lulus** setelah memperbaiki serialization `reviews.reviewer_id` nullable menjadi string kosong pada migration additive `070000`; semua fixture terhapus (`cleanup_failures: 0`). Offline self-check script juga lulus. `070000` diterapkan incrementally setelah suite SQL 54 checks, workflow 40 notices, dan race 5/5 dijalankan; lint tidak menemukan schema errors.
+
 ## Target cloud dan rilis yang belum tersedia
 
-Belum tersedia/terverifikasi: deployment cloud, provider Apple nyata, Realtime Group Chat lintas perangkat, APNs/pengingat lokal, domain/AASA/Universal Links, moderasi operasional, retention dan penghapusan akun server. Source migration aktual ada di `supabase/migrations`; DDL dokumen produk mencakup target yang lebih luas. Tidak ada proyek cloud atau database production yang diubah. Gate cloud/TestFlight tetap belum dicentang.
+Belum tersedia/terverifikasi: deployment cloud, provider Apple nyata dan pencabutan token Apple, Realtime Group Chat lintas perangkat fisik, APNs/pengingat lokal, domain/AASA/Universal Links, operator moderasi production dan kebijakan retention. Penghapusan akun password server dan CLI moderasi tersedia lokal, bukan bukti readiness Apple/App Review. Source migration aktual ada di `supabase/migrations`; DDL dokumen produk mencakup target yang lebih luas. Tidak ada proyek cloud atau database production yang diubah. Gate cloud/TestFlight tetap belum dicentang.

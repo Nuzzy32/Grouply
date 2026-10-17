@@ -1,5 +1,11 @@
 # Grouply — konteks kerja
 
+## Perubahan scope eksplisit: Flutter, 17 Oktober 2026
+
+- Pengguna meminta migrasi ke Flutter untuk Android dan iOS. `flutter/` adalah client lintas platform baru; batas iOS-only di spesifikasi v1.3 berikut merupakan konteks historis, bukan larangan untuk migrasi yang telah diminta ini. Web tetap tidak termasuk scope.
+- Pertahankan source Swift, test native, dan migration Supabase yang sudah ada; jangan hapus atau menganggap Flutter sudah menggantikan rilis native sepenuhnya. Backend/RPC dipakai bersama, bukan disalin ke database baru.
+- Jalankan Flutter dari `flutter/`; baca `flutter/README.md` dan `docs/FLUTTER_MIGRATION.md` untuk konfigurasi, perintah, bukti pengujian, dan gap. Jangan klaim build/test lokal sebagai bukti cloud, perangkat fisik, atau rilis store. Login Apple, pendaftaran/pemulihan akun, push, dan migrasi otomatis data Swift belum tersedia pada client Flutter.
+
 ## Sumber dan platform
 
 - Native iPhone iOS 17+, SwiftUI; Bahasa Indonesia, desain Soft Future.
@@ -47,5 +53,6 @@ Verifikasi: build simulator dan regresi akhir **13 core + 5 UI lulus** di iPhone
 - API lokal port55321, DB55322 agar tidak mengganggu proyek lain. scripts/backend_local.py setup menghasilkan akun/kredensial lokal privat di luar repo dan konfigurasi publik ignored.
 - Token/refresh token hanya Keychain. Test store memakai injectable token store untuk isolasi; jangan mengganti production storage dengan UserDefaults atau file. Simulator harus ad-hoc signed untuk Keychain.
 - Realtime memakai URLSession WebSocket: INSERT chat_messages, INSERT chat_reads akun sendiri, INSERT/UPDATE user_sync_state akun sendiri. Event memicu snapshot; tidak subscribe DELETE/group_members. Background/logout menghentikan koneksi; foreground/reconnect memuat gap. markChatRead mengirim messageIDs yang diamati, bukan membaca pesan baru yang belum tampil.
-- Penghapusan akun server, Apple provider, Realtime cloud/perangkat nyata, push dan moderasi operasional masih pekerjaan lanjutan; jangan klaim MVP beta selesai.
+- Milestone E lokal menyediakan laporan privat + CLI operator, block/unblock lintas sesi, dan deleteAccount transactional tanpa snapshot setelah penghapusan. Identitas histori bersama dikosongkan, bukan seluruh konten dihapus. Tugas non-done termasuk arsip harus dialihkan; koordinator dengan anggota lain harus transfer. Grup satu anggota ditinggalkan tanpa coordinator/membership, undangan dicabut, histori dipertahankan. Tugas selesai dengan peserta terhapus tidak dapat dibuka kembali; buat pengganti.
+- Apple token revocation/provider, Realtime cloud/perangkat nyata, push, moderasi production dan kebijakan retensi tetap pekerjaan lanjutan; jangan klaim MVP beta selesai.
 - Verifikasi backend 17 Oktober 2026: 23 tes native (termasuk 3 integrasi server/Keychain), 6 UI, 36 assertion SQL + direct-DML denial, HTTP tiga akun + race review lulus. Advisors/lint warn/error bersih. Artefak ada di docs/IMPLEMENTATION_STATUS.md. Jangan menyebut tes localhost sebagai bukti cloud/perangkat nyata.

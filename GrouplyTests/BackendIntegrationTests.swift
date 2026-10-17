@@ -67,6 +67,17 @@ final class BackendIntegrationTests: XCTestCase {
     try await waitForRealtime("Incoming chat updates both unread badges") { receiver.unreadCount(groupID: groupID) == 1 && otherDevice.unreadCount(groupID: groupID) == 1 }
     receiver.markChatRead(groupID: groupID)
     try await waitForRealtime("Read acknowledgement syncs across sessions") { receiver.unreadCount(groupID: groupID) == 0 && otherDevice.unreadCount(groupID: groupID) == 0 }
+    try await waitForRealtime("Reads finish before blocking") { !receiver.isBusy && !otherDevice.isBusy }
+    let senderID = try await sender.snapshot().currentUserID
+    try await receiver.blockUser(senderID)
+    try await waitForRealtime("Block synchronizes to the other session") { otherDevice.blockedUserIDs.contains(senderID) && !otherDevice.isBusy }
+    try await otherDevice.unblockUser(senderID)
+    try await waitForRealtime("Unblock synchronizes back") { !receiver.blockedUserIDs.contains(senderID) && !receiver.isBusy }
+    try await receiver.reportMessage(first, reason: "Konten pengujian moderasi")
+    try await waitForRealtime("Report enters own pending history") { receiver.reports.contains { $0.messageID == first && $0.status == "pending" } && !receiver.isBusy }
+    let reportCount = receiver.reports.count
+    try await receiver.reportMessage(first, reason: "Konten pengujian moderasi")
+    XCTAssertEqual(receiver.reports.count, reportCount)
     receiver.setBackendActive(false)
     XCTAssertFalse(receiver.realtimeConnected)
     let missed = UUID().uuidString.lowercased()

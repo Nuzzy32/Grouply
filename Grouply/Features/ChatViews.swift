@@ -245,6 +245,7 @@ struct ChatThread: View {
       if list.isEmpty { empty }
     }
     .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
+    .onChange(of: store.blockedUserIDs) { _, _ in revealed.removeAll() }
     .padding(.top, 6).padding(.horizontal, 16).padding(.bottom, 8)
     .sheet(item: $sheet, onDismiss: showPendingConfirm) { item in
       switch item {
@@ -476,6 +477,7 @@ struct ChatThread: View {
         sheet = .report(id)
       }
     case .block:
+      guard !m.senderID.isEmpty else { sheet = nil; return }
       let who = m.senderID, name = store.user(who)?.name ?? "Anggota"
       sheet = nil
       if store.blockedUserIDs.contains(who) {
@@ -616,9 +618,11 @@ private struct ChatMessageSheet: View {
           }
           if !mine {
             actionRow("Laporkan pesan", icon: "flag", color: GLTheme.danger, .report)
-            actionRow(
-              blocked ? "Buka blokir \(name)" : "Blokir \(name)", icon: "nosign",
-              color: GLTheme.danger, .block)
+            if !m.senderID.isEmpty {
+              actionRow(
+                blocked ? "Buka blokir \(name)" : "Blokir \(name)", icon: "nosign",
+                color: GLTheme.danger, .block)
+            }
           }
         }
         .padding(.vertical, 4).padding(.horizontal, 16)
@@ -713,9 +717,10 @@ private struct ChatReportSheet: View {
       GLIcon("checkmark.circle", size: 32).frame(width: 64, height: 64)
         .background(GLTheme.mint, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
       Text("Laporan tersimpan").gl(21, .bold)
-      Text(
-        "Terima kasih sudah menjaga grup tetap nyaman. Di versi produksi, laporan ditinjau tim moderasi."
-      ).gl(15).lineSpacing(4).foregroundStyle(GLTheme.text3)
+      Text(store.isCloudMode
+        ? "Laporan masuk antrean privat untuk ditinjau operator berwenang. Belum ada jaminan waktu respons."
+        : "Terima kasih sudah menjaga grup tetap nyaman. Ini simulasi pelaporan lokal.")
+        .gl(15).lineSpacing(4).foregroundStyle(GLTheme.text3)
       Text(
         store.isCloudMode
           ? "Laporan berhasil tersimpan di server."

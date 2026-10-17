@@ -356,11 +356,9 @@ private struct ProfileAboutView: View {
         }.glCard()
         VStack(alignment: .leading, spacing: 8) {
           Text("Pelaporan & moderasi").gl(16, .bold)
-          (Text(store.isCloudMode
-            ? "Tekan lama pesan untuk melaporkan atau memblokir pengirimnya. Laporan disimpan privat di server dan "
-            : "Tekan lama pesan untuk melaporkan atau memblokir pengirimnya. Dalam demo, laporan disimpan di perangkat dan ")
-            + Text("belum dikirim ke moderator").bold()
-            + Text(". Kanal moderasi operasional belum tersedia."))
+          Text(store.isCloudMode
+            ? "Tekan lama pesan untuk melaporkan atau memblokir pengirimnya. Laporan masuk antrean privat di server dan dapat ditinjau operator berwenang. Belum ada jaminan waktu respons."
+            : "Tekan lama pesan untuk melaporkan atau memblokir pengirimnya. Dalam demo, laporan hanya disimpan di perangkat, bukan dikirim kepada moderator.")
             .gl(14).lineSpacing(5).foregroundStyle(GLTheme.text3)
           ForEach(myReports) { report in
             let from = store.messages.first { $0.id == report.messageID }
@@ -369,7 +367,7 @@ private struct ProfileAboutView: View {
               GLIcon("flag", size: 18)
               Text("\(report.reason) · Pesan dari \(from)").gl(14)
                 .frame(maxWidth: .infinity, alignment: .leading)
-              Text(store.isCloudMode ? "Tersimpan di server" : "Tersimpan lokal").gl(12).foregroundStyle(GLTheme.secondary)
+              Text(store.isCloudMode ? report.statusLabel : "Tersimpan lokal").gl(12).foregroundStyle(GLTheme.secondary)
             }
             .padding(.vertical, 10).padding(.horizontal, 12)
             .background(GLTheme.muted, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
@@ -605,18 +603,28 @@ private struct ProfileDeleteSheet: View {
   @State private var busy = false
   /// Prototype rule: groups I coordinate that still have other members.
   private var blockers: [GLGroup] {
-    store.myGroups.filter { $0.coordinatorID == store.currentUserID && $0.memberIDs.count > 1 }
+    store.myGroups.filter {
+      $0.coordinatorID == store.currentUserID && (!store.isCloudMode || $0.memberIDs.count > 1)
+    }
+  }
+  private var hasActiveAssignments: Bool {
+    store.tasks.contains {
+      $0.status != .done && ($0.assigneeID == store.currentUserID || $0.reviewerID == store.currentUserID)
+    }
   }
   var body: some View {
     GLSheet("Hapus akun") {
       if step == 1 {
         VStack(alignment: .leading, spacing: 12) {
           VStack(alignment: .leading, spacing: 10) {
-            line("trash", "Di versi produksi, penghapusan akun bersifat permanen.")
+            line("trash", store.isCloudMode ? "Akun login dan profil di server akan dihapus permanen." : "Ini simulasi penghapusan akun demo, bukan akun server.")
             line(
               "clock.arrow.circlepath",
               "Hasil kerja dan pesanmu di grup tetap ada, ditampilkan sebagai “Pengguna terhapus”.")
-            line("arrow.left.arrow.right", "Tugas aktifmu dialihkan ke koordinator masing-masing grup.")
+            line("arrow.left.arrow.right", "Alihkan peran pelaksana/reviewer pada semua tugas yang belum selesai terlebih dahulu, termasuk di proyek arsip. Tidak ada pengalihan otomatis.")
+            if store.isCloudMode {
+              line("person.crop.circle.badge.minus", "Jika kamu satu-satunya anggota, grup kehilangan akses anggota dan undangannya dinonaktifkan. Riwayat kerja tetap disimpan tanpa identitas akunmu.")
+            }
           }
           .padding(.vertical, 16).padding(.horizontal, 18).frame(maxWidth: .infinity, alignment: .leading)
           .background(.white, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
@@ -626,12 +634,17 @@ private struct ProfileDeleteSheet: View {
                 + blockers.map(\.name).joined(separator: ", ") + ".",
               icon: "person.badge.shield.checkmark")
           }
+          if hasActiveAssignments {
+            GLNotice(text: "Masih ada tugas yang belum selesai dengan kamu sebagai pelaksana atau reviewer. Minta koordinator membuka kembali proyek bila perlu, lalu alihkan tugasnya.", icon: "checklist")
+          }
           if let error { GLFormError(text: error) }
           ProfileFilledButton(
-            title: "Lanjutkan", background: blockers.isEmpty ? GLTheme.ink : Color(hex: "B4B8BC")
+            title: "Lanjutkan", background: blockers.isEmpty && !hasActiveAssignments ? GLTheme.ink : Color(hex: "B4B8BC")
           ) {
             if !blockers.isEmpty {
               error = "Serahkan peran koordinator dulu sebelum menghapus akun."
+            } else if hasActiveAssignments {
+              error = "Alihkan semua tugas aktif dan peran reviewer sebelum menghapus akun."
             } else {
               error = nil
               withAnimation(.easeOut(duration: 0.2)) { step = 2 }
@@ -697,6 +710,10 @@ struct ProfilePrivacySheet: View {
       VStack(alignment: .leading, spacing: 10) {
         Text("GROUPLY memakai nama dan identitas login untuk akunmu. Persona demo terpisah dari akun server.")
         Text("Proyek, tugas, dan pesan hanya terlihat oleh anggota grup terkait.")
+        if store.isCloudMode {
+          Text("Laporan dan isi pesan yang dilaporkan dapat ditinjau operator berwenang. Blokir menyembunyikan pesan untukmu, bukan mengeluarkan anggota atau menghentikan tugas bersama.")
+          Text("Penghapusan akun menghapus identitas login dan profil. Pesan, hasil kerja, dan review bersama tetap disimpan tanpa identitas akun; hapus informasi pribadi dalam kontribusi sebelum membagikannya. Kebijakan retensi untuk rilis publik belum disahkan.")
+        }
         // Prototype: "…di memori browser saja." — adapted for the native demo.
         Text(store.isCloudMode ? "Data akun ini tersimpan di Supabase. Sesi login disimpan aman di Keychain." : "Data demo disimpan di perangkat ini saja.").foregroundStyle(GLTheme.secondary)
       }

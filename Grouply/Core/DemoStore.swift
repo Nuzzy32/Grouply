@@ -788,6 +788,28 @@ extension DemoStore {
     }
   }
 
+  func deleteBackendAccount() async throws {
+    guard let client = backend, !isBusy else { throw DemoError(message: "Tunggu proses sebelumnya selesai.") }
+    isBusy = true
+    stopRealtime()
+    defer { isBusy = false }
+    do {
+      try await client.deleteAccount()
+      guard backend === client else { return }
+      clearExpiredBackend()
+      backendError = nil
+    } catch {
+      guard backend === client else { throw error }
+      if !client.hasSession {
+        clearExpiredBackend()
+        backendError = "Sesi lokal dihentikan: \(error.localizedDescription)"
+      } else {
+        startRealtime()
+      }
+      throw error
+    }
+  }
+
   @discardableResult func sendMessage(groupID: String, taskID: String? = nil, text: String, clientID: String = UUID().uuidString) async throws -> String {
     guard isCloudMode else { return try localSendMessage(groupID: groupID, taskID: taskID, text: text, clientID: clientID) }
     do {
@@ -850,7 +872,8 @@ extension DemoStore {
 extension DemoStore {
   /// "Kamu" for the signed-in user, like the prototype's `nm()`.
   func displayName(_ id: String) -> String {
-    id == currentUserID ? "Kamu" : user(id)?.name ?? "Anggota"
+    if id.isEmpty { return "Pengguna terhapus" }
+    return id == currentUserID ? "Kamu" : user(id)?.name ?? "Anggota"
   }
   /// Hours since the active submission was sent, while a task waits in review.
   func reviewWaitHours(_ task: GLTask) -> Int? {

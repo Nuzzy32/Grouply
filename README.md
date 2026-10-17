@@ -1,5 +1,11 @@
 # Grouply
 
+## Flutter migration — Android + iOS
+
+The shared Flutter client is in `flutter/`. Start with `cd flutter && flutter run`; without backend configuration it runs an explicitly labelled local demo. The existing SwiftUI client remains as a reference during migration, and both clients use the same Supabase RPC contracts. See [Flutter setup](flutter/README.md) and [migration verification and remaining release work](docs/FLUTTER_MIGRATION.md). This is a development port, not a published Android/iOS release.
+
+## Existing SwiftUI client
+
 Native iPhone implementation of the supplied Grouply v3.1 prototype, using **SwiftUI, iOS 17+, and the Soft Future design system**. Interface language: Bahasa Indonesia.
 
 **Current delivery: native demo plus a working local Supabase backend.** Demo personas remain available separately. The server mode uses actual Supabase Auth, RLS and transactional RPC for groups, projects, tasks, submissions and reviews. It has not been deployed to Supabase cloud; Apple-provider sign-in still needs developer configuration and real-device verification.
@@ -51,7 +57,7 @@ The server mode now connects to Supabase Auth and the migration-backed PostgreSQ
 
 Group Chat Realtime is connected locally using native WebSockets: cross-account messages, account-scoped unread/read sync, reconnect catch-up and membership revocation are tested against localhost with multiple clients in one simulator. See [Backend Setup](docs/BACKEND_SETUP.md).
 
-Before a shared beta: deploy to an explicitly selected cloud project, validate Apple sign-in and Realtime on real iPhones/networks, connect APNs/local reminders, host a domain/AASA file, and provide operational moderation, retention and server account deletion. Notification switches remain example preferences. Server reports are stored privately but do not reach a moderator yet. Never put service-role/APNs secrets in the app.
+Local Milestone E adds a private report queue/operator CLI, cross-session block updates, and transactional password-account deletion while retaining shared history with identity references removed. See `docs/BACKEND_SETUP.md` for prerequisites and retention limits. Before a shared beta: deploy to an explicitly selected cloud project, validate Apple sign-in and Realtime on real iPhones/networks, implement Apple token revocation, connect APNs/local reminders, host a domain/AASA file, and establish production moderation and retention policies. Notification switches remain example preferences. Never put service-role/APNs secrets in the app.
 
 ## Project map
 

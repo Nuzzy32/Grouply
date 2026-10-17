@@ -3,6 +3,21 @@ import XCTest
 @testable import Grouply
 
 final class WorkflowTests: XCTestCase {
+  @MainActor func testCompletedTaskWithDeletedParticipantCannotReopen() async throws {
+    let store = DemoStore(persist: false)
+    store.signIn(as: "u1")
+    let taskIndex = try XCTUnwrap(store.tasks.firstIndex { $0.projectID == "p1" })
+    store.tasks[taskIndex].status = .done
+    store.tasks[taskIndex].assigneeID = ""
+    do {
+      try await store.reopenTask(store.tasks[taskIndex].id)
+      XCTFail("Deleted participant cannot become active again")
+    } catch {
+      XCTAssertTrue(error.localizedDescription.contains("Buat tugas pengganti"))
+    }
+    XCTAssertEqual(store.tasks[taskIndex].status, .done)
+  }
+
   @MainActor private func assertThrows<T>(_ action: @autoclosure () async throws -> T, file: StaticString = #filePath, line: UInt = #line) async {
     do { _ = try await action(); XCTFail("Expected operation to fail", file: file, line: line) } catch { }
   }

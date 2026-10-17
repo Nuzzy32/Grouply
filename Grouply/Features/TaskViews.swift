@@ -883,8 +883,12 @@ private struct TaskActionsSheet: View {
           rowLabel("Bagikan tugas", "Kirim tautan ke WhatsApp", "square.and.arrow.up")
         }.buttonStyle(GLRowButtonStyle())
         if coord && task.status == .done && project.status == .active {
-          row("Buka kembali tugas", "Riwayat hasil dan review tetap disimpan", "arrow.counterclockwise") {
-            then(.reopen)
+          if task.assigneeID.isEmpty || task.reviewerID.isEmpty {
+            GLNotice(text: "Pelaksana atau reviewer telah menghapus akun. Buat tugas pengganti; riwayat ini tetap disimpan.", icon: "person.crop.circle.badge.minus")
+          } else {
+            row("Buka kembali tugas", "Riwayat hasil dan review tetap disimpan", "arrow.counterclockwise") {
+              then(.reopen)
+            }
           }
         }
       }

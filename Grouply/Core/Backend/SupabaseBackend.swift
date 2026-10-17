@@ -92,6 +92,7 @@ struct BackendSnapshot: Codable {
 struct MutationResult: Decodable {
   var id: String?
   var invite: GLInvite?
+  var deleted: Bool?
 }
 
 struct BackendError: LocalizedError {
@@ -115,7 +116,7 @@ struct BackendError: LocalizedError {
     case "active_assignment":
       return "Anggota masih memiliki tugas aktif. Alihkan tugasnya terlebih dahulu."
     case "coordinator_transfer_required":
-      return "Alihkan peran koordinator sebelum meninggalkan grup."
+      return "Alihkan peran koordinator ke anggota lain sebelum keluar atau menghapus akun."
     case "group_full": return "Grup sudah mencapai batas delapan anggota."
     case "invite_expired": return "Undangan sudah kedaluwarsa. Minta kode baru dari koordinator."
     case "invite_full": return "Undangan sudah mencapai batas penggunaan. Minta kode baru."
@@ -403,6 +404,14 @@ struct RealtimeFrame: Decodable {
       path: "rest/v1/rpc/grouply_mutate",
       body: ["action": .string(action), "payload": .object(payload)])
     return try Self.decoder().decode(MutationResult.self, from: data)
+  }
+  func deleteAccount() async throws {
+    let result = try await mutate(action: "deleteAccount", payload: [:])
+    guard result.deleted == true else {
+      throw BackendError(status: 0, message: "Server belum mengonfirmasi penghapusan akun. Muat ulang sebelum mencoba lagi.")
+    }
+    do { try clearSession() }
+    catch { throw BackendError(status: 0, message: "Akun server telah dihapus, tetapi pembersihan sesi perangkat gagal. \(error.localizedDescription)") }
   }
   private func authenticate(grant: String, body: [String: JSONValue]) async throws {
     let startGeneration = generation

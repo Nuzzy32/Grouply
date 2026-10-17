@@ -44,6 +44,91 @@ private func requestBody(_ request: URLRequest) -> Data {
   return data
 }
 final class BackendClientTests: XCTestCase {
+  @MainActor func testAccountDeletionClearsStateWithoutFetchingDeletedSnapshot() async throws {
+    for cleanupFails in [false, true] {
+      let tokens = MemoryTokenStore()
+      let backend = client(store: tokens)
+      let store = DemoStore(persist: false, backendFactory: { _ in backend })
+      store.setBackendActive(false)
+      var deletionCount = 0
+      var snapshotCount = 0
+      BackendURLProtocol.handler = { request in
+        switch request.url!.lastPathComponent {
+        case "token":
+          return (200, #"{"access_token":"token","refresh_token":"refresh","expires_in":3600,"user":{"id":"actor"}}"#)
+        case "grouply_snapshot":
+          snapshotCount += 1
+          return (200, #"{"users":[],"groups":[],"projects":[],"tasks":[],"messages":[],"invites":[],"reports":[],"currentUserID":"actor","blockedUserIDs":[],"readMessageIDs":[]}"#)
+        case "grouply_mutate":
+          let body = try JSONSerialization.jsonObject(with: requestBody(request)) as! [String: Any]
+          XCTAssertEqual(body["action"] as? String, "deleteAccount")
+          deletionCount += 1
+          return (200, #"{"deleted":true}"#)
+        default:
+          XCTFail("Deletion must not request logout or another endpoint")
+          return (500, "{}")
+        }
+      }
+      try await store.connectBackend(email: "actor@example.org", password: "unused")
+      tokens.failsClear = cleanupFails
+      do {
+        try await store.deleteAccount()
+        XCTAssertFalse(cleanupFails)
+      } catch {
+        XCTAssertTrue(cleanupFails)
+        XCTAssertTrue(error.localizedDescription.contains("Akun server telah dihapus"))
+      }
+      XCTAssertEqual(deletionCount, 1)
+      XCTAssertEqual(snapshotCount, 1)
+      XCTAssertFalse(store.isCloudMode)
+      XCTAssertFalse(backend.hasSession)
+      XCTAssertNil(store.currentUserID)
+      XCTAssertFalse(store.realtimeConnected)
+      XCTAssertTrue(store.reports.isEmpty)
+      if !cleanupFails { XCTAssertNil(tokens.data) }
+    }
+  }
+
+  @MainActor func testAccountDeletionDenialKeepsExistingSession() async throws {
+    let tokens = MemoryTokenStore()
+    let backend = client(store: tokens)
+    BackendURLProtocol.handler = { request in
+      if request.url!.lastPathComponent == "token" {
+        return (200, #"{"access_token":"token","refresh_token":"refresh","expires_in":3600,"user":{"id":"actor"}}"#)
+      }
+      return (400, #"{"message":"active_assignment"}"#)
+    }
+    try await backend.signIn(email: "actor@example.org", password: "unused")
+    do { try await backend.deleteAccount(); XCTFail("Must reject active assignments") }
+    catch let error as BackendError { XCTAssertEqual(error.message, "active_assignment") }
+    XCTAssertTrue(backend.hasSession)
+    XCTAssertNotNil(tokens.data)
+  }
+
+  @MainActor func testAccountDeletionNeedsExplicitServerConfirmation() async throws {
+    let tokens = MemoryTokenStore()
+    let backend = client(store: tokens)
+    BackendURLProtocol.handler = { request in
+      if request.url!.lastPathComponent == "token" {
+        return (200, #"{"access_token":"token","refresh_token":"refresh","expires_in":3600,"user":{"id":"actor"}}"#)
+      }
+      return (200, "{}")
+    }
+    try await backend.signIn(email: "actor@example.org", password: "unused")
+    do { try await backend.deleteAccount(); XCTFail("Requires deletion acknowledgement") }
+    catch let error as BackendError { XCTAssertTrue(error.message.contains("belum mengonfirmasi")) }
+    XCTAssertTrue(backend.hasSession)
+    XCTAssertNotNil(tokens.data)
+  }
+
+  @MainActor func testDeletedIdentityAndLegacyReportDecode() throws {
+    let store = DemoStore(persist: false)
+    XCTAssertEqual(store.displayName(""), "Pengguna terhapus")
+    let data = Data(#"{"id":"r","messageID":"m","reporterID":"u","reason":"spam","createdAt":"2026-10-17T00:00:00Z"}"#.utf8)
+    let report = try SupabaseBackend.decoder().decode(GLReport.self, from: data)
+    XCTAssertNil(report.status)
+    XCTAssertEqual(report.statusLabel, "Menunggu peninjauan")
+  }
   @MainActor func testRealtimeURLAndSubscriptionsDoNotExposeTokensOrDeleteEvents() throws {
     let config = BackendConfiguration(url: URL(string: "http://127.0.0.1:55321")!, publishableKey: "sb_publishable_test")
     let url = SupabaseBackend.realtimeURL(config)

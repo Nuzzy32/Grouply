@@ -175,6 +175,9 @@ extension DemoStore {
     try localStartTask(id)
   }
   func reopenTask(_ id: String) async throws {
+    if let task = task(id), task.assigneeID.isEmpty || task.reviewerID.isEmpty {
+      throw DemoError(message: "Pelaksana atau reviewer telah menghapus akun. Buat tugas pengganti; riwayat ini tetap disimpan.")
+    }
     if isCloudMode {
       let result = try await mutateBackend(
         "reopenTask", ["id": .string(id), "expectedVersion": .int(task(id)?.version ?? 0)])
@@ -266,8 +269,7 @@ extension DemoStore {
   }
   func deleteAccount() async throws {
     if isCloudMode {
-      let result = try await mutateBackend("deleteAccount", [:])
-      _ = result
+      try await deleteBackendAccount()
       return
     }
     try localDeleteAccount()
