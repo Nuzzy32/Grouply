@@ -324,14 +324,9 @@ mixin _GroupActions<T extends _WorkspaceScreen> on _WorkspaceState<T> {
             ),
             const SizedBox(width: 10),
             Expanded(
-              // ponytail: no share plugin installed; "Bagikan" copies the
-              // Swift ShareLink text. Add share_plus for a real share sheet.
               child: GLTap(
                 onTap: status == 'valid'
-                    ? () => _copy(
-                        'Gabung ke grup GROUPLY. Kode undangan: $code',
-                        'Teks undangan disalin',
-                      )
+                    ? () => _shareInvite(code)
                     : () => feedback(
                         'Kode ini sudah tidak berlaku. Buat kode baru.',
                         kind: GLToastKind.err,
@@ -358,6 +353,18 @@ mixin _GroupActions<T extends _WorkspaceScreen> on _WorkspaceState<T> {
       feedback(done);
     } catch (_) {
       feedback('Kode tidak dapat disalin.', kind: GLToastKind.err);
+    }
+  }
+
+  Future<void> _shareInvite(String code) async {
+    final text = 'Gabung ke grup GROUPLY. Kode undangan: $code';
+    try {
+      final result = await SharePlus.instance.share(ShareParams(text: text));
+      if (result.status == ShareResultStatus.unavailable) {
+        await _copy(text, 'Teks undangan disalin');
+      }
+    } catch (_) {
+      await _copy(text, 'Teks undangan disalin');
     }
   }
 
