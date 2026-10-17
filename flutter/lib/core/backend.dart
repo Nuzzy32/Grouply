@@ -281,8 +281,15 @@ class SupabaseGrouplyBackend implements GrouplyBackend {
       email: email,
       token: token,
     );
-    await _sdk.auth.updateUser(UserAttributes(password: password));
-    await _flushStorage();
+    try {
+      await _sdk.auth.updateUser(UserAttributes(password: password));
+      await _flushStorage();
+    } catch (_) {
+      // The OTP already signed the user in; don't leave a session behind
+      // when the new password was not saved.
+      await signOut();
+      rethrow;
+    }
   }
 
   @override
