@@ -16,16 +16,23 @@ enum DeadlineReminders {
     }
   }
 
+  @MainActor private static var generation = 0
+
   /// Replaces every pending deadline reminder with the given plan. An empty plan (e.g. logout) clears them.
-  static func sync(_ plan: [(id: String, title: String, fireAt: Date)]) async {
+  /// A newer call supersedes an older one still in flight, so a previous account's plan can't land late.
+  @MainActor static func sync(_ plan: [(id: String, title: String, fireAt: Date)]) async {
+    generation += 1
+    let mine = generation
     let center = UNUserNotificationCenter.current()
     let old = await center.pendingNotificationRequests().map(\.identifier).filter { $0.hasPrefix(prefix) }
+    guard mine == generation else { return }
     center.removePendingNotificationRequests(withIdentifiers: old)
     guard !plan.isEmpty,
       (try? await center.requestAuthorization(options: [.alert, .sound])) == true
     else { return }
     // ponytail: iOS keeps max 64 pending requests; take the nearest 60 if a user ever has more open tasks.
     for item in plan.sorted(by: { $0.fireAt < $1.fireAt }).prefix(60) {
+      guard mine == generation else { return }
       let content = UNMutableNotificationContent()
       content.title = "Deadline besok"
       content.body = item.title
