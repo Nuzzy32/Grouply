@@ -11,7 +11,7 @@ import '../theme.dart';
 export '../theme.dart';
 
 /// `Color(hex:)` — accepts "#DED2FF" or "DED2FF".
-Color glHex(String? hex, [Color? fallback]) {
+Color glTint(String? hex, [Color? fallback]) {
   final value = int.tryParse((hex ?? '').replaceAll('#', ''), radix: 16);
   if (value == null) return fallback ?? GLTheme.lavender;
   if (!GLTheme.dark) return Color(0xFF000000 | value);
@@ -404,7 +404,7 @@ class GLAvatar extends StatelessWidget {
         height: size,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: glHex(user?.text('tint')),
+          color: glTint(user?.text('tint')),
           shape: BoxShape.circle,
         ),
         child: Text(

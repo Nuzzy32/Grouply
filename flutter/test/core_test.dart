@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:grouply/core/backend.dart';
+import 'package:grouply/ui/gl.dart';
 import 'package:grouply/core/store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -760,6 +761,19 @@ void main() {
       store.didChangeAppLifecycleState(AppLifecycleState.resumed);
       await Future<void>.delayed(Duration.zero);
       expect(store.user('u1')!.text('name'), 'Updated while away');
+    },
+  );
+  test(
+    'glTint maps pastel data colors and blends unknown colors in dark mode',
+    () {
+      final previous = GLTheme.dark;
+      try {
+        GLTheme.dark = true;
+        expect(glTint('#DED2FF'), const Color(0xFF3A3354));
+        expect(glTint('D6E4FF'), const Color(0xFF50545C));
+      } finally {
+        GLTheme.dark = previous;
+      }
     },
   );
 }
