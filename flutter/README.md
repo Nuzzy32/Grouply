@@ -7,8 +7,10 @@ Port Android + iOS dari aplikasi SwiftUI Grouply. Source Swift tetap dipertahank
 ```sh
 cd flutter
 flutter pub get
-flutter run
+flutter run --dart-define-from-file=dart_defines.local.json
 ```
+
+`dart_defines.local.json` (diabaikan Git) ditulis oleh `python3 scripts/backend_local.py setup` dan berisi URL serta publishable key Supabase lokal untuk iOS Simulator. `flutter run` tanpa flag ini membuat sheet akun menampilkan "Konfigurasi server belum tersedia".
 
 Mode demo sudah dihapus. Tanpa konfigurasi backend, sheet akun hanya menampilkan pemberitahuan bahwa server belum dikonfigurasi. Tes widget memakai fake backend `test/demo_backend.dart` yang tidak ikut dibundel.
 

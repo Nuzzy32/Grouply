@@ -43,3 +43,6 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Local Supabase connection values written by scripts/backend_local.py setup
+/dart_defines.local.json
