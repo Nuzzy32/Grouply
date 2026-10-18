@@ -1019,7 +1019,7 @@ class _TabBar extends StatelessWidget {
 
   Widget _button(int i, String label, String icon, {int badge = 0}) {
     final active = index == i;
-    final color = active ? GLTheme.ink : GLTheme.onInk.withValues(alpha: 0.78);
+    final color = active ? GLTheme.tabActiveInk : GLTheme.tabInactive;
     return Expanded(
       child: Semantics(
         selected: active,
@@ -1033,7 +1033,7 @@ class _TabBar extends StatelessWidget {
             child: Container(
               height: 56,
               decoration: ShapeDecoration(
-                color: active ? GLTheme.surface : Colors.transparent,
+                color: active ? GLTheme.tabActive : Colors.transparent,
                 shape: StadiumBorder(),
               ),
               child: Column(
@@ -1062,7 +1062,10 @@ class _TabBar extends StatelessWidget {
                             decoration: ShapeDecoration(
                               color: GLTheme.mint,
                               shape: StadiumBorder(
-                                side: BorderSide(color: GLTheme.ink, width: 2),
+                                side: BorderSide(
+                                  color: GLTheme.tabBar,
+                                  width: 2,
+                                ),
                               ),
                             ),
                             child: Text(
@@ -1098,7 +1101,7 @@ class _TabBar extends StatelessWidget {
     height: 68,
     padding: EdgeInsets.symmetric(horizontal: 6),
     decoration: ShapeDecoration(
-      color: GLTheme.ink,
+      color: GLTheme.tabBar,
       shape: StadiumBorder(),
       shadows: [
         BoxShadow(

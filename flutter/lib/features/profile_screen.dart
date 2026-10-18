@@ -262,10 +262,8 @@ Future<T?> _showBareSheet<T>(
   isScrollControlled: true,
   useSafeArea: true,
   backgroundColor: GLTheme.background,
-  barrierColor: Color(0x66000000),
-  shape: RoundedRectangleBorder(
-    borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
-  ),
+  barrierColor: GLTheme.scrim,
+  shape: GLTheme.sheetShape,
   builder: (context) => SingleChildScrollView(
     padding: EdgeInsets.fromLTRB(horizontal, 10, horizontal, 34),
     child: _ink(

@@ -13,8 +13,8 @@ import '../core/store.dart';
 import '../ui/gl.dart';
 import 'workspace_screens.dart';
 
-final _chip = GLTheme.chip;
-final _dash = GLTheme.placeholder;
+Color get _chip => GLTheme.chip;
+Color get _dash => GLTheme.placeholder;
 
 List<JsonMap> _thread(GrouplyStore store, String groupID) {
   final rows = store.messages
@@ -1516,10 +1516,8 @@ Future<T?> _showChatSheet<T>(BuildContext context, WidgetBuilder builder) =>
       isScrollControlled: true,
       useSafeArea: true,
       backgroundColor: GLTheme.background,
-      barrierColor: Color(0x66000000),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
-      ),
+      barrierColor: GLTheme.scrim,
+      shape: GLTheme.sheetShape,
       builder: (context) => Padding(
         padding: EdgeInsets.only(
           bottom: MediaQuery.viewInsetsOf(context).bottom,

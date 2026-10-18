@@ -115,7 +115,7 @@ struct RootView: View {
       tabButton(3, "Tugas Saya", "checkmark.circle")
     }
     .padding(.horizontal, 6).frame(height: 68)
-    .background(GLTheme.ink, in: Capsule())
+    .background(GLTheme.tabBar, in: Capsule())
     .shadow(color: .black.opacity(0.4), radius: 15, y: 16)
     .padding(.horizontal, 12).padding(.bottom, 22)
   }
@@ -133,7 +133,7 @@ struct RootView: View {
               Text("\(badge)").font(.system(size: 11, weight: .bold)).foregroundStyle(GLTheme.ink)
                 .padding(.horizontal, 5).frame(minWidth: 18, minHeight: 18)
                 .background(GLTheme.mint, in: Capsule())
-                .overlay(Capsule().stroke(GLTheme.ink, lineWidth: 2))
+                .overlay(Capsule().stroke(GLTheme.tabBar, lineWidth: 2))
                 .offset(x: 10, y: -4)
             }
           }
@@ -141,8 +141,8 @@ struct RootView: View {
           .minimumScaleFactor(0.8)
       }
       .frame(maxWidth: .infinity).frame(height: 56)
-      .foregroundStyle(active ? GLTheme.ink : GLTheme.onInk.opacity(0.78))
-      .background(active ? GLTheme.surface : .clear, in: Capsule())
+      .foregroundStyle(active ? GLTheme.tabActiveInk : GLTheme.tabInactive)
+      .background(active ? GLTheme.tabActive : .clear, in: Capsule())
       .contentShape(Capsule())
     }.buttonStyle(.plain).accessibilityIdentifier("tab-\(index)")
       .accessibilityLabel(badge > 0 ? "\(label), \(badge) pesan baru" : label)
