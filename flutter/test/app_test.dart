@@ -95,6 +95,31 @@ void main() {
     store.dispose();
   });
 
+  testWidgets('switching system brightness while open recolors the screen', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+    addTearDown(() => GLTheme.dark = false);
+    tester.platformDispatcher.platformBrightnessTestValue = Brightness.light;
+    final store = GrouplyStore();
+    await store.initialize();
+    await store.startDemo();
+    await tester.pumpWidget(GrouplyApp(store: store, enableLinks: false));
+    await tester.pumpAndSettle();
+    Color background() =>
+        tester.widget<Scaffold>(find.byType(Scaffold).first).backgroundColor!;
+    expect(background(), const Color(0xFFF8F9F7));
+    tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
+    await tester.pumpAndSettle();
+    expect(background(), const Color(0xFF121314));
+    tester.platformDispatcher.platformBrightnessTestValue = Brightness.light;
+    await tester.pumpAndSettle();
+    expect(background(), const Color(0xFFF8F9F7));
+    await tester.pumpWidget(const SizedBox.shrink());
+    store.dispose();
+  });
+
   testWidgets('home fits a narrow screen with enlarged text', (tester) async {
     SharedPreferences.setMockInitialValues({});
     tester.view.physicalSize = const Size(360, 800);

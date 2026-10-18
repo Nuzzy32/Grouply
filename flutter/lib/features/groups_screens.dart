@@ -788,7 +788,7 @@ class _DashedBorder extends CustomPainter {
 
 /// Group card on the Grup tab (prototype `groupsVals`).
 class _GroupCard extends StatelessWidget {
-  _GroupCard(this.store, this.group);
+  const _GroupCard(this.store, this.group);
   final GrouplyStore store;
   final JsonMap group;
   @override
@@ -1382,7 +1382,7 @@ class _GroupState extends _WorkspaceState<GroupScreen>
 
 /// Group-detail project card: 12×40 tint bar, status chip, progress bar.
 class _GroupProjectCard extends StatelessWidget {
-  _GroupProjectCard(this.store, this.project);
+  const _GroupProjectCard(this.store, this.project);
   final GrouplyStore store;
   final JsonMap project;
   @override
@@ -1477,7 +1477,7 @@ class _GroupProjectCard extends StatelessWidget {
 // MARK: - Members screen (prototype `isMembers` + `membersVals`)
 
 class _GroupMembersScreen extends _WorkspaceScreen {
-  _GroupMembersScreen({required super.store, required this.groupID});
+  const _GroupMembersScreen({required super.store, required this.groupID});
   final String groupID;
   @override
   State<_GroupMembersScreen> createState() => _GroupMembersState();
@@ -1611,7 +1611,7 @@ class _GroupMembersState extends _WorkspaceState<_GroupMembersScreen>
 }
 
 class _GroupsSmallChip extends StatelessWidget {
-  _GroupsSmallChip({
+  const _GroupsSmallChip({
     required this.label,
     required this.icon,
     required this.background,
@@ -1637,7 +1637,7 @@ class _GroupsSmallChip extends StatelessWidget {
 
 /// `height:52px;border-radius:18px;border:1.5px solid #A8231B` "Keluar dari grup".
 class _GroupLeaveButton extends StatelessWidget {
-  _GroupLeaveButton({required this.onTap});
+  const _GroupLeaveButton({required this.onTap});
   final VoidCallback onTap;
   @override
   Widget build(BuildContext context) => GLTap(
@@ -1676,7 +1676,7 @@ class _GroupLeaveButton extends StatelessWidget {
 // MARK: - Settings screen (prototype `isSettings`)
 
 class _GroupSettingsScreen extends _WorkspaceScreen {
-  _GroupSettingsScreen({required super.store, required this.groupID});
+  const _GroupSettingsScreen({required super.store, required this.groupID});
   final String groupID;
   @override
   State<_GroupSettingsScreen> createState() => _GroupSettingsState();
@@ -1887,7 +1887,7 @@ class _GroupSettingsState extends _WorkspaceState<_GroupSettingsScreen>
 /// "Buat grup" (`sheetNewGroup`) and "Gabung ke grup" (`sheetJoin`).
 /// Pops with the created/joined group id.
 class _GroupFormSheet extends StatefulWidget {
-  _GroupFormSheet({required this.store, required this.joining});
+  const _GroupFormSheet({required this.store, required this.joining});
   final GrouplyStore store;
   final bool joining;
   @override

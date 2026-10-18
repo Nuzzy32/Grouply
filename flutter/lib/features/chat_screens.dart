@@ -137,7 +137,7 @@ class _DashedBorder extends CustomPainter {
 
 /// Press state for SwiftUI ButtonStyles (`GLChatRowStyle`, `ChatPressStyle`).
 class _Press extends StatefulWidget {
-  _Press({required this.builder, required this.onTap, this.label});
+  const _Press({required this.builder, required this.onTap, this.label});
   final Widget Function(bool pressed) builder;
   final VoidCallback? onTap;
   final String? label;
@@ -170,7 +170,7 @@ class _PressState extends State<_Press> {
 // MARK: - Chat tab (`ChatsView`)
 
 class ChatsScreen extends StatefulWidget {
-  ChatsScreen({super.key, required this.store});
+  const ChatsScreen({super.key, required this.store});
   final GrouplyStore store;
 
   @override
@@ -489,7 +489,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
 // MARK: - Group chat screen (`ChatDetailView` + `ChatThread` + `ChatComposer`)
 
 class ChatScreen extends StatefulWidget {
-  ChatScreen({super.key, required this.store, required this.groupID});
+  const ChatScreen({super.key, required this.store, required this.groupID});
   final GrouplyStore store;
   final String groupID;
 
@@ -1578,7 +1578,7 @@ Future<T?> _showChatSheet<T>(BuildContext context, WidgetBuilder builder) =>
 
 /// Pops with 'copy' | 'retry' | 'report' | 'block'.
 class _MessageSheet extends StatelessWidget {
-  _MessageSheet({required this.store, required this.message});
+  const _MessageSheet({required this.store, required this.message});
   final GrouplyStore store;
   final JsonMap message;
 
@@ -1674,7 +1674,7 @@ class _MessageSheet extends StatelessWidget {
 
 /// `ChatReportSheet` — reason radio list, optional details, done state.
 class _ModerationDialog extends StatefulWidget {
-  _ModerationDialog({required this.cloud, required this.onSubmit});
+  const _ModerationDialog({required this.cloud, required this.onSubmit});
   final bool cloud;
   final Future<void> Function(String reason) onSubmit;
 

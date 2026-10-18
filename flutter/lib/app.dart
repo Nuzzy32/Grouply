@@ -24,7 +24,7 @@ String? taskIDFromLink(Uri uri) {
 }
 
 class GrouplyApp extends StatefulWidget {
-  GrouplyApp({super.key, required this.store, this.enableLinks = true});
+  const GrouplyApp({super.key, required this.store, this.enableLinks = true});
   final GrouplyStore store;
   final bool enableLinks;
 
@@ -123,9 +123,21 @@ class _GrouplyAppState extends State<GrouplyApp> {
 
   @override
   Widget build(BuildContext context) {
-    GLTheme.dark =
-        MediaQueryData.fromView(View.of(context)).platformBrightness ==
-        Brightness.dark;
+    final dark = MediaQuery.platformBrightnessOf(context) == Brightness.dark;
+    if (dark != GLTheme.dark) {
+      GLTheme.dark = dark;
+      // Tokens are plain getters, so widgets (incl. const ones and pushed
+      // routes) don't depend on them: rebuild every element once, keeping
+      // navigation and state.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        void rebuild(Element element) {
+          element.markNeedsBuild();
+          element.visitChildren(rebuild);
+        }
+
+        if (mounted) (context as Element).visitChildren(rebuild);
+      });
+    }
     return MaterialApp(
       title: 'Grouply',
       debugShowCheckedModeBanner: false,
@@ -168,7 +180,7 @@ final _personas = [
 
 /// Swift `WelcomeView.restoring`.
 class _Restoring extends StatelessWidget {
-  _Restoring();
+  const _Restoring();
   @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: GLTheme.background,
@@ -204,7 +216,7 @@ class _Restoring extends StatelessWidget {
 
 /// Swift `WelcomeView.welcome`.
 class _Welcome extends StatefulWidget {
-  _Welcome({required this.store});
+  const _Welcome({required this.store});
   final GrouplyStore store;
   @override
   State<_Welcome> createState() => _WelcomeState();
@@ -277,7 +289,10 @@ class _WelcomeState extends State<_Welcome> {
               child: Container(
                 height: 56,
                 alignment: Alignment.center,
-                decoration: glBox(GLTheme.ink, 18),
+                decoration: glBox(
+                  Color(GLTheme.dark ? 0xFFECEDEE : 0xFF000000),
+                  18,
+                ),
                 child: Text(
                   'Masuk dengan Akun',
                   style: gl(17, w600, 0, GLTheme.onInk),
@@ -361,7 +376,7 @@ class _WelcomeState extends State<_Welcome> {
 }
 
 class _PersonaButton extends StatelessWidget {
-  _PersonaButton({
+  const _PersonaButton({
     required this.name,
     required this.tint,
     required this.role,
@@ -410,7 +425,7 @@ class _PersonaButton extends StatelessWidget {
 
 /// Three tilted preview cards (Swift `previewCards`, 220pt tall).
 class _PreviewCards extends StatelessWidget {
-  _PreviewCards();
+  const _PreviewCards();
   static final _deg = 3.141592653589793 / 180;
   @override
   Widget build(BuildContext context) => ExcludeSemantics(
@@ -543,7 +558,7 @@ Future<void> showLoginSheet(BuildContext context, GrouplyStore store) =>
     );
 
 class _LoginSheet extends StatefulWidget {
-  _LoginSheet({required this.store});
+  const _LoginSheet({required this.store});
   final GrouplyStore store;
   @override
   State<_LoginSheet> createState() => _LoginSheetState();
@@ -953,7 +968,7 @@ class _LoginSheetState extends State<_LoginSheet> {
 /// Root shell: tab content plus the Swift floating ink tab bar
 /// (left/right 12, bottom 22, height 68, capsule, 56pt buttons).
 class _Shell extends StatefulWidget {
-  _Shell({super.key, required this.store});
+  const _Shell({super.key, required this.store});
   final GrouplyStore store;
   @override
   State<_Shell> createState() => _ShellState();
@@ -1051,7 +1066,11 @@ class _ShellState extends State<_Shell> {
 }
 
 class _TabBar extends StatelessWidget {
-  _TabBar({required this.index, required this.unread, required this.onSelect});
+  const _TabBar({
+    required this.index,
+    required this.unread,
+    required this.onSelect,
+  });
   final int index;
   final int unread;
   final ValueChanged<int> onSelect;
@@ -1181,7 +1200,7 @@ class _TabBar extends StatelessWidget {
 
 /// Swift `HomeView` (Beranda).
 class _Home extends StatelessWidget {
-  _Home({required this.store, required this.openTab});
+  const _Home({required this.store, required this.openTab});
   final GrouplyStore store;
   final ValueChanged<int> openTab;
 
@@ -1767,7 +1786,7 @@ class _Home extends StatelessWidget {
 
 /// Swift `HomeProjectCard`.
 class _HomeProjectCard extends StatelessWidget {
-  _HomeProjectCard({required this.store, required this.project});
+  const _HomeProjectCard({required this.store, required this.project});
   final GrouplyStore store;
   final JsonMap project;
   @override

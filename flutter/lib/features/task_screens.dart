@@ -157,7 +157,11 @@ Future<void> _taskLaunch(BuildContext context, String link) async {
 
 /// Task card used on Tugas Saya and Project Detail (prototype `vmTask`).
 class _TaskRow extends StatelessWidget {
-  _TaskRow({required this.store, required this.task, this.showProject = false});
+  const _TaskRow({
+    required this.store,
+    required this.task,
+    this.showProject = false,
+  });
   final GrouplyStore store;
   final JsonMap task;
   final bool showProject;
@@ -2214,7 +2218,7 @@ class _TaskDashedBorder extends CustomPainter {
 
 /// Link pill used in submission cards and the review sheet.
 class _TaskLinkRow extends StatelessWidget {
-  _TaskLinkRow({required this.url, this.external = false});
+  const _TaskLinkRow({required this.url, this.external = false});
   final String url;
   final bool external;
   @override
@@ -2253,7 +2257,7 @@ class _TaskLinkRow extends StatelessWidget {
 
 /// Multiline input box (`TaskTextArea`): white, 1pt border.
 class _TaskTextArea extends StatelessWidget {
-  _TaskTextArea({
+  const _TaskTextArea({
     super.key,
     required this.controller,
     required this.placeholder,
@@ -2296,7 +2300,7 @@ class _TaskTextArea extends StatelessWidget {
 
 /// Sheet list card with icon rows (`TaskActionsSheet` / message options).
 class _TaskOptionList extends StatelessWidget {
-  _TaskOptionList({required this.rows, this.footer});
+  const _TaskOptionList({required this.rows, this.footer});
   final List<(String, String, String, String)> rows; // key, label, sub, icon
   final Widget? footer;
   @override
@@ -2343,7 +2347,7 @@ class _TaskOptionList extends StatelessWidget {
 
 /// Reassign sheet body (prototype `sheetReassign`): member rows + footnote.
 class _TaskReassignList extends StatelessWidget {
-  _TaskReassignList({
+  const _TaskReassignList({
     required this.store,
     required this.rows,
     required this.note,
@@ -2413,7 +2417,7 @@ class _TaskReassignList extends StatelessWidget {
 
 /// Member pick chip (prototype `ntAssignees` / `ntReviewers`).
 class _TaskMemberChip extends StatelessWidget {
-  _TaskMemberChip({
+  const _TaskMemberChip({
     required this.store,
     required this.id,
     required this.on,
@@ -2480,7 +2484,7 @@ Future<JsonMap?> _showTaskSheet(
 );
 
 class _TaskEditorSheet extends StatefulWidget {
-  _TaskEditorSheet({
+  const _TaskEditorSheet({
     required this.store,
     required this.project,
     required this.group,
@@ -2982,7 +2986,7 @@ class _TaskEditorSheetState extends State<_TaskEditorSheet> {
 // MARK: - Submit sheet (prototype `sheetSubmit`)
 
 class _TaskSubmissionSheet extends StatefulWidget {
-  _TaskSubmissionSheet({required this.store, required this.task});
+  const _TaskSubmissionSheet({required this.store, required this.task});
   final GrouplyStore store;
   final JsonMap task;
   @override
@@ -3167,7 +3171,7 @@ class _TaskSubmissionSheetState extends State<_TaskSubmissionSheet> {
 // MARK: - Review sheet (prototype `sheetReview`)
 
 class _TaskReviewSheet extends StatefulWidget {
-  _TaskReviewSheet({required this.store, required this.task});
+  const _TaskReviewSheet({required this.store, required this.task});
   final GrouplyStore store;
   final JsonMap task;
   @override
@@ -3414,7 +3418,7 @@ class _TaskReviewSheetState extends State<_TaskReviewSheet> {
 // MARK: - Task discussion composer (`ChatComposer` with taskID)
 
 class _TaskComposer extends StatefulWidget {
-  _TaskComposer({
+  const _TaskComposer({
     required this.store,
     required this.groupID,
     required this.taskID,

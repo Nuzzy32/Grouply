@@ -75,19 +75,19 @@ final _pjOutline = ShapeDecoration(
 
 /// 28pt project status pill (`padding:0 10px 0 7px`, 12/600, 15pt icon).
 class _ProjectStatusChip extends StatelessWidget {
-  _ProjectStatusChip(this.status);
+  const _ProjectStatusChip(this.status);
   final String status;
   @override
   Widget build(BuildContext context) {
     final (label, bg, icon) = switch (status) {
-      'archived' => ('Diarsipkan', 0xFFECEEEB, 'archivebox'),
-      'completed' => ('Selesai', 0xFFC9F2D6, 'checkmark.circle'),
-      _ => ('Aktif', 0xFFD8EAF4, 'bolt'),
+      'archived' => ('Diarsipkan', GLTheme.chip, 'archivebox'),
+      'completed' => ('Selesai', GLTheme.mint, 'checkmark.circle'),
+      _ => ('Aktif', GLTheme.sky, 'bolt'),
     };
     return Container(
       height: 28,
       padding: EdgeInsets.only(left: 7, right: 10),
-      decoration: ShapeDecoration(color: Color(bg), shape: StadiumBorder()),
+      decoration: ShapeDecoration(color: bg, shape: StadiumBorder()),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         spacing: 4,
@@ -102,7 +102,7 @@ class _ProjectStatusChip extends StatelessWidget {
 
 /// `GLTaskRow` (TaskViews.swift) as used by the project task list.
 class _ProjectTaskRow extends StatelessWidget {
-  _ProjectTaskRow({required this.store, required this.task});
+  const _ProjectTaskRow({required this.store, required this.task});
   final GrouplyStore store;
   final JsonMap task;
   @override
@@ -1271,7 +1271,7 @@ class _ProjectState extends _WorkspaceState<ProjectScreen> {
 
 /// Pulse ring: 112pt track, 16pt segments with a 3pt gap, animated on appear.
 class _PjRing extends StatelessWidget {
-  _PjRing({required this.tasks});
+  const _PjRing({required this.tasks});
   final List<JsonMap> tasks;
   @override
   Widget build(BuildContext context) {
@@ -1364,7 +1364,7 @@ class _PjRingPainter extends CustomPainter {
 
 /// `ProjectMemberButtonStyle`: scale .9 while pressed.
 class _PjPress extends StatefulWidget {
-  _PjPress({required this.child, required this.onTap});
+  const _PjPress({required this.child, required this.onTap});
   final Widget child;
   final VoidCallback onTap;
   @override
@@ -1432,7 +1432,11 @@ bool _pjSameDay(DateTime a, DateTime b) =>
     a.year == b.year && a.month == b.month && a.day == b.day;
 
 class _ProjectEditor extends StatefulWidget {
-  _ProjectEditor({required this.store, required this.groupID, this.project});
+  const _ProjectEditor({
+    required this.store,
+    required this.groupID,
+    this.project,
+  });
   final GrouplyStore store;
   final String groupID;
   final JsonMap? project;

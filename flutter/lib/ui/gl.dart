@@ -26,12 +26,13 @@ Color glHex(String? hex, [Color? fallback]) {
   };
   final direct = mapped[value];
   if (direct != null) return Color(0xFF000000 | direct);
-  int mix(int channel) => ((channel * 28 + 0x1C * 72) / 100).round();
+  // 28% of the stored hex over the dark surface 1C1E20, per channel (as Swift `Color(tint:)`).
+  int mix(int channel, int base) => (channel * 0.28 + base * 0.72).floor();
   return Color.fromARGB(
     255,
-    mix((value >> 16) & 0xFF),
-    mix((value >> 8) & 0xFF),
-    mix(value & 0xFF),
+    mix((value >> 16) & 0xFF, 0x1C),
+    mix((value >> 8) & 0xFF, 0x1E),
+    mix(value & 0xFF, 0x20),
   );
 }
 
@@ -177,7 +178,7 @@ IconData glSymbol(String name) =>
 
 /// `GLIcon` — SF Symbol drawn at 78% of its box, like the Swift version.
 class GLIcon extends StatelessWidget {
-  GLIcon(this.name, {super.key, this.size = 20, this.color});
+  const GLIcon(this.name, {super.key, this.size = 20, this.color});
   final String name;
   final double size;
   final Color? color;
@@ -229,7 +230,7 @@ ShapeDecoration glBox(
 
 /// `.glSurface(radius)` — white card with hairline shadow.
 class GLSurface extends StatelessWidget {
-  GLSurface({
+  const GLSurface({
     super.key,
     required this.child,
     this.radius = 24,
@@ -251,7 +252,7 @@ class GLSurface extends StatelessWidget {
 
 /// `.glCard(color)` — 18pt padding, radius 24, full width.
 class GLCard extends StatelessWidget {
-  GLCard({super.key, required this.child, this.color});
+  const GLCard({super.key, required this.child, this.color});
   final Widget child;
   final Color? color;
   @override
@@ -266,15 +267,19 @@ class GLCard extends StatelessWidget {
 /// Press feedback without Material ripples: `GLRowButtonStyle` (opacity .6)
 /// or `GLCardButtonStyle` (scale .98).
 class GLTap extends StatefulWidget {
-  GLTap({
+  const GLTap({
     super.key,
     required this.child,
     required this.onTap,
     this.scale = false,
     this.label,
   });
-  GLTap.card({super.key, required this.child, required this.onTap, this.label})
-    : scale = true;
+  const GLTap.card({
+    super.key,
+    required this.child,
+    required this.onTap,
+    this.label,
+  }) : scale = true;
   final Widget child;
   final VoidCallback? onTap;
   final bool scale;
@@ -314,7 +319,7 @@ class _GLTapState extends State<GLTap> {
 
 /// `GLButtonStyle` — ink fill, white label, scale .98 on press, 35% when disabled.
 class GLInkButton extends StatelessWidget {
-  GLInkButton({
+  const GLInkButton({
     super.key,
     required this.child,
     required this.onPressed,
@@ -352,7 +357,7 @@ class GLInkButton extends StatelessWidget {
 
 /// `GLPrimaryButton` — 58pt ink button with optional icon.
 class GLPrimaryButton extends StatelessWidget {
-  GLPrimaryButton({
+  const GLPrimaryButton({
     super.key,
     required this.title,
     required this.onPressed,
@@ -381,7 +386,12 @@ String glInitials(String? name) {
 
 /// `GLAvatar` — two-letter initials on the user's tint.
 class GLAvatar extends StatelessWidget {
-  GLAvatar({super.key, required this.user, this.size = 36, this.fontSize});
+  const GLAvatar({
+    super.key,
+    required this.user,
+    this.size = 36,
+    this.fontSize,
+  });
   final JsonMap? user;
   final double size;
   final double? fontSize;
@@ -414,7 +424,7 @@ class GLAvatar extends StatelessWidget {
 
 /// `GLChip` — pill for status/role/info. `outlined` = 1.5pt ink ring.
 class GLChip extends StatelessWidget {
-  GLChip({
+  const GLChip({
     super.key,
     required this.label,
     this.icon,
@@ -473,7 +483,7 @@ class GLChip extends StatelessWidget {
 
 /// `GLCountBadge` — dark counter in section headers.
 class GLCountBadge extends StatelessWidget {
-  GLCountBadge({super.key, required this.count, this.size = 30});
+  const GLCountBadge({super.key, required this.count, this.size = 30});
   final int count;
   final double size;
   @override
@@ -523,7 +533,7 @@ abstract final class GLStatus {
 }
 
 class GLStatusChip extends StatelessWidget {
-  GLStatusChip({super.key, required this.status, this.large = false});
+  const GLStatusChip({super.key, required this.status, this.large = false});
   final String status;
   final bool large;
   @override
@@ -537,7 +547,7 @@ class GLStatusChip extends StatelessWidget {
 
 /// `GLNotice` — tinted info box.
 class GLNotice extends StatelessWidget {
-  GLNotice({
+  const GLNotice({
     super.key,
     required this.text,
     this.color,
@@ -564,7 +574,7 @@ class GLNotice extends StatelessWidget {
 
 /// `GLEmptyState` — centered white card, radius 28.
 class GLEmptyState extends StatelessWidget {
-  GLEmptyState({
+  const GLEmptyState({
     super.key,
     required this.title,
     required this.message,
@@ -603,7 +613,7 @@ class GLEmptyState extends StatelessWidget {
 
 /// `GLSectionHeading` — 21/700 title with optional trailing "… >" link.
 class GLSectionHeading extends StatelessWidget {
-  GLSectionHeading({
+  const GLSectionHeading({
     super.key,
     required this.title,
     this.actionTitle,
@@ -733,7 +743,7 @@ extension on int {
 
 /// `GLCircleButton` — 44pt white circle icon button with hairline shadow.
 class GLCircleButton extends StatelessWidget {
-  GLCircleButton({
+  const GLCircleButton({
     super.key,
     required this.icon,
     required this.label,
@@ -771,7 +781,7 @@ class GLCircleButton extends StatelessWidget {
 
 /// `GLDetailHeader` — back circle, centered 17/600 title, optional trailing.
 class GLDetailHeader extends StatelessWidget {
-  GLDetailHeader(this.title, {super.key, this.trailing, this.onBack});
+  const GLDetailHeader(this.title, {super.key, this.trailing, this.onBack});
   final String title;
   final Widget? trailing;
   final VoidCallback? onBack;
@@ -803,7 +813,7 @@ class GLDetailHeader extends StatelessWidget {
 /// `.glDetailScreen()` — background + safe area + custom header, scrolling body.
 /// Content uses the Swift detail padding (20 horizontal, 10 top).
 class GLDetailScaffold extends StatelessWidget {
-  GLDetailScaffold({
+  const GLDetailScaffold({
     super.key,
     required this.title,
     required this.children,
@@ -918,7 +928,7 @@ Future<T?> showGLSheet<T>(
 
 /// `GLField` — 14/600 label (+ red asterisk) over a field.
 class GLField extends StatelessWidget {
-  GLField(
+  const GLField(
     this.label, {
     super.key,
     required this.child,
@@ -984,7 +994,7 @@ InputDecoration glInputDecoration({String? hint, double radius = 16}) {
 }
 
 class GLTextField extends StatelessWidget {
-  GLTextField({
+  const GLTextField({
     super.key,
     required this.controller,
     this.hint,
@@ -1041,7 +1051,7 @@ class GLTextField extends StatelessWidget {
 
 /// `GLFormError` — coral inline error.
 class GLFormError extends StatelessWidget {
-  GLFormError(this.text, {super.key});
+  const GLFormError(this.text, {super.key});
   final String text;
   @override
   Widget build(BuildContext context) => MergeSemantics(
@@ -1062,7 +1072,7 @@ class GLFormError extends StatelessWidget {
 
 /// `GLSubmitButton` — 56pt, radius 20, 17/600, spinner while busy.
 class GLSubmitButton extends StatelessWidget {
-  GLSubmitButton({
+  const GLSubmitButton({
     super.key,
     required this.title,
     required this.onPressed,
@@ -1103,7 +1113,7 @@ class GLSubmitButton extends StatelessWidget {
 
 /// `GLOutlineButton` — 1.5pt ink border.
 class GLOutlineButton extends StatelessWidget {
-  GLOutlineButton({
+  const GLOutlineButton({
     super.key,
     required this.title,
     required this.onPressed,
@@ -1220,7 +1230,7 @@ Future<bool> showGLConfirm(
     false;
 
 class _DialogButton extends StatelessWidget {
-  _DialogButton({
+  const _DialogButton({
     required this.title,
     required this.color,
     required this.foreground,
@@ -1278,7 +1288,11 @@ void showGLToast(
 }
 
 class GLToastView extends StatelessWidget {
-  GLToastView({super.key, required this.text, this.kind = GLToastKind.ok});
+  const GLToastView({
+    super.key,
+    required this.text,
+    this.kind = GLToastKind.ok,
+  });
   final String text;
   final GLToastKind kind;
   @override
@@ -1331,7 +1345,7 @@ class GLToastView extends StatelessWidget {
 
 /// `GLAccessDenied` — lost access to a group/project/task.
 class GLAccessDenied extends StatelessWidget {
-  GLAccessDenied({
+  const GLAccessDenied({
     super.key,
     this.text =
         'Konten ini milik grup yang tidak kamu ikuti, atau sudah dihapus. Minta kode undangan ke koordinatornya untuk bergabung.',
@@ -1368,7 +1382,7 @@ class GLAccessDenied extends StatelessWidget {
 
 /// Thin progress bar (ink on muted) used on project cards.
 class GLProgressBar extends StatelessWidget {
-  GLProgressBar({super.key, required this.value, this.height = 6});
+  const GLProgressBar({super.key, required this.value, this.height = 6});
   final double value;
   final double height;
   @override
@@ -1391,7 +1405,7 @@ class GLProgressBar extends StatelessWidget {
 
 /// 1pt divider line used between list rows.
 class GLHairline extends StatelessWidget {
-  GLHairline({super.key, this.color});
+  const GLHairline({super.key, this.color});
   final Color? color;
   @override
   Widget build(BuildContext context) => Container(height: 1, color: color);

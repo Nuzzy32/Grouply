@@ -65,7 +65,7 @@ class _LocalPrefs extends ChangeNotifier {
 
 /// `.glDetailScreen()` with the profile padding (20 horizontal, 4 top, 32 bottom).
 class _ProfileScaffold extends StatelessWidget {
-  _ProfileScaffold({
+  const _ProfileScaffold({
     required this.title,
     required this.children,
     this.spacing = 16,
@@ -105,7 +105,7 @@ Widget _ink(Widget child) => DefaultTextStyle.merge(
 
 /// White grouped list (`border-radius:24px;padding:4px 16px`).
 class _ProfileGroup extends StatelessWidget {
-  _ProfileGroup({required this.children, this.vertical = 4});
+  const _ProfileGroup({required this.children, this.vertical = 4});
   final List<Widget> children;
   final double vertical;
   @override
@@ -124,7 +124,7 @@ final _divider = BoxDecoration(
 
 /// 44pt capsule outline button ("Edit", "Buka blokir").
 class _PillButton extends StatelessWidget {
-  _PillButton({required this.title, required this.onTap});
+  const _PillButton({required this.title, required this.onTap});
   final String title;
   final VoidCallback? onTap;
   @override
@@ -144,7 +144,7 @@ class _PillButton extends StatelessWidget {
 
 /// iOS switch from the prototype's `sw()` (#34C759 / #D5D8DB).
 class _ProfileSwitch extends StatelessWidget {
-  _ProfileSwitch({required this.on, required this.onChanged});
+  const _ProfileSwitch({required this.on, required this.onChanged});
   final bool on;
   final VoidCallback onChanged;
   @override
@@ -159,7 +159,11 @@ class _ProfileSwitch extends StatelessWidget {
 
 /// Dashed `#9AA0A6` 1.5pt rounded border (`StrokeStyle(dash: [5, 4])`).
 class _Dashed extends StatelessWidget {
-  _Dashed({required this.radius, required this.padding, required this.child});
+  const _Dashed({
+    required this.radius,
+    required this.padding,
+    required this.child,
+  });
   final double radius;
   final EdgeInsetsGeometry padding;
   final Widget child;
@@ -198,7 +202,7 @@ class _DashPainter extends CustomPainter {
 }
 
 class _DashedNote extends StatelessWidget {
-  _DashedNote(this.text);
+  const _DashedNote(this.text);
   final String text;
   @override
   Widget build(BuildContext context) => _Dashed(
@@ -219,7 +223,7 @@ Widget _tag(String text, double height, double em) => Container(
 
 /// Filled sheet button (`height:54px;border-radius:18px;font-size:16px`).
 class _FilledButton extends StatelessWidget {
-  _FilledButton({
+  const _FilledButton({
     required this.title,
     required this.onTap,
     this.height = 54,
@@ -315,7 +319,7 @@ Future<T?> _showBareSheet<T>(
 // MARK: - Profil
 
 class ProfileScreen extends StatefulWidget {
-  ProfileScreen({super.key, required this.store});
+  const ProfileScreen({super.key, required this.store});
 
   final GrouplyStore store;
 
@@ -627,7 +631,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 // MARK: - Notifikasi
 
 class _NotifScreen extends StatelessWidget {
-  _NotifScreen({required this.store});
+  const _NotifScreen({required this.store});
   final GrouplyStore store;
 
   Widget _row(String key, String label, String sub) {
@@ -772,7 +776,7 @@ class _NotifScreen extends StatelessWidget {
 // MARK: - Pengguna diblokir
 
 class _BlockedScreen extends StatefulWidget {
-  _BlockedScreen({required this.store});
+  const _BlockedScreen({required this.store});
   final GrouplyStore store;
   @override
   State<_BlockedScreen> createState() => _BlockedScreenState();
@@ -877,7 +881,7 @@ class _BlockedScreenState extends State<_BlockedScreen> {
 // MARK: - Tentang
 
 class _AboutScreen extends StatelessWidget {
-  _AboutScreen({required this.store});
+  const _AboutScreen({required this.store});
   final GrouplyStore store;
 
   String _status(JsonMap report) {
@@ -993,7 +997,7 @@ void _showEditName(BuildContext context, GrouplyStore store) => showGLSheet(
 );
 
 class _EditNameSheet extends StatefulWidget {
-  _EditNameSheet({required this.store});
+  const _EditNameSheet({required this.store});
   final GrouplyStore store;
   @override
   State<_EditNameSheet> createState() => _EditNameSheetState();
@@ -1068,7 +1072,7 @@ void _showPerm(BuildContext context) => _showBareSheet(
 );
 
 class _PermSheet extends StatefulWidget {
-  _PermSheet();
+  const _PermSheet();
   @override
   State<_PermSheet> createState() => _PermSheetState();
 }
@@ -1310,7 +1314,7 @@ void _showDelete(BuildContext context, GrouplyStore store) => showGLSheet(
 );
 
 class _DeleteSheet extends StatefulWidget {
-  _DeleteSheet({required this.store});
+  const _DeleteSheet({required this.store});
   final GrouplyStore store;
   @override
   State<_DeleteSheet> createState() => _DeleteSheetState();
