@@ -46,7 +46,7 @@ struct ProfileView: View {
             divider: true
           ) { sub = .blocked }
           navRow(
-            "flag", Color(hex: "ECEEEB"), "Pelaporan",
+            "flag", GLTheme.chip, "Pelaporan",
             "\(store.reports.filter { $0.reporterID == me }.count) laporan tersimpan \(store.isCloudMode ? "di server" : "lokal")"
           ) { sub = .about }
         }
@@ -90,7 +90,7 @@ struct ProfileView: View {
       }.frame(maxWidth: .infinity, alignment: .leading)
       ProfilePillButton(title: "Edit") { sheet = .editName }
     }
-    .padding(20).background(.white, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+    .padding(20).background(GLTheme.surface, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
   }
 
   private var demoBox: some View {
@@ -120,7 +120,7 @@ struct ProfileView: View {
     .padding(.vertical, 14).padding(.horizontal, 16).frame(maxWidth: .infinity, alignment: .leading)
     .overlay(
       RoundedRectangle(cornerRadius: 24, style: .continuous)
-        .strokeBorder(Color(hex: "9AA0A6"), style: StrokeStyle(lineWidth: 1.5, dash: [5, 4])))
+        .strokeBorder(GLTheme.placeholder, style: StrokeStyle(lineWidth: 1.5, dash: [5, 4])))
   }
 
   private func sectionLabel(_ text: String) -> some View {
@@ -169,7 +169,7 @@ private struct ProfileGroup<Content: View>: View {
   var body: some View {
     VStack(spacing: 0) { content }
       .padding(.horizontal, 16).padding(.vertical, vertical)
-      .background(.white, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+      .background(GLTheme.surface, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
   }
 }
 
@@ -195,7 +195,7 @@ private struct ProfilePillButton: View {
 private struct ProfileSwitch: View {
   let on: Bool
   var body: some View {
-    Capsule().fill(on ? Color(hex: "34C759") : Color(hex: "D5D8DB")).frame(width: 51, height: 31)
+    Capsule().fill(on ? Color(hex: "34C759") : GLTheme.hairline).frame(width: 51, height: 31)
       .overlay(alignment: on ? .trailing : .leading) {
         Circle().fill(.white).frame(width: 27, height: 27)
           .shadow(color: .black.opacity(0.2), radius: 2, y: 2).padding(2)
@@ -211,7 +211,7 @@ private struct ProfileDashedNote: View {
       .padding(.vertical, 10).padding(.horizontal, 12).frame(maxWidth: .infinity, alignment: .leading)
       .overlay(
         RoundedRectangle(cornerRadius: 14, style: .continuous)
-          .strokeBorder(Color(hex: "9AA0A6"), style: StrokeStyle(lineWidth: 1.5, dash: [5, 4])))
+          .strokeBorder(GLTheme.placeholder, style: StrokeStyle(lineWidth: 1.5, dash: [5, 4])))
   }
 }
 
@@ -253,7 +253,7 @@ private struct ProfileNotifView: View {
             ProfileSwitch(on: perm == "on")
           }
           .padding(.vertical, 14).padding(.horizontal, 16).frame(minHeight: 68)
-          .background(.white, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+          .background(GLTheme.surface, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
         }
         .buttonStyle(GLRowButtonStyle())
         .accessibilityValue(perm == "on" ? "Aktif" : "Nonaktif")
@@ -310,7 +310,7 @@ private struct ProfileBlockedView: View {
           }
           .multilineTextAlignment(.center).frame(maxWidth: .infinity)
           .padding(.vertical, 28).padding(.horizontal, 22)
-          .background(.white, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+          .background(GLTheme.surface, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
         } else {
           ProfileGroup(vertical: 0) {
             ForEach(store.blockedUserIDs, id: \.self) { id in
@@ -396,7 +396,7 @@ private struct ProfileBareSheet<Content: View>: View {
   var body: some View {
     ScrollView {
       VStack(alignment: centered ? .center : .leading, spacing: spacing) {
-        Capsule().fill(Color(hex: "C4C7C5")).frame(width: 38, height: 5).frame(maxWidth: .infinity)
+        Capsule().fill(GLTheme.disabled).frame(width: 38, height: 5).frame(maxWidth: .infinity)
         content
       }
       .multilineTextAlignment(centered ? .center : .leading)
@@ -428,7 +428,7 @@ private struct ProfileFilledButton: View {
   let action: () -> Void
   var body: some View {
     Button(action: action) {
-      Text(title).gl(fontSize, .semibold).foregroundStyle(.white).frame(maxWidth: .infinity)
+      Text(title).gl(fontSize, .semibold).foregroundStyle(GLTheme.onInk).frame(maxWidth: .infinity)
         .frame(height: height)
         .background(background, in: RoundedRectangle(cornerRadius: radius, style: .continuous))
         .opacity(busy ? 0.6 : 1)
@@ -522,7 +522,7 @@ private struct ProfilePermSheet: View {
           .padding(18).frame(maxWidth: .infinity)
           .overlay(
             RoundedRectangle(cornerRadius: 22, style: .continuous)
-              .strokeBorder(Color(hex: "9AA0A6"), style: StrokeStyle(lineWidth: 1.5, dash: [5, 4])))
+              .strokeBorder(GLTheme.placeholder, style: StrokeStyle(lineWidth: 1.5, dash: [5, 4])))
           HStack(spacing: 10) {
             GLOutlineButton(title: "Ditolak", height: 52, radius: 18) {
               perm = "denied"
@@ -555,7 +555,7 @@ private struct ProfilePersonasSheet: View {
         Spacer(minLength: 0)
         Button { dismiss() } label: {
           GLIcon("xmark", size: 22).frame(width: 44, height: 44)
-            .background(Color(hex: "ECEEEB"), in: Circle())
+            .background(GLTheme.chip, in: Circle())
         }.buttonStyle(.plain).accessibilityLabel("Tutup")
       }
       Text("Hanya untuk menguji sudut pandang tiap anggota. Semua persona memakai data yang sama.")
@@ -579,7 +579,7 @@ private struct ProfilePersonasSheet: View {
                 if on { Text("Aktif").gl(13, .bold) }
               }
               .padding(.vertical, 8).padding(.leading, 8).padding(.trailing, 14).frame(minHeight: 56)
-              .background(.white, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+              .background(GLTheme.surface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
               .overlay(
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
                   .strokeBorder(on ? GLTheme.ink : GLTheme.border, lineWidth: 1.5))
@@ -627,7 +627,7 @@ private struct ProfileDeleteSheet: View {
             }
           }
           .padding(.vertical, 16).padding(.horizontal, 18).frame(maxWidth: .infinity, alignment: .leading)
-          .background(.white, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+          .background(GLTheme.surface, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
           if !blockers.isEmpty {
             GLNotice(
               text: "Serahkan peran koordinator dulu di: "
@@ -639,7 +639,7 @@ private struct ProfileDeleteSheet: View {
           }
           if let error { GLFormError(text: error) }
           ProfileFilledButton(
-            title: "Lanjutkan", background: blockers.isEmpty && !hasActiveAssignments ? GLTheme.ink : Color(hex: "B4B8BC")
+            title: "Lanjutkan", background: blockers.isEmpty && !hasActiveAssignments ? GLTheme.ink : GLTheme.faint
           ) {
             if !blockers.isEmpty {
               error = "Serahkan peran koordinator dulu sebelum menghapus akun."
@@ -719,7 +719,7 @@ struct ProfilePrivacySheet: View {
       }
       .gl(15).lineSpacing(4.5)
       .padding(.vertical, 16).padding(.horizontal, 18).frame(maxWidth: .infinity, alignment: .leading)
-      .background(.white, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+      .background(GLTheme.surface, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
       ProfileFilledButton(title: "Mengerti") { dismiss() }
     }
   }

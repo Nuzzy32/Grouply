@@ -157,8 +157,8 @@ struct MyTasksView: View {
           .frame(minWidth: 28, minHeight: 28).background(on ? GLTheme.mint : GLTheme.muted, in: Capsule())
       }
       .padding(.leading, 16).padding(.trailing, 7).frame(height: 44)
-      .foregroundStyle(on ? .white : GLTheme.ink)
-      .background(on ? GLTheme.ink : .white, in: Capsule())
+      .foregroundStyle(on ? GLTheme.onInk : GLTheme.ink)
+      .background(on ? GLTheme.ink : GLTheme.surface, in: Capsule())
       .overlay(Capsule().strokeBorder(GLTheme.ink, lineWidth: 1.5))
     }.buttonStyle(.plain).accessibilityAddTraits(on ? .isSelected : [])
   }
@@ -318,7 +318,7 @@ struct TaskDetailView: View {
           .padding(.horizontal, 4).frame(maxWidth: .infinity).frame(height: 44)
           .background {
             if on {
-              RoundedRectangle(cornerRadius: 14, style: .continuous).fill(.white)
+              RoundedRectangle(cornerRadius: 14, style: .continuous).fill(GLTheme.surface)
                 .shadow(color: .black.opacity(0.08), radius: 1.5, y: 1)
             }
           }
@@ -330,7 +330,7 @@ struct TaskDetailView: View {
       }
     }
     .padding(4)
-    .background(Color(hex: "ECEEEB"), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+    .background(GLTheme.chip, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
   }
 
   // MARK: Overview tab
@@ -379,14 +379,14 @@ struct TaskDetailView: View {
         }.padding(.vertical, 12)
       }
       .padding(.vertical, 4).padding(.horizontal, 18)
-      .background(.white, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+      .background(GLTheme.surface, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
       VStack(alignment: .leading, spacing: 8) {
         Text("DESKRIPSI").gl(13, .bold, em: 0.04).foregroundStyle(GLTheme.text2)
         Text(task.description.isEmpty ? "Belum ada deskripsi." : task.description).gl(15)
           .lineSpacing(5).fixedSize(horizontal: false, vertical: true).textSelection(.enabled)
       }
       .padding(18).frame(maxWidth: .infinity, alignment: .leading)
-      .background(.white, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+      .background(GLTheme.surface, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
       Button {
         withAnimation(.easeOut(duration: 0.18)) { tab = .discussion }
       } label: {
@@ -431,7 +431,7 @@ struct TaskDetailView: View {
         }
         .multilineTextAlignment(.center).frame(maxWidth: .infinity)
         .padding(.vertical, 28).padding(.horizontal, 20)
-        .background(.white, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .background(GLTheme.surface, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
       }
     }
   }
@@ -477,7 +477,7 @@ struct TaskDetailView: View {
       }
     }
     .padding(18).frame(maxWidth: .infinity, alignment: .leading)
-    .background(.white, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+    .background(GLTheme.surface, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
   }
 
   private func lockText(_ task: GLTask, _ mine: Bool) -> some View {
@@ -498,7 +498,7 @@ struct TaskDetailView: View {
       .foregroundStyle(GLTheme.text2)
       .padding(.leading, 10).padding(.trailing, 14).frame(height: 44)
       .overlay(
-        Capsule().strokeBorder(Color(hex: "9AA0A6"), style: StrokeStyle(lineWidth: 1.5, dash: [4, 3])))
+        Capsule().strokeBorder(GLTheme.placeholder, style: StrokeStyle(lineWidth: 1.5, dash: [4, 3])))
       .contentShape(Capsule())
     }.buttonStyle(GLRowButtonStyle()).fixedSize().accessibilityLabel("Setujui, terkunci")
   }
@@ -521,7 +521,7 @@ struct TaskDetailView: View {
             Text(refreshing ? "Memuat…" : "Muat ulang").gl(13, .semibold)
           }
           .padding(.horizontal, 12).frame(height: 44)
-          .background { Capsule().fill(.white).shadow(color: .black.opacity(0.06), radius: 1, y: 1) }
+          .background { Capsule().fill(GLTheme.raised).shadow(color: .black.opacity(0.06), radius: 1, y: 1) }
         }.buttonStyle(.plain).fixedSize().accessibilityLabel("Muat ulang komentar")
       }.padding(.horizontal, 20)
       ChatThread(groupID: project.groupID, taskID: task.id)
@@ -565,7 +565,7 @@ struct TaskDetailView: View {
         .multilineTextAlignment(.center)
         .padding(.vertical, 8).padding(.horizontal, 16)
         .frame(maxWidth: .infinity).frame(minHeight: 54)
-        .background(.white, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .background(GLTheme.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).strokeBorder(GLTheme.border))
         .accessibilityElement(children: .combine)
       }
@@ -708,7 +708,7 @@ private struct TaskTextArea: View {
   var body: some View {
     TextField(placeholder, text: $text, axis: .vertical).gl(16).lineLimit(rows...max(rows, 10))
       .padding(.horizontal, 16).padding(.vertical, vertical)
-      .background(.white, in: RoundedRectangle(cornerRadius: radius, style: .continuous))
+      .background(GLTheme.surface, in: RoundedRectangle(cornerRadius: radius, style: .continuous))
       .overlay(RoundedRectangle(cornerRadius: radius, style: .continuous).strokeBorder(GLTheme.border))
   }
 }
@@ -727,8 +727,8 @@ private struct TaskMemberChip: View {
         Text(store.displayName(id)).gl(14, .semibold)
       }
       .padding(.leading, 5).padding(.trailing, 14).frame(height: 44)
-      .foregroundStyle(on ? .white : GLTheme.ink)
-      .background(on ? GLTheme.ink : .white, in: Capsule())
+      .foregroundStyle(on ? GLTheme.onInk : GLTheme.ink)
+      .background(on ? GLTheme.ink : GLTheme.surface, in: Capsule())
       .overlay(Capsule().strokeBorder(GLTheme.ink, lineWidth: 1.5))
       .opacity(dimmed ? 0.4 : 1)
       .animation(.easeOut(duration: 0.15), value: on)
@@ -781,7 +781,7 @@ private struct TaskProjectCard: View {
       Spacer(minLength: 0)
     }
     .padding(.vertical, 12).padding(.horizontal, 14)
-    .background(.white, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+    .background(GLTheme.surface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
     .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).strokeBorder(GLTheme.border))
     .accessibilityElement(children: .combine)
   }
@@ -803,8 +803,8 @@ private struct TaskDeadlineField: View {
           Button { date = value } label: {
             Text(label).gl(14, .semibold).lineLimit(1).minimumScaleFactor(0.8)
               .frame(maxWidth: .infinity).frame(height: 44)
-              .foregroundStyle(on ? .white : GLTheme.ink)
-              .background(on ? GLTheme.ink : .white, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+              .foregroundStyle(on ? GLTheme.onInk : GLTheme.ink)
+              .background(on ? GLTheme.ink : GLTheme.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
               .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(GLTheme.ink, lineWidth: 1.5))
           }.buttonStyle(.plain).accessibilityAddTraits(on ? .isSelected : [])
         }
@@ -820,7 +820,7 @@ private struct TaskDeadlineField: View {
         Spacer(minLength: 0)
       }
       .padding(.horizontal, 14).frame(height: 50)
-      .background(.white, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+      .background(GLTheme.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
       .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(GLTheme.border))
       Text("\(GLFormat.weekday(date)), \(GLFormat.date(date)) · 23:59").gl(13).foregroundStyle(GLTheme.secondary)
       if let projectDue, cal.startOfDay(for: date) > cal.startOfDay(for: projectDue) {
@@ -893,7 +893,7 @@ private struct TaskActionsSheet: View {
         }
       }
       .padding(.vertical, 4).padding(.horizontal, 16)
-      .background(.white, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+      .background(GLTheme.surface, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
     }
   }
   private var shareText: String {
@@ -999,11 +999,11 @@ struct TaskEditor: View {
         HStack(spacing: 10) {
           Button { dismiss() } label: {
             Text("Batal").gl(16, .semibold).frame(maxWidth: .infinity).frame(height: 56)
-              .background(Color(hex: "ECEEEB"), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+              .background(GLTheme.chip, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
           }.buttonStyle(.plain)
           Button { save() } label: {
             Text(busy ? "Menyimpan…" : retry ? "Coba lagi" : "Simpan perubahan").gl(16, .semibold)
-              .foregroundStyle(.white).frame(maxWidth: .infinity).frame(height: 56)
+              .foregroundStyle(GLTheme.onInk).frame(maxWidth: .infinity).frame(height: 56)
               .background(GLTheme.ink, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
               .opacity(busy ? 0.6 : 1)
           }.buttonStyle(.plain).disabled(busy).layoutPriority(1)
@@ -1130,7 +1130,7 @@ struct ReassignEditor: View {
         }
       }
       .padding(.vertical, 4).padding(.horizontal, 14)
-      .background(.white, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+      .background(GLTheme.surface, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
       if let error { GLFormError(text: error) }
       Text(
         newAssignee.map {
@@ -1241,7 +1241,7 @@ struct SubmissionEditor: View {
               .onChange(of: links[i]) { _, _ in error = nil }
           }
           .padding(.horizontal, 14).frame(height: 48)
-          .background(.white, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+          .background(GLTheme.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
           .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(GLTheme.border))
         }
         if links.count < 5 {
@@ -1308,7 +1308,7 @@ struct ReviewEditor: View {
           ForEach(sub.links, id: \.self) { TaskLinkRow(url: $0, external: true) }
         }
         .padding(.vertical, 16).padding(.horizontal, 18).frame(maxWidth: .infinity, alignment: .leading)
-        .background(.white, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .background(GLTheme.surface, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
       }
       if let error { GLFormError(text: error) }
       if changes {
@@ -1326,11 +1326,11 @@ struct ReviewEditor: View {
               error = nil
             } label: {
               Text("Kembali").gl(16, .semibold).frame(maxWidth: .infinity).frame(height: 54)
-                .background(Color(hex: "ECEEEB"), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                .background(GLTheme.chip, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
             }.buttonStyle(.plain)
             Button { decide(false) } label: {
               Text(busy ? "Mengirim…" : "Kirim ke \(store.user(task.assigneeID)?.name ?? "Pelaksana")")
-                .gl(16, .semibold).lineLimit(1).minimumScaleFactor(0.8).foregroundStyle(.white)
+                .gl(16, .semibold).lineLimit(1).minimumScaleFactor(0.8).foregroundStyle(GLTheme.onInk)
                 .padding(.horizontal, 8).frame(maxWidth: .infinity).frame(height: 54)
                 .background(GLTheme.ink, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                 .opacity(busy ? 0.6 : 1)
@@ -1342,10 +1342,10 @@ struct ReviewEditor: View {
         VStack(spacing: 10) {
           Button { decide(true) } label: {
             HStack(spacing: 8) {
-              if pending == true { ProgressView().tint(.white) } else { GLIcon("checkmark.circle", size: 22) }
+              if pending == true { ProgressView().tint(GLTheme.onInk) } else { GLIcon("checkmark.circle", size: 22) }
               Text(pending == true ? "Menyimpan…" : "Setujui").gl(17, .semibold)
             }
-            .foregroundStyle(.white).frame(maxWidth: .infinity).frame(height: 56)
+            .foregroundStyle(GLTheme.onInk).frame(maxWidth: .infinity).frame(height: 56)
             .background(GLTheme.ink, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
             .opacity(busy ? 0.6 : 1)
           }.buttonStyle(.plain).disabled(busy).accessibilityIdentifier("approve-work")
@@ -1358,7 +1358,7 @@ struct ReviewEditor: View {
               Text("Minta revisi").gl(17, .semibold)
             }
             .frame(maxWidth: .infinity).frame(height: 56)
-            .background(.white, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .background(GLTheme.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).strokeBorder(GLTheme.ink, lineWidth: 1.5))
           }.buttonStyle(.plain).disabled(busy)
         }

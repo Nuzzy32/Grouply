@@ -7,7 +7,6 @@ struct GrouplyApp: App {
   var body: some Scene {
     WindowGroup {
       RootView().environment(store).tint(GLTheme.ink)
-        .preferredColorScheme(.light)
     }
   }
 }
