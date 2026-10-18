@@ -1,66 +1,206 @@
-# Grouply
+<p align="center">
+  <img src="docs/assets/readme/app-icon.png" width="96" alt="Grouply app icon">
+</p>
 
-## Flutter migration — Android + iOS
+<h1 align="center">Grouply</h1>
 
-The shared Flutter client is in `flutter/`. Run it with backend configuration (`cd flutter && flutter run --dart-define=...`, see [Flutter setup](flutter/README.md)); without it the app only shows a notice that the server is not configured. It supports email sign-in, sign-up and an emailed-code password reset. The existing SwiftUI client remains, and both clients use the same Supabase RPC contracts. See [migration verification and remaining release work](docs/FLUTTER_MIGRATION.md). This is a development port, not a published Android/iOS release.
+<p align="center">
+  <strong>Make group work actually work.</strong><br>
+  A coordination app for student group projects: who does what, what was submitted,<br>
+  what is waiting for review, and where the discussion lives.
+</p>
 
-## Existing SwiftUI client
+<p align="center">
+  <img alt="iOS 17+" src="https://img.shields.io/badge/iOS-17%2B-000000?logo=apple&logoColor=white">
+  <img alt="Android" src="https://img.shields.io/badge/Android-Flutter-3DDC84?logo=android&logoColor=white">
+  <img alt="SwiftUI" src="https://img.shields.io/badge/SwiftUI-native-F05138?logo=swift&logoColor=white">
+  <img alt="Flutter" src="https://img.shields.io/badge/Flutter-3.41-02569B?logo=flutter&logoColor=white">
+  <img alt="Supabase" src="https://img.shields.io/badge/Supabase-Postgres%20%2B%20RLS-3FCF8E?logo=supabase&logoColor=white">
+  <a href="LICENSE"><img alt="License: Apache 2.0" src="https://img.shields.io/badge/License-Apache%202.0-blue.svg"></a>
+</p>
 
-Native iPhone implementation of the supplied Grouply v3.1 prototype, using **SwiftUI, iOS 17+, and the Soft Future design system**. Interface language: Bahasa Indonesia.
+<p align="center">
+  <img src="docs/assets/readme/02-home-light.png" width="200" alt="Home, light mode">
+  <img src="docs/assets/readme/04-task-light.png" width="200" alt="Task detail, light mode">
+  <img src="docs/assets/readme/06-chat-dark.png" width="200" alt="Group chat, dark mode">
+  <img src="docs/assets/readme/05-review-dark.png" width="200" alt="Peer review, dark mode">
+</p>
 
-**Current delivery: real accounts on a working local Supabase backend.** Demo mode (personas, seed data, local JSON snapshot and simulation switches) was removed from both clients on 17 October 2026; every screen now shows server data only. The server uses actual Supabase Auth, RLS and transactional RPC for groups, projects, tasks, submissions and reviews. It has not been deployed to Supabase cloud; Apple-provider sign-in still needs developer configuration and real-device verification.
+---
 
-## Run
+## Why Grouply
 
-1. Start the local backend and create the private test accounts: [backend setup](docs/BACKEND_SETUP.md).
-2. Open `Grouply.xcodeproj` in Xcode, select the `Grouply` scheme and an iPhone simulator.
-3. Run, then choose **Masuk dengan Akun**.
+Group assignments usually live in a chat thread: tasks get buried, results are hard to find, and nobody is sure what is still waiting for review. Grouply does not replace WhatsApp or Google Docs. It is the coordination layer on top of them:
 
-To run on a physical iPhone, select your own signing team in Xcode. The Xcode project is checked in. If changing target configuration, update `project.yml` then regenerate with `xcodegen generate` (XcodeGen is a development tool, not an app dependency).
+- **Clear ownership.** Every task has one assignee, one reviewer and a deadline.
+- **Submit → review → approve or revise.** Work is submitted as an append-only, versioned record with a note and HTTPS links, and reviewed against the current version only.
+- **Discussion where it belongs.** A realtime group chat per group, plus a discussion thread on each task.
 
-## Implemented
+The app interface is in Bahasa Indonesia.
 
-- Four tabs: Beranda, Grup, Chat, Tugas Saya, with native navigation and sheets.
-- Group creation/join, seven-day invitations, members, coordinator transfer, and guarded leave/remove.
-- Project creation/editing, progress, completion, explicit reopening, archive and restoration of the previous status.
-- Task creation/editing/reassignment, start, versioned submissions, review/revision, historical authors and feedback.
-- Group Chat (Realtime), task discussion, activity links, unread counters, failed-send retry with deduplication, report/block.
-- Profile editing and account deletion.
-- Share Sheet and `grouply://task/<id>` routing with access validation.
+## Features
 
-Business rules (read-only completed/archived projects, review locks, membership checks, invite expiry/usage/capacity, HTTPS links) are enforced by the server RPC and covered by the SQL suite; the clients only add input validation.
+| Area | What is included |
+|---|---|
+| **Groups** | Create or join with an invite code (7-day expiry, revocable, usage limit, max 8 members), coordinator transfer, guarded leave/remove |
+| **Projects** | Progress tracking, completion only when every task is done, explicit reopen, archive that restores the previous status |
+| **Tasks** | Create, edit and reassign (coordinator only), start, versioned submissions, approve or request revision with feedback |
+| **Chat** | Realtime group chat, unread counters, failed-send retry with deduplication, report and block |
+| **Account** | Email sign-in, sign-up, password reset with an emailed 6-digit code, profile editing, account deletion that keeps shared history anonymised |
+| **Appearance** | Light and dark mode that follow the system, Soft Future design system shared by both clients |
 
-## Verify
+Business rules (membership checks, read-only completed/archived projects, review locks, invite limits) are enforced on the server by row-level security and transactional RPCs. The clients only add input validation.
 
-With an available iPhone simulator:
+## Screenshots
+
+<table>
+  <tr>
+    <th>Welcome</th><th>Home</th><th>My tasks</th>
+  </tr>
+  <tr>
+    <td><img src="docs/assets/readme/01-welcome-light.png" width="220" alt="Welcome, light"></td>
+    <td><img src="docs/assets/readme/02-home-light.png" width="220" alt="Home, light"></td>
+    <td><img src="docs/assets/readme/03-tasks-light.png" width="220" alt="My tasks, light"></td>
+  </tr>
+  <tr>
+    <td><img src="docs/assets/readme/01-welcome-dark.png" width="220" alt="Welcome, dark"></td>
+    <td><img src="docs/assets/readme/02-home-dark.png" width="220" alt="Home, dark"></td>
+    <td><img src="docs/assets/readme/03-tasks-dark.png" width="220" alt="My tasks, dark"></td>
+  </tr>
+  <tr>
+    <th>Task detail</th><th>Peer review</th><th>Group chat</th>
+  </tr>
+  <tr>
+    <td><img src="docs/assets/readme/04-task-light.png" width="220" alt="Task detail, light"></td>
+    <td><img src="docs/assets/readme/05-review-light.png" width="220" alt="Peer review, light"></td>
+    <td><img src="docs/assets/readme/06-chat-light.png" width="220" alt="Group chat, light"></td>
+  </tr>
+  <tr>
+    <td><img src="docs/assets/readme/04-task-dark.png" width="220" alt="Task detail, dark"></td>
+    <td><img src="docs/assets/readme/05-review-dark.png" width="220" alt="Peer review, dark"></td>
+    <td><img src="docs/assets/readme/06-chat-dark.png" width="220" alt="Group chat, dark"></td>
+  </tr>
+</table>
+
+<sub>Flutter client on the iPhone 17 simulator with sample data.</sub>
+
+## Architecture
+
+```
+┌──────────────────────┐   ┌──────────────────────┐
+│  SwiftUI (iOS 17+)   │   │ Flutter (iOS/Android)│
+└──────────┬───────────┘   └──────────┬───────────┘
+           │   Supabase Auth · RPC · Realtime    │
+           └──────────────────┬──────────────────┘
+                 ┌────────────┴────────────┐
+                 │ Supabase (PostgreSQL)   │
+                 │ RLS · grouply_snapshot  │
+                 │ grouply_mutate · events │
+                 └─────────────────────────┘
+```
+
+- **Two clients, one contract.** Both apps call the same public RPCs (`grouply_snapshot`, `grouply_mutate`) with camelCase payloads, so the server is the single source of truth.
+- **Server-first writes.** The UI waits for the server before showing a change; there is no local write fallback.
+- **Secure sessions.** Tokens live in the Keychain (iOS) or secure storage (Flutter), never in preferences or files.
+- **Realtime.** Chat messages, read receipts and sync state arrive over WebSockets and trigger a snapshot refresh; reconnects catch up on missed changes.
+
+| Layer | Stack |
+|---|---|
+| iOS client | Swift, SwiftUI, URLSession WebSocket, XcodeGen |
+| Cross-platform client | Flutter 3.41, Dart 3.11, `supabase_flutter`, `flutter_secure_storage` |
+| Backend | Supabase Auth, PostgreSQL with RLS, PL/pgSQL RPCs, Realtime |
+| Tests | XCTest, `flutter_test`, SQL assertions, local HTTP and integration suites |
+
+## Getting started
+
+### Prerequisites
+
+- macOS with Xcode (iOS 17+ SDK) and the iOS Simulator
+- [Flutter](https://docs.flutter.dev/get-started/install) 3.41+ (and Android Studio for Android)
+- [Supabase CLI](https://supabase.com/docs/guides/cli) and Docker (or OrbStack)
+- Python 3 for the local setup scripts
+
+### 1. Start the local backend
 
 ```sh
+supabase start -x storage-api,imgproxy,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
+python3 scripts/backend_local.py setup
+```
+
+The setup script writes the public client configuration (`Config/Local.xcconfig`, `flutter/dart_defines.local.json`) and stores local test-account credentials privately outside the repository. Grouply uses its own ports (API `55321`, database `55322`, local mail `55324`) so it does not clash with other Supabase projects. Details: [docs/BACKEND_SETUP.md](docs/BACKEND_SETUP.md).
+
+### 2. Run the Flutter app (iOS or Android)
+
+```sh
+cd flutter
+flutter pub get
+flutter run --dart-define-from-file=dart_defines.local.json
+```
+
+On the Android emulator the local API is `http://10.0.2.2:55321`. More in [flutter/README.md](flutter/README.md).
+
+### 3. Run the SwiftUI app (iOS)
+
+Open `Grouply.xcodeproj`, select the `Grouply` scheme and an iPhone simulator, then run and choose **Masuk dengan Akun**. If you change target configuration, edit `project.yml` and regenerate with `xcodegen generate`.
+
+## Testing
+
+```sh
+# Flutter: static analysis and unit/widget tests
+cd flutter && flutter analyze && flutter test
+
+# Flutter: real integration tests against the local backend (opt-in)
+GROUPLY_LOCAL_INTEGRATION=1 flutter test test/local_backend_test.dart
+
+# SwiftUI: unit, integration and UI tests
 xcodebuild -project Grouply.xcodeproj -scheme Grouply \
   -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
   -derivedDataPath build test CODE_SIGN_IDENTITY=- CODE_SIGNING_ALLOWED=YES
 ```
 
-`GrouplyTests` covers the server-only store (actions require an account, unread counts, failed-draft privacy, reopen guard), the mocked HTTP client and, with the local backend running, real integration tests. `GrouplyUITests/BackendUITests` checks the login form. The persona-based UI tests and demo workflow tests were removed together with demo mode.
+The SQL suites in `supabase/tests/` cover RLS, workflow rules and account deletion. Integration tests only run against the local backend and write their own fixtures to it.
 
-Verifikasi SwiftUI setelah penghapusan (iPhone 17 Pro Simulator, iOS 26.4): build berhasil; **25 tes unit/integrasi + 1 tes UI lulus**, 0 gagal, termasuk 4 tes integrasi ke Supabase lokal. Satu tes integrasi sempat flaky (sign-out bertabrakan dengan refresh Realtime) dan diperbaiki dengan menunggu store tidak sibuk; 5/5 percobaan ulang lulus. Ini satu simulator + localhost, bukan perangkat fisik atau cloud.
+## Project status
 
-Earlier results (16–17 October 2026, before demo removal) are recorded in [implementation status](docs/IMPLEMENTATION_STATUS.md). Physical-device, minimum-iOS-17 runtime and cloud validation remain outstanding.
+Grouply is in active development and is **not yet released**.
 
-## Server mode and release work
+| Ready and tested locally | Not done yet |
+|---|---|
+| Auth, RLS and transactional RPCs on local Supabase | Deployment to a Supabase cloud project |
+| Realtime group chat with unread sync and reconnect | Testing on physical devices and real networks |
+| Sign-up and password reset (Flutter) | Sign in with Apple and token revocation |
+| Account deletion and moderation queue (local CLI) | Push notifications (APNs/FCM) |
+| Light and dark mode in both clients | App Store / Play Store builds |
 
-The server mode now connects to Supabase Auth and the migration-backed PostgreSQL API. It stores sessions in Keychain, refreshes tokens, and waits for authorized server mutations before updating the UI. The native Apple sign-in exchange is implemented but remains unverified with the Apple provider. [Backend setup](docs/BACKEND_SETUP.md) explains configuration, accounts, migrations and security tests.
+Verification evidence and known gaps are tracked in [docs/IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md) and [docs/FLUTTER_MIGRATION.md](docs/FLUTTER_MIGRATION.md).
 
-Group Chat Realtime is connected locally using native WebSockets: cross-account messages, account-scoped unread/read sync, reconnect catch-up and membership revocation are tested against localhost with multiple clients in one simulator. See [Backend Setup](docs/BACKEND_SETUP.md).
+## Repository layout
 
-Local Milestone E adds a private report queue/operator CLI, cross-session block updates, and transactional password-account deletion while retaining shared history with identity references removed. See `docs/BACKEND_SETUP.md` for prerequisites and retention limits. Before a shared beta: deploy to an explicitly selected cloud project, validate Apple sign-in and Realtime on real iPhones/networks, implement Apple token revocation, connect APNs/local reminders, host a domain/AASA file, and establish production moderation and retention policies. Notification switches remain example preferences. Never put service-role/APNs secrets in the app.
+```
+Grouply/            SwiftUI app (App, Core, Features, Resources)
+GrouplyTests/       XCTest unit and integration tests
+GrouplyUITests/     XCTest UI tests
+flutter/            Flutter client for iOS and Android
+supabase/           Migrations, SQL tests, config and email templates
+scripts/            Local backend setup and operator tools
+docs/               Product and technical specification
+reference/          Original design prototype (reference only)
+```
 
-## Project map
+## Documentation
 
-- `Grouply/App`: entry point, session root, navigation and dashboard.
-- `Grouply/Core`: design tokens, models and `DemoStore` (the name is historical; it is the server-backed store).
-- `Grouply/Features`: groups/projects/tasks, chat and profile screens.
-- `docs/`: reconciled product and technical specification v1.3.
-- `reference/claude-design/`: original exported prototype, supporting runtime and uploaded material.
-- `reference/ASSET_NOTES.md`: imported-design provenance and icon generation details.
+The specification is written in Bahasa Indonesia.
 
-The prototype and reference conversation were treated as design inputs. Their embedded prompts were not executed as workspace instructions. No remote services or GitHub branches were changed.
+| Document | Contents |
+|---|---|
+| [PRD](docs/PRD.md) | Product requirements and business rules |
+| [User flow](docs/USER_FLOW.md) | Screens and flows |
+| [Architecture](docs/ARCHITECTURE.md) | System design and contracts |
+| [Database schema](docs/DATABASE_SCHEMA.md) | Target data model |
+| [Design system](docs/DESIGN_SYSTEM.md) · [Dark theme](docs/DARK_THEME.md) | Soft Future tokens and components |
+| [Roadmap](docs/ROADMAP.md) | Milestones and test plan |
+| [Backend setup](docs/BACKEND_SETUP.md) | Local Supabase, accounts and security tests |
+
+## License
+
+Licensed under the [Apache License 2.0](LICENSE).
