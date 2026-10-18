@@ -770,7 +770,8 @@ void main() {
       try {
         GLTheme.dark = true;
         expect(glTint('#DED2FF'), const Color(0xFF3A3354));
-        expect(glTint('D6E4FF'), const Color(0xFF50545C));
+        // Same blend as Swift `Color(tint:)`: 28% over 1C1E20 per channel.
+        expect(glTint('D6E4FF'), const Color(0xFF50555E));
       } finally {
         GLTheme.dark = previous;
       }
