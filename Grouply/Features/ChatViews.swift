@@ -225,16 +225,6 @@ struct ChatThread: View {
         Text("Realtime belum tersambung. Tarik untuk memuat ulang.")
           .gl(13).foregroundStyle(GLTheme.secondary).padding(.vertical, 8)
       }
-      if store.simulatedOffline {
-        HStack(spacing: 8) {
-          GLIcon("icloud.slash", size: 18)
-          Text("Kamu sedang offline. Pesan akan gagal terkirim.").gl(14, .medium)
-        }
-        .padding(.vertical, 10).padding(.horizontal, 14)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(GLTheme.butter, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .padding(.bottom, 8)
-      }
       ForEach(Array(list.enumerated()), id: \.element.id) { i, m in
         let day = ChatFormat.day(m.createdAt, now: store.now)
         if i == 0 || ChatFormat.day(list[i - 1].createdAt, now: store.now) != day {
@@ -717,15 +707,9 @@ private struct ChatReportSheet: View {
       GLIcon("checkmark.circle", size: 32).frame(width: 64, height: 64)
         .background(GLTheme.mint, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
       Text("Laporan tersimpan").gl(21, .bold)
-      Text(store.isCloudMode
-        ? "Laporan masuk antrean privat untuk ditinjau operator berwenang. Belum ada jaminan waktu respons."
-        : "Terima kasih sudah menjaga grup tetap nyaman. Ini simulasi pelaporan lokal.")
+      Text("Laporan masuk antrean privat untuk ditinjau operator berwenang. Belum ada jaminan waktu respons.")
         .gl(15).lineSpacing(4).foregroundStyle(GLTheme.text3)
-      Text(
-        store.isCloudMode
-          ? "Laporan berhasil tersimpan di server."
-          : "Simulasi: laporan hanya disimpan di prototipe ini dan tidak dikirim ke moderator sungguhan."
-      )
+      Text("Laporan berhasil tersimpan di server.")
       .gl(13).lineSpacing(3).foregroundStyle(GLTheme.secondary)
       .padding(.vertical, 10).padding(.horizontal, 12)
       .overlay(

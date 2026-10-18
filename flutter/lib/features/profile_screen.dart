@@ -201,26 +201,6 @@ class _DashPainter extends CustomPainter {
   bool shouldRepaint(_DashPainter old) => old.radius != radius;
 }
 
-class _DashedNote extends StatelessWidget {
-  const _DashedNote(this.text);
-  final String text;
-  @override
-  Widget build(BuildContext context) => _Dashed(
-    radius: 14,
-    padding: EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-    child: Text(text, style: gl(13, w400, 0, GLTheme.secondary, 2.5)),
-  );
-}
-
-/// Capsule tag ("PROTOTIPE", "DEMO").
-Widget _tag(String text, double height, double em) => Container(
-  height: height,
-  padding: EdgeInsets.symmetric(horizontal: 8),
-  alignment: Alignment.center,
-  decoration: ShapeDecoration(color: GLTheme.butter, shape: StadiumBorder()),
-  child: Text(text, style: gl(11, w700, em)),
-);
-
 /// Filled sheet button (`height:54px;border-radius:18px;font-size:16px`).
 class _FilledButton extends StatelessWidget {
   const _FilledButton({
@@ -271,7 +251,7 @@ Widget _column(
   ],
 );
 
-/// Prototype sheet without the title row (perm, personas, privacy draw their own).
+/// Prototype sheet without the title row (perm and privacy draw their own).
 Future<T?> _showBareSheet<T>(
   BuildContext context, {
   required WidgetBuilder builder,
@@ -372,25 +352,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     await _run(() async {
       _checkIdentity(store, actor);
       await store.signOut();
-    });
-  }
-
-  Future<void> _resetDemo() async {
-    if (!await showGLConfirm(
-          context,
-          title: 'Reset data demo?',
-          text:
-              'Semua perubahan di prototipe (grup, proyek, tugas, pesan, laporan) kembali ke data awal. Tidak ada data server yang terpengaruh.',
-          ok: 'Reset',
-          destructive: true,
-        ) ||
-        !mounted) {
-      return;
-    }
-    final overlay = Navigator.of(context, rootNavigator: true).context;
-    await _run(() async {
-      await store.resetDemo();
-      if (overlay.mounted) showGLToast(overlay, 'Data demo direset');
     });
   }
 
@@ -495,47 +456,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _demoBox() => _Dashed(
-    radius: 24,
-    padding: EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-    child: _column([
-      Row(
-        children: [
-          _tag('PROTOTIPE', 22, 0.04),
-          SizedBox(width: 6),
-          Flexible(child: Text('Pengaturan demo', style: gl(13, w700, 0.04))),
-        ],
-      ),
-      Text(
-        'Hanya untuk pengujian. Tidak ada di aplikasi produksi.',
-        style: gl(13, w400, 0, GLTheme.text3, 2.5),
-      ),
-      Row(
-        children: [
-          Expanded(
-            child: GLOutlineButton(
-              title: 'Ganti persona',
-              height: 44,
-              radius: 14,
-              fontSize: 14,
-              onPressed: _disabled ? null : () => _showPersonas(context, store),
-            ),
-          ),
-          SizedBox(width: 8),
-          Expanded(
-            child: GLOutlineButton(
-              title: 'Reset data demo',
-              height: 44,
-              radius: 14,
-              fontSize: 14,
-              onPressed: _disabled ? null : _resetDemo,
-            ),
-          ),
-        ],
-      ),
-    ], 10),
-  );
-
   @override
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: Listenable.merge([store, _LocalPrefs.shared]),
@@ -548,7 +468,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           .length;
       return _ProfileScaffold(
         title: 'Profil',
-        onRefresh: store.demoMode ? null : () => _run(store.refresh),
+        onRefresh: () => _run(store.refresh),
         children: [
           if (store.error != null)
             GLNotice(text: store.error!, color: GLTheme.coral),
@@ -597,7 +517,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   'flag',
                   GLTheme.chip,
                   'Pelaporan',
-                  '$reports laporan tersimpan ${store.demoMode ? 'lokal' : 'di server'}',
+                  '$reports laporan tersimpan di server',
                   () => _push(_AboutScreen(store: store)),
                 ),
               ],
@@ -620,7 +540,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ],
             ),
-            if (store.demoMode) _demoBox(),
           ],
         ],
       );
@@ -885,7 +804,6 @@ class _AboutScreen extends StatelessWidget {
   final GrouplyStore store;
 
   String _status(JsonMap report) {
-    if (store.demoMode) return 'Tersimpan lokal';
     return switch (report.text('status')) {
       'dismissed' => 'Selesai ditinjau',
       'removed' => 'Pesan dihapus moderator',
@@ -897,7 +815,6 @@ class _AboutScreen extends StatelessWidget {
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: store,
     builder: (context, _) {
-      final cloud = !store.demoMode;
       final reports = store.reports
           .where((row) => row.text('reporterID') == store.currentUserID)
           .toList();
@@ -934,9 +851,7 @@ class _AboutScreen extends StatelessWidget {
             child: _column([
               Text('Pelaporan & moderasi', style: gl(16, w700)),
               Text(
-                cloud
-                    ? 'Tekan lama pesan untuk melaporkan atau memblokir pengirimnya. Laporan masuk antrean privat di server dan dapat ditinjau operator berwenang. Belum ada jaminan waktu respons.'
-                    : 'Tekan lama pesan untuk melaporkan atau memblokir pengirimnya. Dalam demo, laporan hanya disimpan di perangkat, bukan dikirim kepada moderator.',
+                'Tekan lama pesan untuk melaporkan atau memblokir pengirimnya. Laporan masuk antrean privat di server dan dapat ditinjau operator berwenang. Belum ada jaminan waktu respons.',
                 style: gl(14, w400, 0, GLTheme.text3, 5),
               ),
               for (final report in reports)
@@ -1201,112 +1116,6 @@ class _PermSheetState extends State<_PermSheet> {
 
 Widget _keyed(Key key, Widget child) => KeyedSubtree(key: key, child: child);
 
-void _showPersonas(BuildContext context, GrouplyStore store) => _showBareSheet(
-  context,
-  builder: (sheet) => ListenableBuilder(
-    listenable: store,
-    builder: (sheet, _) => Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(
-          children: [
-            _tag('DEMO', 24, 0.06),
-            SizedBox(width: 8),
-            Expanded(child: Text('Ganti persona', style: gl(22, w700, -0.02))),
-            GLTap(
-              label: 'Tutup',
-              onTap: () => Navigator.of(sheet).pop(),
-              child: Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: GLTheme.chip,
-                  shape: BoxShape.circle,
-                ),
-                child: GLIcon('xmark', size: 22),
-              ),
-            ),
-          ],
-        ),
-        SizedBox(height: 8), // spacing 14, padding(.top, -6)
-        Text(
-          'Hanya untuk menguji sudut pandang tiap anggota. Semua persona memakai data yang sama.',
-          style: gl(14, w400, 0, GLTheme.text3, 2.5),
-        ),
-        SizedBox(height: 14),
-        _column([
-          for (final persona in demoPersonas)
-            if (store.user(persona.id) case final user?
-                when user.text('email').isNotEmpty)
-              _keyed(
-                ValueKey('switch-persona-${persona.id}'),
-                _personaRow(sheet, store, persona.id, persona.role, user),
-              ),
-        ], 8),
-      ],
-    ),
-  ),
-);
-
-Widget _personaRow(
-  BuildContext sheet,
-  GrouplyStore store,
-  String id,
-  String role,
-  JsonMap user,
-) {
-  final on = store.currentUserID == id;
-  return Semantics(
-    selected: on,
-    child: GLTap(
-      onTap: () async {
-        if (on) return;
-        try {
-          await store.switchDemoUser(id);
-          if (!sheet.mounted) return;
-          showGLToast(
-            sheet,
-            'Demo: sekarang melihat sebagai ${user.text('name')}',
-            kind: GLToastKind.info,
-          );
-          Navigator.of(sheet).pop();
-        } catch (failure) {
-          if (sheet.mounted) {
-            showGLToast(sheet, _failureText(failure), kind: GLToastKind.err);
-          }
-        }
-      },
-      child: Container(
-        constraints: BoxConstraints(minHeight: 56),
-        padding: EdgeInsets.only(top: 8, bottom: 8, left: 8, right: 14),
-        decoration: glBox(
-          GLTheme.surface,
-          18,
-          border: on ? GLTheme.ink : GLTheme.border,
-          borderWidth: 1.5,
-        ),
-        child: Row(
-          children: [
-            GLAvatar(user: user, size: 40, fontSize: 13),
-            SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(user.text('name'), style: gl(16, w600)),
-                  Text(role, style: gl(13, w400, 0, GLTheme.secondary)),
-                ],
-              ),
-            ),
-            if (on) Text('Aktif', style: gl(13, w700)),
-          ],
-        ),
-      ),
-    ),
-  );
-}
-
 void _showDelete(BuildContext context, GrouplyStore store) => showGLSheet(
   context,
   title: 'Hapus akun',
@@ -1328,7 +1137,6 @@ class _DeleteSheetState extends State<_DeleteSheet> {
   bool _busy = false;
 
   GrouplyStore get store => widget.store;
-  bool get _cloud => !store.demoMode;
 
   /// Prototype rule: groups I coordinate that still have other members.
   List<JsonMap> get _blockers => store.groups
@@ -1336,7 +1144,7 @@ class _DeleteSheetState extends State<_DeleteSheet> {
         (row) =>
             row.ids('memberIDs').contains(store.currentUserID) &&
             row.text('coordinatorID') == store.currentUserID &&
-            (!_cloud || row.ids('memberIDs').length > 1),
+            row.ids('memberIDs').length > 1,
       )
       .toList();
 
@@ -1366,19 +1174,12 @@ class _DeleteSheetState extends State<_DeleteSheet> {
     if (_text.text.trim().toUpperCase() != 'HAPUS') {
       return setState(() => _error = 'Ketik HAPUS untuk konfirmasi.');
     }
-    final cloud = _cloud;
     setState(() => _busy = true);
     try {
       _checkIdentity(store, _actor);
       await store.mutate('deleteAccount', {});
       if (!mounted) return;
-      showGLToast(
-        context,
-        cloud
-            ? 'Akun dihapus.'
-            : 'Simulasi: akun dihapus dari data demo lokal. Tidak ada data server yang dihapus.',
-        kind: GLToastKind.info,
-      );
+      showGLToast(context, 'Akun dihapus.', kind: GLToastKind.info);
       Navigator.of(context).pop();
     } catch (failure) {
       if (mounted) setState(() => _error = _failureText(failure));
@@ -1401,9 +1202,7 @@ class _DeleteSheetState extends State<_DeleteSheet> {
                 child: _column([
                   _line(
                     'trash',
-                    _cloud
-                        ? 'Akun login dan profil di server akan dihapus permanen.'
-                        : 'Ini simulasi penghapusan akun demo, bukan akun server.',
+                    'Akun login dan profil di server akan dihapus permanen.',
                   ),
                   _line(
                     'clock.arrow.circlepath',
@@ -1413,11 +1212,10 @@ class _DeleteSheetState extends State<_DeleteSheet> {
                     'arrow.left.arrow.right',
                     'Alihkan peran pelaksana/reviewer pada semua tugas yang belum selesai terlebih dahulu, termasuk di proyek arsip. Tidak ada pengalihan otomatis.',
                   ),
-                  if (_cloud)
-                    _line(
-                      'person.crop.circle.badge.minus',
-                      'Jika kamu satu-satunya anggota, grup kehilangan akses anggota dan undangannya dinonaktifkan. Riwayat kerja tetap disimpan tanpa identitas akunmu.',
-                    ),
+                  _line(
+                    'person.crop.circle.badge.minus',
+                    'Jika kamu satu-satunya anggota, grup kehilangan akses anggota dan undangannya dinonaktifkan. Riwayat kerja tetap disimpan tanpa identitas akunmu.',
+                  ),
                 ], 10),
               ),
               if (blockers.isNotEmpty)
@@ -1483,19 +1281,11 @@ class _DeleteSheetState extends State<_DeleteSheet> {
                   onSubmitted: (_) => _delete(),
                 ),
               ),
-              if (!_cloud)
-                _DashedNote(
-                  'Simulasi: hanya data demo lokal yang berubah. Tidak ada data server yang dihapus. Pakai “Reset data demo” untuk mengembalikan.',
-                ),
               if (_error != null) GLFormError(_error!),
               _keyed(
                 ValueKey('confirm-delete-account'),
                 _FilledButton(
-                  title: _busy
-                      ? 'Menghapus…'
-                      : _cloud
-                      ? 'Hapus akun'
-                      : 'Hapus akun (simulasi)',
+                  title: _busy ? 'Menghapus…' : 'Hapus akun',
                   background: GLTheme.danger,
                   busy: _busy,
                   onTap: _delete,
@@ -1508,10 +1298,7 @@ class _DeleteSheetState extends State<_DeleteSheet> {
 
 /// Prototype `sheetPrivacy` (`ProfilePrivacySheet`); also opened from Welcome.
 /// [cloud] mirrors Swift `store.isCloudMode` (signed in to the server).
-Future<void> showPrivacySheet(
-  BuildContext context, {
-  bool cloud = false,
-}) => _showBareSheet(
+Future<void> showPrivacySheet(BuildContext context) => _showBareSheet(
   context,
   builder: (sheet) => _column([
     Text('Privasi & data', style: gl(22, w700, -0.02)),
@@ -1521,13 +1308,11 @@ Future<void> showPrivacySheet(
       child: DefaultTextStyle.merge(
         style: gl(15, w400, 0, GLTheme.ink, 4.5),
         child: _column([
-          Text(
-            'GROUPLY memakai nama dan identitas login untuk akunmu. Persona demo terpisah dari akun server.',
-          ),
-          Text(
+          const Text('GROUPLY memakai nama dan identitas login untuk akunmu.'),
+          const Text(
             'Proyek, tugas, dan pesan hanya terlihat oleh anggota grup terkait.',
           ),
-          if (cloud) ...[
+          ...const [
             Text(
               'Laporan dan isi pesan yang dilaporkan dapat ditinjau operator berwenang. Blokir menyembunyikan pesan untukmu, bukan mengeluarkan anggota atau menghentikan tugas bersama.',
             ),
@@ -1536,9 +1321,7 @@ Future<void> showPrivacySheet(
             ),
           ],
           Text(
-            cloud
-                ? 'Data akun ini tersimpan di Supabase. Sesi login disimpan aman di Keychain.'
-                : 'Data demo disimpan di perangkat ini saja.',
+            'Data akun tersimpan di server Grouply (Supabase). Sesi login disimpan aman di perangkat.',
             style: TextStyle(color: GLTheme.secondary),
           ),
         ], 10),

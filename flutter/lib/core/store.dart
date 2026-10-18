@@ -1,13 +1,9 @@
 import 'dart:async';
-import 'dart:convert';
-import 'dart:math';
 
 import 'package:flutter/widgets.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show AuthException;
 
 import 'backend.dart';
-
-part 'demo.dart';
 
 typedef JsonMap = Map<String, dynamic>;
 
@@ -27,18 +23,12 @@ class GrouplyException implements Exception {
 }
 
 class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
-  GrouplyStore({
-    GrouplyBackend? backend,
-    SharedPreferences? preferences,
-    DateTime Function()? clock,
-  }) : _backend = backend ?? SupabaseGrouplyBackend(),
-       _preferences = preferences,
-       _clock = clock ?? DateTime.now;
+  GrouplyStore({GrouplyBackend? backend, DateTime Function()? clock})
+    : _backend = backend ?? SupabaseGrouplyBackend(),
+      _clock = clock ?? DateTime.now;
 
   final GrouplyBackend _backend;
-  SharedPreferences? _preferences;
   final DateTime Function() _clock;
-  static const demoStorageKey = 'grouply.demo.v2';
   List<JsonMap> users = [],
       groups = [],
       projects = [],
@@ -47,7 +37,7 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
       invites = [],
       reports = [];
   String currentUserID = '';
-  bool demoMode = false, loading = false;
+  bool loading = false;
   bool get authenticated => currentUserID.isNotEmpty;
   DateTime get now => _clock();
   bool get configured => _backend.configured;
@@ -65,8 +55,6 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
       _initialized = false,
       _active = true,
       _mutating = false;
-  bool simulateSendFailure = false;
-  bool _demoWritable = true;
   Future<void> _sessionWork = Future.value();
 
   Future<void> _session(Future<void> Function() operation) {
@@ -117,7 +105,7 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
     _notify();
     _auth = _backend.authChanges.listen(
       (actor) {
-        if (demoMode || _disposed) return;
+        if (_disposed) return;
         if (currentUserID.isNotEmpty && actor != currentUserID) {
           _generation++;
           _clear();
@@ -134,7 +122,6 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
     );
     try {
       await _session(() async {
-        _preferences ??= await SharedPreferences.getInstance();
         await _backend.initialize();
       });
       if (_disposed || generation != _generation) return;
@@ -154,46 +141,61 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
-  Future<void> signIn(String email, String password) async {
-    if (loading || _mutating) {
-      throw const GrouplyException('Tunggu proses sebelumnya selesai.');
-    }
-    final generation = ++_generation;
-    demoMode = false;
-    _clear();
-    error = null;
-    loading = true;
-    _notify();
-    try {
-      await _session(() async {
-        await _backend.disconnect();
-        await _backend.signIn(email.trim(), password);
-      });
-      if (generation != _generation || _disposed) return;
-      await refresh();
-      await _connect();
-    } catch (_) {
-      if (generation == _generation) {
-        _clear();
-        error = 'Tidak dapat masuk. Periksa akun dan koneksi.';
-      }
-      throw const GrouplyException(
-        'Tidak dapat masuk. Periksa akun dan koneksi.',
+  Future<void> signIn(String email, String password) => _authenticate(() async {
+    await _backend.signIn(email.trim(), password);
+    return true;
+  }, 'Tidak dapat masuk. Periksa akun dan koneksi.');
+
+  /// Returns false when the account exists but its email must be confirmed
+  /// before signing in.
+  Future<bool> signUp(String name, String email, String password) =>
+      _authenticate(
+        () => _backend.signUp(name.trim(), email.trim(), password),
+        'Akun belum dapat dibuat. Periksa data dan koneksi.',
       );
-    } finally {
-      if (generation == _generation) {
-        loading = false;
-        _notify();
-      }
+
+  Future<void> sendPasswordReset(String email) async {
+    try {
+      await _backend.sendPasswordReset(email.trim());
+    } catch (failure) {
+      throw GrouplyException(
+        _authMessage(failure) ??
+            'Kode belum dapat dikirim. Periksa email dan koneksi.',
+      );
     }
   }
 
-  Future<bool> signUp(String name, String email, String password) async {
+  Future<void> resetPassword(String email, String code, String password) =>
+      _authenticate(() async {
+        await _backend.resetPassword(email.trim(), code.trim(), password);
+        return true;
+      }, 'Kata sandi belum dapat diubah. Periksa kode dan koneksi.');
+
+  static String? _authMessage(Object failure) {
+    if (failure is! AuthException) return null;
+    return switch (failure.code) {
+      'user_already_exists' ||
+      'email_exists' => 'Email sudah terdaftar. Silakan masuk.',
+      'weak_password' =>
+        'Kata sandi terlalu lemah. Gunakan yang lebih panjang.',
+      'same_password' => 'Gunakan kata sandi yang berbeda dari sebelumnya.',
+      'otp_expired' => 'Kode salah atau kedaluwarsa. Minta kode baru.',
+      'email_address_invalid' => 'Format email tidak valid.',
+      'signup_disabled' => 'Pendaftaran sedang ditutup.',
+      'over_email_send_rate_limit' ||
+      'over_request_rate_limit' => 'Terlalu banyak percobaan. Coba lagi nanti.',
+      _ => null,
+    };
+  }
+
+  Future<bool> _authenticate(
+    Future<bool> Function() operation,
+    String failureMessage,
+  ) async {
     if (loading || _mutating) {
       throw const GrouplyException('Tunggu proses sebelumnya selesai.');
     }
     final generation = ++_generation;
-    demoMode = false;
     _clear();
     error = null;
     loading = true;
@@ -202,72 +204,19 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
       var signedIn = false;
       await _session(() async {
         await _backend.disconnect();
-        signedIn = await _backend.signUp(name.trim(), email.trim(), password);
+        signedIn = await operation();
       });
-      if (generation != _generation || _disposed) return false;
-      if (!signedIn) {
-        _clear();
-        return false;
-      }
+      if (!signedIn || generation != _generation || _disposed) return signedIn;
       await refresh();
       await _connect();
       return true;
-    } catch (_) {
+    } catch (failure) {
+      final message = _authMessage(failure) ?? failureMessage;
       if (generation == _generation) {
         _clear();
-        error = 'Tidak dapat mendaftar. Periksa data dan koneksi.';
+        error = message;
       }
-      throw const GrouplyException(
-        'Tidak dapat mendaftar. Periksa data dan koneksi.',
-      );
-    } finally {
-      if (generation == _generation) {
-        loading = false;
-        _notify();
-      }
-    }
-  }
-
-  Future<void> requestPasswordReset(String email) async {
-    try {
-      await _backend.requestPasswordReset(email.trim());
-    } catch (_) {
-      throw const GrouplyException(
-        'Kode pemulihan belum dapat dikirim. Coba lagi nanti.',
-      );
-    }
-  }
-
-  Future<void> recoverPassword(
-    String email,
-    String token,
-    String password,
-  ) async {
-    if (loading || _mutating) {
-      throw const GrouplyException('Tunggu proses sebelumnya selesai.');
-    }
-    final generation = ++_generation;
-    demoMode = false;
-    _clear();
-    error = null;
-    loading = true;
-    _notify();
-    try {
-      await _session(() async {
-        await _backend.disconnect();
-        await _backend.recoverPassword(email.trim(), token.trim(), password);
-      });
-      if (generation != _generation || _disposed) return;
-      await refresh();
-      await _connect();
-    } catch (_) {
-      if (generation == _generation) {
-        _clear();
-        error = 'Kode salah atau sudah kedaluwarsa. Minta kode baru.';
-      }
-      throw const GrouplyException(
-        'Kode salah atau sudah kedaluwarsa. Minta kode baru.',
-      );
+      throw GrouplyException(message);
     } finally {
       if (generation == _generation) {
         loading = false;
@@ -277,10 +226,8 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   Future<void> signOut() async {
-    final wasDemo = demoMode;
     final generation = ++_generation;
     _refreshTimer?.cancel();
-    demoMode = false;
     _clear();
     loading = true;
     error = null;
@@ -288,7 +235,7 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
     try {
       await _session(() async {
         await _backend.disconnect();
-        if (!wasDemo) await _backend.signOut();
+        await _backend.signOut();
       });
     } catch (_) {
       if (generation == _generation) {
@@ -303,85 +250,8 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
-  Future<void> startDemo() async {
-    if (loading || _mutating) {
-      throw const GrouplyException('Tunggu proses sebelumnya selesai.');
-    }
-    final generation = ++_generation;
-    _refreshTimer?.cancel();
-    loading = true;
-    _notify();
-    try {
-      await _session(() async {
-        await _backend.disconnect();
-        if (_backend.currentUserID != null) await _backend.signOut();
-        _preferences ??= await SharedPreferences.getInstance();
-      });
-      if (generation != _generation || _disposed) return;
-    } catch (_) {
-      if (generation == _generation) {
-        loading = false;
-        error = 'Sesi server belum dapat ditutup.';
-        _notify();
-      }
-      rethrow;
-    }
-    demoMode = true;
-    _clear();
-    error = null;
-    _demoWritable = true;
-    final saved = _preferences!.getString(demoStorageKey);
-    try {
-      if (saved == null) {
-        _seed();
-      } else {
-        final decoded = jsonDecode(saved) as JsonMap;
-        _apply(decoded, cloud: false);
-        _blocks = _stringLists(decoded['blocks']);
-        _reads = _stringLists(decoded['reads']);
-      }
-    } catch (_) {
-      _demoWritable = false;
-      _seed();
-      error =
-          'Data demo lama tidak terbaca dan tidak ditimpa. Sesi ini tidak disimpan.';
-    }
-    if (currentUserID.isEmpty ||
-        user(currentUserID)?.text('name') == 'Pengguna dihapus') {
-      currentUserID =
-          users
-              .where((row) => row.text('email').isNotEmpty)
-              .firstOrNull
-              ?.text('id') ??
-          '';
-    }
-    try {
-      await _saveDemo();
-    } finally {
-      if (generation == _generation) {
-        loading = false;
-        _notify();
-      }
-    }
-  }
-
-  Future<void> switchDemoUser(String id) async {
-    if (!demoMode ||
-        loading ||
-        _mutating ||
-        user(id) == null ||
-        user(id)!.text('email').isEmpty) {
-      throw const GrouplyException('Pengguna demo tidak valid.');
-    }
-    ++_generation;
-    currentUserID = id;
-    error = null;
-    await _saveDemo();
-    _notify();
-  }
-
   Future<void> refresh() async {
-    if (demoMode || _disposed || _mutating || _backend.currentUserID == null) {
+    if (_disposed || _mutating || _backend.currentUserID == null) {
       return;
     }
     final generation = _generation, order = ++_snapshotOrder;
@@ -391,7 +261,6 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
       if (_disposed ||
           generation != _generation ||
           order != _snapshotOrder ||
-          demoMode ||
           actor != _backend.currentUserID) {
         return;
       }
@@ -424,33 +293,12 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
     error = null;
     final generation = _generation;
     try {
-      if (demoMode) {
-        final backup = jsonEncode(_demoSnapshot());
-        try {
-          final result = _demoMutate(action, Map.of(payload));
-          await _saveDemo();
-          if (generation != _generation || !demoMode || _disposed) {
-            throw const GrouplyException('Sesi telah berubah.');
-          }
-          _notify();
-          return result;
-        } catch (_) {
-          final decoded = jsonDecode(backup) as JsonMap;
-          if (generation == _generation && demoMode && !_disposed) {
-            _apply(decoded, cloud: false);
-            _blocks = _stringLists(decoded['blocks']);
-            _reads = _stringLists(decoded['reads']);
-          }
-          rethrow;
-        }
-      }
       final actor = currentUserID;
       ++_snapshotOrder;
       final result = await _backend.mutate(action, Map.of(payload));
       if (_disposed ||
           generation != _generation ||
-          actor != _backend.currentUserID ||
-          demoMode) {
+          actor != _backend.currentUserID) {
         throw const GrouplyException('Sesi telah berubah.');
       }
       if (action == 'deleteAccount') {
@@ -464,8 +312,7 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
         final snapshot = await _backend.snapshot();
         if (_disposed ||
             generation != _generation ||
-            actor != _backend.currentUserID ||
-            demoMode) {
+            actor != _backend.currentUserID) {
           throw const GrouplyException('Sesi telah berubah.');
         }
         if (snapshot['currentUserID'] != actor) {
@@ -476,7 +323,6 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
       } catch (_) {
         if (generation != _generation ||
             _disposed ||
-            demoMode ||
             actor != _backend.currentUserID) {
           throw const GrouplyException('Sesi telah berubah.');
         }
@@ -497,7 +343,7 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
       return result;
     } catch (failure) {
       if (generation == _generation) {
-        if (!demoMode && _backend.currentUserID == null) {
+        if (_backend.currentUserID == null) {
           ++_generation;
           _clear();
         }
@@ -524,7 +370,7 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   Future<void> _connect() async {
-    if (!demoMode && authenticated && _active && !_disposed) {
+    if (authenticated && _active && !_disposed) {
       await _backend.connect(_scheduleRefresh);
     }
   }
@@ -532,7 +378,7 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
   void _scheduleRefresh() {
     _refreshTimer?.cancel();
     _refreshTimer = Timer(const Duration(milliseconds: 120), () async {
-      if (!_active || demoMode || _disposed) return;
+      if (!_active || _disposed) return;
       if (_mutating) {
         _scheduleRefresh();
         return;
@@ -558,7 +404,7 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   Future<void> _resume() async {
-    if (demoMode || _disposed) return;
+    if (_disposed) return;
     try {
       await _backend.foreground();
       await refresh();
@@ -569,13 +415,7 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
-  Map<String, List<String>> _stringLists(dynamic value) =>
-      (value as Map? ?? {}).map(
-        (key, value) =>
-            MapEntry(key as String, (value as List).cast<String>().toList()),
-      );
-
-  void _apply(JsonMap value, {bool cloud = true}) {
+  void _apply(JsonMap value) {
     const strings = {
       'users': ['name', 'email', 'tint'],
       'groups': [
@@ -701,18 +541,14 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
         !decoded['users']!.any((row) => row['id'] == actor)) {
       throw const FormatException('Missing identity');
     }
-    final blocks = cloud
-        ? (value['blockedUserIDs'] as List).cast<String>().toList()
-        : <String>[];
-    final reads = cloud
-        ? (value['readMessageIDs'] as List).cast<String>().toList()
-        : <String>[];
+    final blocks = (value['blockedUserIDs'] as List).cast<String>().toList();
+    final reads = (value['readMessageIDs'] as List).cast<String>().toList();
     final codes = {
       for (final invite in invites)
         if (invite.text('code').isNotEmpty)
           invite.text('id'): invite.text('code'),
     };
-    if (cloud && actor == currentUserID) {
+    if (actor == currentUserID) {
       for (final invite in decoded['invites']!) {
         if (decoded['groups']!.any(
           (row) =>
@@ -730,32 +566,8 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
     invites = decoded['invites']!;
     reports = decoded['reports']!;
     currentUserID = actor;
-    if (cloud) {
-      _blocks = {actor: blocks};
-      _reads = {actor: reads};
-    }
-  }
-
-  JsonMap _demoSnapshot() => {
-    'users': users,
-    'groups': groups,
-    'projects': projects,
-    'tasks': tasks,
-    'messages': messages,
-    'invites': invites,
-    'reports': reports,
-    'currentUserID': currentUserID,
-    'blocks': _blocks,
-    'reads': _reads,
-  };
-  Future<void> _saveDemo() async {
-    if (!demoMode || !_demoWritable) return;
-    if (!await _preferences!.setString(
-      demoStorageKey,
-      jsonEncode(_demoSnapshot()),
-    )) {
-      throw const GrouplyException('Data demo belum tersimpan.');
-    }
+    _blocks = {actor: blocks};
+    _reads = {actor: reads};
   }
 
   @override

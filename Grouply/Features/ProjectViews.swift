@@ -811,12 +811,7 @@ struct ProjectEditor: View {
           onCreated(id)
         }
       } catch {
-        self.error =
-          store.simulatedOffline
-          ? (projectID == nil
-            ? "Gagal membuat proyek. Periksa koneksimu lalu coba lagi."
-            : "Gagal menyimpan perubahan. Coba lagi.")
-          : error.localizedDescription
+        self.error = error.localizedDescription
       }
     }
   }

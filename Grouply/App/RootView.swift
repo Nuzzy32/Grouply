@@ -152,7 +152,7 @@ struct RootView: View {
   private func openLink(_ url: URL) {
     guard url.scheme == "grouply" else { return }
     guard store.currentUserID != nil else {
-      linkError = "Masuk ke demo terlebih dahulu, lalu buka lagi tautannya."
+      linkError = "Masuk ke akun terlebih dahulu, lalu buka lagi tautannya."
       return
     }
     if url.host == "task", let id = url.pathComponents.last,
@@ -213,23 +213,6 @@ struct WelcomeView: View {
               .frame(maxWidth: .infinity).frame(height: 56)
               .background(Color(light: "000000", dark: "ECEDEE"), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
           }.buttonStyle(.plain).accessibilityIdentifier("open-backend-login")
-          Text("Akun Supabase terpisah dari persona demo di bawah.").gl(12)
-            .foregroundStyle(GLTheme.secondary).multilineTextAlignment(.center)
-            .frame(maxWidth: .infinity)
-        }
-        VStack(alignment: .leading, spacing: 8) {
-          HStack(spacing: 6) {
-            Text("DEMO").gl(11, .bold, em: 0.06).padding(.horizontal, 8).frame(height: 22)
-              .background(GLTheme.butter, in: Capsule())
-            Text("Masuk cepat sebagai").gl(13, .semibold)
-          }
-          LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
-            ForEach(profilePersonas, id: \.id) { persona in
-              if let user = store.user(persona.id), !user.email.isEmpty {
-                personaButton(user, role: persona.role)
-              }
-            }
-          }
         }
         Button { privacy = true } label: {
           Text("Privasi & data").gl(14, .semibold).underline().frame(minHeight: 44)
@@ -237,26 +220,6 @@ struct WelcomeView: View {
       }
       .padding(.horizontal, 24).padding(.top, 10).padding(.bottom, 32)
     }
-  }
-
-  private func personaButton(_ user: GLUser, role: String) -> some View {
-    Button {
-      store.signIn(as: user.id)
-      if store.currentUserID == user.id { store.flash("Masuk sebagai " + user.name) }
-    } label: {
-      HStack(spacing: 8) {
-        GLAvatar(user: user, size: 32, fontSize: 11)
-        VStack(alignment: .leading, spacing: 0) {
-          Text(user.name).gl(14, .semibold).lineLimit(1)
-          Text(role).gl(12).foregroundStyle(GLTheme.secondary).lineLimit(1)
-        }
-        Spacer(minLength: 0)
-      }
-      .padding(.vertical, 6).padding(.leading, 6).padding(.trailing, 10).frame(minHeight: 48)
-      .background(GLTheme.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-      .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(GLTheme.border))
-      .contentShape(Rectangle())
-    }.buttonStyle(.plain).accessibilityIdentifier("persona-\(user.id)")
   }
 
   /// Three tilted preview cards (`flex:1 1 220px`, clamped 170–260).
@@ -355,17 +318,11 @@ struct HomeView: View {
     ScrollView {
       VStack(alignment: .leading, spacing: 22) {
         header
-        Label(store.isCloudMode ? "Akun server · Supabase" : "Demo lokal · data contoh", systemImage: store.isCloudMode ? "externaldrive.connected.to.line.below" : "iphone")
+        Label("Akun server · Supabase", systemImage: "externaldrive.connected.to.line.below")
           .gl(12, .medium).foregroundStyle(GLTheme.secondary)
         if store.myGroups.isEmpty {
           emptyGroups
         } else {
-          if let error = store.persistenceError { GLNotice(text: error, color: GLTheme.coral) }
-          if store.simulatedOffline {
-            GLNotice(
-              text: "Simulasi offline aktif. Perubahan dinonaktifkan; data terakhir tetap terlihat.",
-              color: GLTheme.coral, icon: "wifi.slash")
-          }
           attentionCard
           if !reviews.isEmpty { reviewCard }
           VStack(alignment: .leading, spacing: 12) {

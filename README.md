@@ -2,38 +2,33 @@
 
 ## Flutter migration — Android + iOS
 
-The shared Flutter client is in `flutter/`. Start with `cd flutter && flutter run`; without backend configuration it runs an explicitly labelled local demo. The existing SwiftUI client remains as a reference during migration, and both clients use the same Supabase RPC contracts. See [Flutter setup](flutter/README.md) and [migration verification and remaining release work](docs/FLUTTER_MIGRATION.md). This is a development port, not a published Android/iOS release.
+The shared Flutter client is in `flutter/`. Run it with backend configuration (`cd flutter && flutter run --dart-define=...`, see [Flutter setup](flutter/README.md)); without it the app only shows a notice that the server is not configured. It supports email sign-in, sign-up and an emailed-code password reset. The existing SwiftUI client remains, and both clients use the same Supabase RPC contracts. See [migration verification and remaining release work](docs/FLUTTER_MIGRATION.md). This is a development port, not a published Android/iOS release.
 
 ## Existing SwiftUI client
 
 Native iPhone implementation of the supplied Grouply v3.1 prototype, using **SwiftUI, iOS 17+, and the Soft Future design system**. Interface language: Bahasa Indonesia.
 
-**Current delivery: native demo plus a working local Supabase backend.** Demo personas remain available separately. The server mode uses actual Supabase Auth, RLS and transactional RPC for groups, projects, tasks, submissions and reviews. It has not been deployed to Supabase cloud; Apple-provider sign-in still needs developer configuration and real-device verification.
+**Current delivery: real accounts on a working local Supabase backend.** Demo mode (personas, seed data, local JSON snapshot and simulation switches) was removed from both clients on 17 October 2026; every screen now shows server data only. The server uses actual Supabase Auth, RLS and transactional RPC for groups, projects, tasks, submissions and reviews. It has not been deployed to Supabase cloud; Apple-provider sign-in still needs developer configuration and real-device verification.
 
 ## Run
 
-1. Open `Grouply.xcodeproj` in Xcode.
-2. Select the `Grouply` scheme and an iPhone simulator.
-3. Run, then choose a demo persona on the welcome screen.
+1. Start the local backend and create the private test accounts: [backend setup](docs/BACKEND_SETUP.md).
+2. Open `Grouply.xcodeproj` in Xcode, select the `Grouply` scheme and an iPhone simulator.
+3. Run, then choose **Masuk dengan Akun**.
 
-No credentials or network are needed for demo mode. For actual local server accounts, follow [backend setup](docs/BACKEND_SETUP.md). To run on a physical iPhone, select your own signing team in Xcode.
+To run on a physical iPhone, select your own signing team in Xcode. The Xcode project is checked in. If changing target configuration, update `project.yml` then regenerate with `xcodegen generate` (XcodeGen is a development tool, not an app dependency).
 
-The Xcode project is checked in. If changing target configuration, update `project.yml` then regenerate with `xcodegen generate` (XcodeGen is a development tool, not an app dependency).
-
-## Implemented locally
+## Implemented
 
 - Four tabs: Beranda, Grup, Chat, Tugas Saya, with native navigation and sheets.
-- Group creation/join, seven-day invitations, expiry/revocation/usage/capacity checks, members, coordinator transfer, and guarded leave/remove.
+- Group creation/join, seven-day invitations, members, coordinator transfer, and guarded leave/remove.
 - Project creation/editing, progress, completion, explicit reopening, archive and restoration of the previous status.
 - Task creation/editing/reassignment, start, versioned submissions, review/revision, historical authors and feedback.
-- Group Chat, task discussion, activity links, per-persona unread counters, failed-message retry with deduplication, report/block demonstrations.
-- Profile editing, persona switching, offline/send-failure/time simulation, local account anonymization and reset.
-- Atomic JSON persistence and a visible error if saving fails. Unreadable snapshots are backed up before recovery.
-- Share Sheet and local `grouply://task/<id>` routing with access validation.
+- Group Chat (Realtime), task discussion, activity links, unread counters, failed-send retry with deduplication, report/block.
+- Profile editing and account deletion.
+- Share Sheet and `grouply://task/<id>` routing with access validation.
 
-Completed/archived projects are read-only. Editing and reassignment are locked while a task is under review or done. Review checks the current version and original submission author. Members with active assignments cannot be silently removed. Assignee/reviewer membership is validated in the store, including chat sends. HTTPS result links are validated, up to five per submission.
-
-Demo data stays in the app sandbox at `Application Support/Grouply/demo-v1.json`. Use **Beranda → avatar → Panel demo lokal → Reset semua data demo** to restore the samples. Simulated time advances eight days for invitation testing. Codes include `STAT-K1Q` (initially valid), `UIX-OLD1` (expired), `BD3-USED` (exhausted), and `BD3-OFF9` (revoked).
+Business rules (read-only completed/archived projects, review locks, membership checks, invite expiry/usage/capacity, HTTPS links) are enforced by the server RPC and covered by the SQL suite; the clients only add input validation.
 
 ## Verify
 
@@ -45,11 +40,11 @@ xcodebuild -project Grouply.xcodeproj -scheme Grouply \
   -derivedDataPath build test CODE_SIGN_IDENTITY=- CODE_SIGNING_ALLOWED=YES
 ```
 
-`GrouplyTests` checks workflow, stale versions, role/membership, self-review, readonly projects, archive restoration, invitations, retry deduplication, unread state, persistence and recovery. `GrouplyUITests` exercises the four tabs, review approval, assignee submission, group messaging, and large Dynamic Type. UI-test launches use a fresh in-memory seed, preserving the user's saved demo.
+`GrouplyTests` covers the server-only store (actions require an account, unread counts, failed-draft privacy, reopen guard), the mocked HTTP client and, with the local backend running, real integration tests. `GrouplyUITests/BackendUITests` checks the login form. The persona-based UI tests and demo workflow tests were removed together with demo mode.
 
-Verified on 16 October 2026: **13 domain tests + 5 UI tests passed** on iPhone 17 Pro Simulator, and **4 UI tests passed** on iPhone SE (3rd generation), both on iOS 26.4. The UI suite also verifies automatic detail navigation after creating a group and project. Physical-device and minimum-iOS-17 runtime testing remain outstanding. See [implementation status](docs/IMPLEMENTATION_STATUS.md) and [screenshots](docs/screenshots/).
+Verifikasi SwiftUI setelah penghapusan (iPhone 17 Pro Simulator, iOS 26.4): build berhasil; **25 tes unit/integrasi + 1 tes UI lulus**, 0 gagal, termasuk 4 tes integrasi ke Supabase lokal. Satu tes integrasi sempat flaky (sign-out bertabrakan dengan refresh Realtime) dan diperbaiki dengan menunggu store tidak sibuk; 5/5 percobaan ulang lulus. Ini satu simulator + localhost, bukan perangkat fisik atau cloud.
 
-Backend verification on 17 October 2026: **23 native tests and 6 UI tests passed**, plus 36 SQL assertions, direct-DML denial, and a real three-account HTTP workflow with concurrent-review rejection. The signed simulator Keychain test passes; cloud and physical-device validation remain outstanding.
+Earlier results (16–17 October 2026, before demo removal) are recorded in [implementation status](docs/IMPLEMENTATION_STATUS.md). Physical-device, minimum-iOS-17 runtime and cloud validation remain outstanding.
 
 ## Server mode and release work
 
@@ -61,8 +56,8 @@ Local Milestone E adds a private report queue/operator CLI, cross-session block 
 
 ## Project map
 
-- `Grouply/App`: entry point, session/demo root, navigation and dashboard.
-- `Grouply/Core`: design tokens, models, seed and persistent demo workflow.
+- `Grouply/App`: entry point, session root, navigation and dashboard.
+- `Grouply/Core`: design tokens, models and `DemoStore` (the name is historical; it is the server-backed store).
 - `Grouply/Features`: groups/projects/tasks, chat and profile screens.
 - `docs/`: reconciled product and technical specification v1.3.
 - `reference/claude-design/`: original exported prototype, supporting runtime and uploaded material.

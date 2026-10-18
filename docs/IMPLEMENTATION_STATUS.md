@@ -1,6 +1,16 @@
 # Status implementasi Grouply
 
-Per 17 Oktober 2026, native SwiftUI iPhone iOS 17+ tersedia dalam mode demo dan **mode server Supabase lokal**. Backend sungguhan sudah terhubung ke UI; deployment cloud dan seluruh gate beta publik belum selesai.
+Per 17 Oktober 2026, native SwiftUI iPhone iOS 17+ hanya memakai **mode server Supabase lokal**. Deployment cloud dan seluruh gate beta publik belum selesai.
+
+## Penghapusan mode demo — 17 Oktober 2026
+
+Atas permintaan pengguna, mode demo dihapus dari SwiftUI dan Flutter: persona/seed (`DemoSeed.swift`, `flutter/lib/core/demo.dart`), snapshot JSON lokal, panel demo, simulasi offline/waktu/gagal kirim, dan salinan lokal aturan workflow. Semua aksi kini hanya lewat RPC server; tanpa akun aksi ditolak. Nama tipe `DemoStore`/`DemoError` dipertahankan (historis). Data uji di Supabase lokal (grup/proyek/tugas/pesan/undangan/laporan sisa tes) juga dikosongkan; tiga akun lokal dipertahankan untuk tes integrasi.
+
+Tes yang hanya menguji aturan versi demo dihapus karena aturan itu kini hanya ditegakkan server (suite SQL dan tes integrasi). SwiftUI: tes UI berbasis persona dihapus; `WorkflowTests` ditulis ulang untuk store tanpa server. Flutter: seed lama dipindah menjadi fake backend khusus tes `flutter/test/demo_backend.dart` untuk tes widget.
+
+Verifikasi SwiftUI setelah penghapusan (iPhone 17 Pro Simulator, iOS 26.4): build berhasil; **25 tes unit/integrasi + 1 tes UI lulus**, 0 gagal, termasuk 4 tes integrasi ke Supabase lokal. Satu tes integrasi sempat flaky (sign-out bertabrakan dengan refresh Realtime) dan diperbaiki dengan menunggu store tidak sibuk; 5/5 percobaan ulang lulus. Ini satu simulator + localhost, bukan perangkat fisik atau cloud.
+
+Bagian di bawah ini adalah catatan historis sebelum penghapusan demo.
 
 ## Slice backend yang tersedia
 
@@ -12,7 +22,7 @@ Per 17 Oktober 2026, native SwiftUI iPhone iOS 17+ tersedia dalam mode demo dan 
 
 Setup dan perintah pengujian ada di [Backend Setup](BACKEND_SETUP.md). Cloud state tidak ditulis ke snapshot demo; laporan cloud dibersihkan saat logout. Respons 401 dari request sesi lama tidak boleh menghapus kredensial sesi baru.
 
-## Tersedia di demo
+## Fitur (catatan historis; demo sudah dihapus)
 
 - Beranda, Grup, Chat dan Tugas Saya dengan navigasi detail/sheet.
 - Buat/gabung/edit grup, undangan tujuh hari dengan expiry/revoke/usage/capacity, anggota, transfer koordinator, keluar/remove dengan pemeriksaan tanggung jawab aktif.

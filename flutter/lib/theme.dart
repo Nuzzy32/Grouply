@@ -26,6 +26,7 @@ abstract final class GLTheme {
   static Color get butter => Color(dark ? 0xFF413720 : 0xFFF9E9BE);
   static Color get coral => Color(dark ? 0xFF47282B : 0xFFF6CED1);
   static Color get danger => Color(dark ? 0xFFFF8A80 : 0xFFA8231B);
+  static Color get success => Color(dark ? 0xFF6FCF97 : 0xFF1E7A43);
   static Color get link => Color(dark ? 0xFF8AB4F8 : 0xFF1F4F86);
 
   static ThemeData get data {

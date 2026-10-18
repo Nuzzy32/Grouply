@@ -1,6 +1,6 @@
 # Backend Grouply: setup dan batas verifikasi
 
-Backend ini berjalan lokal pada Docker dan memakai Supabase Auth, PostgreSQL, RLS, dan RPC sungguhan. Ia terpisah dari persona demo; belum dideploy ke proyek Supabase cloud.
+Backend ini berjalan lokal pada Docker dan memakai Supabase Auth, PostgreSQL, RLS, dan RPC sungguhan. Mode demo sudah dihapus dari kedua client, jadi semua data aplikasi berasal dari backend ini; belum dideploy ke proyek Supabase cloud.
 
 ## Menjalankan lokal
 
@@ -16,12 +16,14 @@ open Grouply.xcodeproj
 
 Port Grouply: API **55321**, PostgreSQL **55322**, email lokal **55324**, shadow database **55320**. Port berbeda mencegah bentrok dengan proyek Supabase lain. Jangan menjalankan `supabase stop` terhadap proyek lain.
 
+Email atur ulang kata sandi memakai kode 6 digit dari `supabase/templates/recovery.html`. Setelah mengubah template atau `config.toml`, jalankan `supabase stop` lalu perintah start di atas untuk proyek ini; email lokal terbaca di Mailpit port 55324. Template cloud diatur terpisah di dashboard.
+
 Skrip `setup` hanya mengizinkan localhost port 55321. Ia membuat tiga akun pengujian pada Supabase Auth lokal, menghasilkan kata sandi acak, dan menulis:
 
 - `Config/Local.xcconfig`: URL dan **publishable key publik**, diabaikan Git.
 - `~/Library/Application Support/GrouplyDevelopment/accounts.json`: kredensial lokal dengan izin file `0600`, di luar repo. Jangan commit atau membagikan file ini.
 
-Untuk mencoba server di aplikasi, pilih **Masuk dengan Akun**. Pada build Debug gunakan email/password akun pengujian dari file privat tersebut. Persona di bagian demo tetap merupakan data lokal terpisah. Akun pengujian email/password tidak ditawarkan pada build Release.
+Untuk mencoba server di aplikasi, pilih **Masuk dengan Akun**. Pada build Debug gunakan email/password akun pengujian dari file privat tersebut. Akun pengujian email/password tidak ditawarkan pada build Release.
 
 Di simulator, gunakan signing ad hoc agar Keychain memiliki identitas aplikasi. Build unsigned (`CODE_SIGNING_ALLOWED=NO`) tidak dapat membuktikan Keychain bekerja.
 
@@ -36,7 +38,7 @@ xcodebuild -project Grouply.xcodeproj -scheme Grouply \
   CODE_SIGN_IDENTITY=- CODE_SIGNING_ALLOWED=YES CODE_SIGNING_REQUIRED=YES
 ```
 
-Tes integrasi native membaca path akun lokal melalui scheme environment `GROUPLY_LOCAL_ACCOUNTS_PATH`. Tanpa setup lokal, tes integrasi menandai dirinya skipped; tes demo dan client mock tetap berjalan. Tidak ada kata sandi yang tertanam pada source atau diketik melalui log XCTest UI.
+Tes integrasi native membaca path akun lokal melalui scheme environment `GROUPLY_LOCAL_ACCOUNTS_PATH`. Tanpa setup lokal, tes integrasi menandai dirinya skipped; tes store dan client mock tetap berjalan. Tidak ada kata sandi yang tertanam pada source atau diketik melalui log XCTest UI.
 
 ## Migration dan pengujian keamanan
 
@@ -61,7 +63,7 @@ Suite SQL memakai transaksi rollback untuk fixture. `supabase db reset --local -
 - Undangan memakai token acak dan hash privat, expiry tujuh hari, kuota dan kapasitas delapan anggota. Kode hanya dikembalikan pada pembuatan undangan.
 - Batas server: 30 pesan teks per pengirim/grup/menit dan 10 undangan per grup/menit. Retry pesan dengan ID yang sama diperiksa sebelum batas frekuensi.
 
-UI menunggu respons server sebelum menganggap perubahan berhasil. Cloud state tidak ditulis ke JSON demo. Token sesi hanya masuk Keychain; logout menghapus state cloud. Refresh dilakukan saat foreground atau pull to refresh.
+UI menunggu respons server sebelum menganggap perubahan berhasil. State tidak ditulis ke file. Token sesi hanya masuk Keychain; logout menghapus state cloud. Refresh dilakukan saat foreground atau pull to refresh.
 
 ### Group Chat Realtime lokal
 
