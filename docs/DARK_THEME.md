@@ -32,6 +32,10 @@ Setiap warna di UI harus berasal dari token. Hex inline dan `.white`/`Colors.whi
 | `link` (baru) | 1F4F86 / 1F3F76 | 8AB4F8 | Tautan/aksi biru |
 | `success` (baru) | 1E7A43 | 6FCF97 | Teks/ikon status berhasil (aturan kata sandi terpenuhi) |
 | `raised` (baru) | FFFFFF | 2E3134 | Pill/lingkaran kecil berbayangan yang mengambang di atas layar |
+| `tabBar` (baru) | 202124 | 2A2D30 | Kapsul tab bar mengambang. Di gelap tidak ikut `ink` (kapsul terang jadi elemen paling silau) |
+| `tabActive` / `tabActiveInk` (baru) | FFFFFF / 202124 | ECEDEE / 202124 | Pill tab aktif dan ikon/teksnya |
+| `tabInactive` (baru) | FFFFFF 78% | ECEDEE 78% | Ikon/teks tab tidak aktif |
+| `segment` (baru, Flutter) | FFFFFF | 3B3F43 | Segmen terpilih di track `chip` dan badge filter tidak aktif; harus lebih terang dari track |
 
 **Pastel dari data** (`user.tint`, `group.tint`, latar chip status proyek): di gelap dipetakan DED2FF→3A3354, C9F2D6→1F3D2B, D8EAF4→1E3442, F9E9BE→413720, F6CED1→47282B, ECEEEB→26292B, FFFFFF→1C1E20. Hex lain (mis. `D6E4FF` default server) dicampur 28% warna asli + 72% `1C1E20` per kanal. Teks di atasnya tetap `ink`.
 
@@ -44,7 +48,8 @@ Kontras yang sudah dihitung (gelap): ink/background 15.9, ink/surface 14.3, seco
 ## Aturan
 
 - Bayangan (shadow) hairline: alpha tetap; boleh dihilangkan di gelap bila terlihat kotor, jangan ditambah.
-- Overlay/scrim hitam tetap hitam.
+- Overlay/scrim hitam tetap hitam. Flutter: di gelap scrim sheet/dialog 65% (`GLTheme.scrim`) dan sheet/dialog diberi garis tepi `hairline`, karena scrim 40% di atas layar gelap tidak memisahkan sheet yang berlatar `background`. Swift memakai sheet native yang sudah punya elevasi.
+- Warna token di Flutter tidak boleh disimpan di `final`/`const` tingkat atas (nilainya beku pada tema pertama); pakai getter.
 - App icon, gambar brand, dan avatar berwarna tidak diubah.
 - Status bar/keyboard mengikuti mode.
 - Jangan mengubah layout, ukuran, atau teks.

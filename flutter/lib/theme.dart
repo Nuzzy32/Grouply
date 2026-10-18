@@ -29,6 +29,25 @@ abstract final class GLTheme {
   static Color get success => Color(dark ? 0xFF6FCF97 : 0xFF1E7A43);
   static Color get link => Color(dark ? 0xFF8AB4F8 : 0xFF1F4F86);
 
+  // Floating tab bar: an ink capsule in light mode, a raised dark capsule in
+  // dark mode (inverting ink would make it the brightest thing on screen).
+  static Color get tabBar => Color(dark ? 0xFF2A2D30 : 0xFF202124);
+  static Color get tabActive => Color(dark ? 0xFFECEDEE : 0xFFFFFFFF);
+  static Color get tabActiveInk => Color(0xFF202124);
+
+  /// Selected segment on a chip track: lighter than the track in both modes.
+  static Color get segment => Color(dark ? 0xFF3B3F43 : 0xFFFFFFFF);
+  static Color get tabInactive => Color(dark ? 0xC7ECEDEE : 0xC7FFFFFF);
+
+  // On a dark page a 40% scrim barely shows, so sheets and dialogs get a
+  // deeper scrim and a hairline edge to read as raised.
+  static Color get scrim => Color(dark ? 0xA6000000 : 0x66000000);
+  static Color? get overlayEdge => dark ? hairline : null;
+  static ShapeBorder get sheetShape => RoundedRectangleBorder(
+    borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+    side: dark ? BorderSide(color: hairline) : BorderSide.none,
+  );
+
   static ThemeData get data {
     final base = ThemeData(
       useMaterial3: true,

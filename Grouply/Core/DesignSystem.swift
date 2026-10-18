@@ -27,6 +27,12 @@ enum GLTheme {
   static let coral = Color(light: "F6CED1", dark: "47282B")
   static let danger = Color(light: "A8231B", dark: "FF8A80")
   static let link = Color(light: "1F4F86", dark: "8AB4F8")
+  // Floating tab bar: ink capsule in light mode, raised dark capsule in dark mode
+  // (inverting ink would make it the brightest thing on screen).
+  static let tabBar = Color(light: "202124", dark: "2A2D30")
+  static let tabActive = Color(light: "FFFFFF", dark: "ECEDEE")
+  static let tabActiveInk = Color(hex: "202124")
+  static let tabInactive = Color(light: "FFFFFF", dark: "ECEDEE").opacity(0.78)
 }
 
 extension Color {

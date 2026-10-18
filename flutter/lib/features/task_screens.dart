@@ -116,7 +116,8 @@ bool _taskSameDay(DateTime a, DateTime b) {
   return x.year == y.year && x.month == y.month && x.day == y.day;
 }
 
-final _taskTrack = GLTheme.chip;
+// Getters, not finals: a final would freeze the colour of the first theme.
+Color get _taskTrack => GLTheme.chip;
 final _taskOutline = StadiumBorder(
   side: BorderSide(color: GLTheme.ink, width: 1.5),
 );
@@ -321,7 +322,10 @@ class _MyTasksState extends _WorkspaceState<MyTasksScreen> {
                 constraints: BoxConstraints(minWidth: 28, minHeight: 28),
                 padding: EdgeInsets.symmetric(horizontal: 8),
                 decoration: ShapeDecoration(
-                  color: on ? GLTheme.mint : GLTheme.muted,
+                  color: on
+                      ? GLTheme.mint
+                      // muted vanishes on a dark surface pill
+                      : (GLTheme.dark ? GLTheme.segment : GLTheme.muted),
                   shape: StadiumBorder(),
                 ),
                 child: Center(
@@ -826,7 +830,7 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
                       padding: EdgeInsets.symmetric(horizontal: 4),
                       decoration: ShapeDecoration(
                         color: tab == key
-                            ? GLTheme.surface
+                            ? GLTheme.segment
                             : Colors.transparent,
                         shape: glShape(14),
                         shadows: tab == key

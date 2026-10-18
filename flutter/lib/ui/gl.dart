@@ -869,10 +869,8 @@ Future<T?> showGLSheet<T>(
   isScrollControlled: true,
   useSafeArea: true,
   backgroundColor: GLTheme.background,
-  barrierColor: Color(0x66000000),
-  shape: RoundedRectangleBorder(
-    borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
-  ),
+  barrierColor: GLTheme.scrim,
+  shape: GLTheme.sheetShape,
   builder: (context) => Padding(
     padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
     child: SingleChildScrollView(
@@ -1174,7 +1172,7 @@ Future<bool> showGLConfirm(
       context: context,
       barrierDismissible: true,
       barrierLabel: 'Tutup',
-      barrierColor: Color(0x66141618),
+      barrierColor: GLTheme.dark ? GLTheme.scrim : Color(0x66141618),
       transitionDuration: Duration(milliseconds: 150),
       transitionBuilder: (_, animation, _, child) =>
           FadeTransition(opacity: animation, child: child),
@@ -1187,7 +1185,11 @@ Future<bool> showGLConfirm(
               type: MaterialType.transparency,
               child: Container(
                 padding: EdgeInsets.all(22),
-                decoration: glBox(GLTheme.surface, 28),
+                decoration: glBox(
+                  GLTheme.surface,
+                  28,
+                  border: GLTheme.overlayEdge,
+                ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
