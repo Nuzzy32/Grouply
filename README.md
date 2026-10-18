@@ -20,10 +20,10 @@
 </p>
 
 <p align="center">
-  <img src="docs/assets/readme/02-home-light.png" width="200" alt="Home, light mode">
-  <img src="docs/assets/readme/04-task-light.png" width="200" alt="Task detail, light mode">
-  <img src="docs/assets/readme/06-chat-dark.png" width="200" alt="Group chat, dark mode">
-  <img src="docs/assets/readme/05-review-dark.png" width="200" alt="Peer review, dark mode">
+  <img src="docs/assets/readme/screens/06-home.png" width="200" alt="Home">
+  <img src="docs/assets/readme/screens/22-task-summary.png" width="200" alt="Task detail">
+  <img src="docs/assets/readme/screens/25-review.png" width="200" alt="Peer review">
+  <img src="docs/assets/readme/screens/33-chat.png" width="200" alt="Group chat">
 </p>
 
 ---
@@ -53,36 +53,110 @@ Business rules (membership checks, read-only completed/archived projects, review
 
 ## Screenshots
 
+Every screen of the Flutter client, light mode, on the iPhone 17 simulator with sample data. The app also follows the system dark mode.
+
+### Account
+
 <table>
   <tr>
-    <th>Welcome</th><th>Home</th><th>My tasks</th>
+    <td align="center" valign="top" width="25%"><img src="docs/assets/readme/screens/01-welcome.png" width="180" alt="Welcome"><br><sub>Welcome</sub></td>
+    <td align="center" valign="top" width="25%"><img src="docs/assets/readme/screens/02-sign-in.png" width="180" alt="Sign in"><br><sub>Sign in</sub></td>
+    <td align="center" valign="top" width="25%"><img src="docs/assets/readme/screens/03-sign-up.png" width="180" alt="Sign up"><br><sub>Sign up</sub></td>
+    <td align="center" valign="top" width="25%"><img src="docs/assets/readme/screens/04-reset-email.png" width="180" alt="Reset password · email"><br><sub>Reset password · email</sub></td>
   </tr>
   <tr>
-    <td><img src="docs/assets/readme/01-welcome-light.png" width="220" alt="Welcome, light"></td>
-    <td><img src="docs/assets/readme/02-home-light.png" width="220" alt="Home, light"></td>
-    <td><img src="docs/assets/readme/03-tasks-light.png" width="220" alt="My tasks, light"></td>
-  </tr>
-  <tr>
-    <td><img src="docs/assets/readme/01-welcome-dark.png" width="220" alt="Welcome, dark"></td>
-    <td><img src="docs/assets/readme/02-home-dark.png" width="220" alt="Home, dark"></td>
-    <td><img src="docs/assets/readme/03-tasks-dark.png" width="220" alt="My tasks, dark"></td>
-  </tr>
-  <tr>
-    <th>Task detail</th><th>Peer review</th><th>Group chat</th>
-  </tr>
-  <tr>
-    <td><img src="docs/assets/readme/04-task-light.png" width="220" alt="Task detail, light"></td>
-    <td><img src="docs/assets/readme/05-review-light.png" width="220" alt="Peer review, light"></td>
-    <td><img src="docs/assets/readme/06-chat-light.png" width="220" alt="Group chat, light"></td>
-  </tr>
-  <tr>
-    <td><img src="docs/assets/readme/04-task-dark.png" width="220" alt="Task detail, dark"></td>
-    <td><img src="docs/assets/readme/05-review-dark.png" width="220" alt="Peer review, dark"></td>
-    <td><img src="docs/assets/readme/06-chat-dark.png" width="220" alt="Group chat, dark"></td>
+    <td align="center" valign="top" width="25%"><img src="docs/assets/readme/screens/05-reset-code.png" width="180" alt="Reset password · code"><br><sub>Reset password · code</sub></td>
   </tr>
 </table>
 
-<sub>Flutter client on the iPhone 17 simulator with sample data.</sub>
+### Home
+
+<table>
+  <tr>
+    <td align="center" valign="top" width="25%"><img src="docs/assets/readme/screens/06-home.png" width="180" alt="Home dashboard"><br><sub>Home dashboard</sub></td>
+    <td align="center" valign="top" width="25%"><img src="docs/assets/readme/screens/36-my-tasks.png" width="180" alt="My tasks"><br><sub>My tasks</sub></td>
+  </tr>
+</table>
+
+### Groups
+
+<table>
+  <tr>
+    <td align="center" valign="top" width="25%"><img src="docs/assets/readme/screens/07-groups.png" width="180" alt="Groups"><br><sub>Groups</sub></td>
+    <td align="center" valign="top" width="25%"><img src="docs/assets/readme/screens/08-create-group.png" width="180" alt="Create group"><br><sub>Create group</sub></td>
+    <td align="center" valign="top" width="25%"><img src="docs/assets/readme/screens/09-join-group.png" width="180" alt="Join with invite code"><br><sub>Join with invite code</sub></td>
+    <td align="center" valign="top" width="25%"><img src="docs/assets/readme/screens/10-group-detail.png" width="180" alt="Group detail"><br><sub>Group detail</sub></td>
+  </tr>
+  <tr>
+    <td align="center" valign="top" width="25%"><img src="docs/assets/readme/screens/11-invite.png" width="180" alt="Invite members"><br><sub>Invite members</sub></td>
+    <td align="center" valign="top" width="25%"><img src="docs/assets/readme/screens/12-members.png" width="180" alt="Members"><br><sub>Members</sub></td>
+    <td align="center" valign="top" width="25%"><img src="docs/assets/readme/screens/13-member-sheet.png" width="180" alt="Member actions"><br><sub>Member actions</sub></td>
+    <td align="center" valign="top" width="25%"><img src="docs/assets/readme/screens/14-group-settings.png" width="180" alt="Group settings"><br><sub>Group settings</sub></td>
+  </tr>
+</table>
+
+### Projects
+
+<table>
+  <tr>
+    <td align="center" valign="top" width="25%"><img src="docs/assets/readme/screens/17-project.png" width="180" alt="Project · Group Pulse"><br><sub>Project · Group Pulse</sub></td>
+    <td align="center" valign="top" width="25%"><img src="docs/assets/readme/screens/18-project-tasks.png" width="180" alt="Project tasks & activity"><br><sub>Project tasks & activity</sub></td>
+    <td align="center" valign="top" width="25%"><img src="docs/assets/readme/screens/15-create-project.png" width="180" alt="Create project"><br><sub>Create project</sub></td>
+    <td align="center" valign="top" width="25%"><img src="docs/assets/readme/screens/21-edit-project.png" width="180" alt="Edit project"><br><sub>Edit project</sub></td>
+  </tr>
+  <tr>
+    <td align="center" valign="top" width="25%"><img src="docs/assets/readme/screens/16-date-picker.png" width="180" alt="Deadline picker"><br><sub>Deadline picker</sub></td>
+    <td align="center" valign="top" width="25%"><img src="docs/assets/readme/screens/20-project-actions.png" width="180" alt="Project actions"><br><sub>Project actions</sub></td>
+  </tr>
+</table>
+
+### Tasks & review
+
+<table>
+  <tr>
+    <td align="center" valign="top" width="25%"><img src="docs/assets/readme/screens/22-task-summary.png" width="180" alt="Task summary"><br><sub>Task summary</sub></td>
+    <td align="center" valign="top" width="25%"><img src="docs/assets/readme/screens/23-task-work.png" width="180" alt="Submitted work"><br><sub>Submitted work</sub></td>
+    <td align="center" valign="top" width="25%"><img src="docs/assets/readme/screens/24-task-discussion.png" width="180" alt="Task discussion"><br><sub>Task discussion</sub></td>
+    <td align="center" valign="top" width="25%"><img src="docs/assets/readme/screens/25-review.png" width="180" alt="Review submission"><br><sub>Review submission</sub></td>
+  </tr>
+  <tr>
+    <td align="center" valign="top" width="25%"><img src="docs/assets/readme/screens/26-request-revision.png" width="180" alt="Request revision"><br><sub>Request revision</sub></td>
+    <td align="center" valign="top" width="25%"><img src="docs/assets/readme/screens/28-task-revision.png" width="180" alt="Needs revision"><br><sub>Needs revision</sub></td>
+    <td align="center" valign="top" width="25%"><img src="docs/assets/readme/screens/29-submit-work.png" width="180" alt="Submit revision"><br><sub>Submit revision</sub></td>
+    <td align="center" valign="top" width="25%"><img src="docs/assets/readme/screens/19-create-task.png" width="180" alt="Create task"><br><sub>Create task</sub></td>
+  </tr>
+  <tr>
+    <td align="center" valign="top" width="25%"><img src="docs/assets/readme/screens/31-edit-task.png" width="180" alt="Edit task"><br><sub>Edit task</sub></td>
+    <td align="center" valign="top" width="25%"><img src="docs/assets/readme/screens/30-reassign.png" width="180" alt="Reassign assignee"><br><sub>Reassign assignee</sub></td>
+    <td align="center" valign="top" width="25%"><img src="docs/assets/readme/screens/27-task-options.png" width="180" alt="Task options"><br><sub>Task options</sub></td>
+  </tr>
+</table>
+
+### Chat
+
+<table>
+  <tr>
+    <td align="center" valign="top" width="25%"><img src="docs/assets/readme/screens/32-chats.png" width="180" alt="Chats"><br><sub>Chats</sub></td>
+    <td align="center" valign="top" width="25%"><img src="docs/assets/readme/screens/33-chat.png" width="180" alt="Group chat"><br><sub>Group chat</sub></td>
+    <td align="center" valign="top" width="25%"><img src="docs/assets/readme/screens/34-message-options.png" width="180" alt="Message options"><br><sub>Message options</sub></td>
+    <td align="center" valign="top" width="25%"><img src="docs/assets/readme/screens/35-report.png" width="180" alt="Report message"><br><sub>Report message</sub></td>
+  </tr>
+</table>
+
+### Profile
+
+<table>
+  <tr>
+    <td align="center" valign="top" width="25%"><img src="docs/assets/readme/screens/37-profile.png" width="180" alt="Profile"><br><sub>Profile</sub></td>
+    <td align="center" valign="top" width="25%"><img src="docs/assets/readme/screens/38-edit-profile.png" width="180" alt="Edit profile"><br><sub>Edit profile</sub></td>
+    <td align="center" valign="top" width="25%"><img src="docs/assets/readme/screens/39-notifications.png" width="180" alt="Notifications"><br><sub>Notifications</sub></td>
+    <td align="center" valign="top" width="25%"><img src="docs/assets/readme/screens/40-about.png" width="180" alt="About"><br><sub>About</sub></td>
+  </tr>
+  <tr>
+    <td align="center" valign="top" width="25%"><img src="docs/assets/readme/screens/41-blocked.png" width="180" alt="Blocked users"><br><sub>Blocked users</sub></td>
+    <td align="center" valign="top" width="25%"><img src="docs/assets/readme/screens/42-delete-account.png" width="180" alt="Delete account"><br><sub>Delete account</sub></td>
+  </tr>
+</table>
 
 ## Architecture
 
