@@ -814,7 +814,7 @@ class _GroupCard extends StatelessWidget {
               Container(
                 width: 52,
                 height: 52,
-                decoration: glBox(glHex(group.text('tint')), 20),
+                decoration: glBox(glTint(group.text('tint')), 20),
                 child: GLIcon(group.text('icon'), size: 26),
               ),
               SizedBox(width: 14),
@@ -988,7 +988,7 @@ class _GroupState extends _WorkspaceState<GroupScreen>
                   Container(
                     width: 58,
                     height: 58,
-                    decoration: glBox(glHex(group.text('tint')), 22),
+                    decoration: glBox(glTint(group.text('tint')), 22),
                     child: GLIcon(group.text('icon'), size: 28),
                   ),
                   SizedBox(width: 14),
@@ -1410,7 +1410,7 @@ class _GroupProjectCard extends StatelessWidget {
                 width: 12,
                 height: 40,
                 decoration: glBox(
-                  glHex(
+                  glTint(
                     store.group(project.text('groupID'))?.text('tint'),
                     GLTheme.surface,
                   ),

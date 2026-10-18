@@ -343,7 +343,10 @@ class _ChatsScreenState extends State<ChatsScreen> {
             Container(
               width: 52,
               height: 52,
-              decoration: glBox(glHex(group.text('tint'), GLTheme.surface), 20),
+              decoration: glBox(
+                glTint(group.text('tint'), GLTheme.surface),
+                20,
+              ),
               child: GLIcon(
                 group.text('icon').isEmpty ? 'person.3' : group.text('icon'),
                 size: 26,
@@ -1288,7 +1291,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         Container(
           width: 42,
           height: 42,
-          decoration: glBox(glHex(group?.text('tint'), GLTheme.surface), 16),
+          decoration: glBox(glTint(group?.text('tint'), GLTheme.surface), 16),
           child: GLIcon(
             (group?.text('icon') ?? '').isEmpty
                 ? 'person.3'

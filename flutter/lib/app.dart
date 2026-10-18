@@ -1788,7 +1788,7 @@ class _HomeProjectCard extends StatelessWidget {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: glHex(group?.text('tint'), GLTheme.surface),
+                color: glTint(group?.text('tint'), GLTheme.surface),
                 shape: BoxShape.circle,
               ),
               child: GLIcon(
