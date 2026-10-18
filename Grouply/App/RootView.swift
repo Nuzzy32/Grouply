@@ -141,8 +141,8 @@ struct RootView: View {
           .minimumScaleFactor(0.8)
       }
       .frame(maxWidth: .infinity).frame(height: 56)
-      .foregroundStyle(active ? GLTheme.ink : .white.opacity(0.78))
-      .background(active ? Color.white : .clear, in: Capsule())
+      .foregroundStyle(active ? GLTheme.ink : GLTheme.onInk.opacity(0.78))
+      .background(active ? GLTheme.surface : .clear, in: Capsule())
       .contentShape(Capsule())
     }.buttonStyle(.plain).accessibilityIdentifier("tab-\(index)")
       .accessibilityLabel(badge > 0 ? "\(label), \(badge) pesan baru" : label)
@@ -209,9 +209,9 @@ struct WelcomeView: View {
         }
         VStack(spacing: 8) {
           Button { backendLogin = true } label: {
-            Text("Masuk dengan Akun").gl(17, .semibold).foregroundStyle(.white)
+            Text("Masuk dengan Akun").gl(17, .semibold).foregroundStyle(GLTheme.onInk)
               .frame(maxWidth: .infinity).frame(height: 56)
-              .background(.black, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+              .background(Color(light: "000000", dark: "ECEDEE"), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
           }.buttonStyle(.plain).accessibilityIdentifier("open-backend-login")
           Text("Akun Supabase terpisah dari persona demo di bawah.").gl(12)
             .foregroundStyle(GLTheme.secondary).multilineTextAlignment(.center)
@@ -253,7 +253,7 @@ struct WelcomeView: View {
         Spacer(minLength: 0)
       }
       .padding(.vertical, 6).padding(.leading, 6).padding(.trailing, 10).frame(minHeight: 48)
-      .background(.white, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+      .background(GLTheme.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
       .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(GLTheme.border))
       .contentShape(Rectangle())
     }.buttonStyle(.plain).accessibilityIdentifier("persona-\(user.id)")
@@ -281,7 +281,7 @@ struct WelcomeView: View {
         }
         .padding(.vertical, 14).padding(.horizontal, 16)
         .frame(width: w * 0.66, alignment: .leading)
-        .background(.white, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .background(GLTheme.surface, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
         .shadow(color: .black.opacity(0.14), radius: 14, y: 14)
         .rotationEffect(.degrees(2.5))
         .offset(x: w * 0.34, y: h * 0.34)
@@ -390,7 +390,7 @@ struct HomeView: View {
               VStack(spacing: 0) {
                 ForEach(activity) { message in activityRow(message) }
               }.padding(.horizontal, 16).padding(.vertical, 4)
-                .background(.white, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+                .background(GLTheme.surface, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
             }
           }
         }
@@ -435,7 +435,7 @@ struct HomeView: View {
         NavigationLink(value: Route.task(item.task.id)) {
           HStack(spacing: 12) {
             GLIcon(item.icon, size: 20).frame(width: 40, height: 40)
-              .background(.white.opacity(0.7), in: Circle())
+              .background(GLTheme.surface.opacity(0.7), in: Circle())
             VStack(alignment: .leading, spacing: 2) {
               Text(item.reason).gl(13, .semibold).foregroundStyle(GLTheme.text2)
               Text(item.task.title).gl(16, .semibold)
@@ -459,7 +459,7 @@ struct HomeView: View {
         NavigationLink(value: Route.task(task.id)) {
           HStack(spacing: 12) {
             GLAvatar(user: store.user(task.assigneeID), size: 40, fontSize: 13)
-              .overlay(Circle().stroke(.white.opacity(0.7), lineWidth: 2))
+              .overlay(Circle().stroke(GLTheme.surface.opacity(0.7), lineWidth: 2))
             VStack(alignment: .leading, spacing: 3) {
               Text(task.title).gl(16, .semibold)
               // flex-wrap: the stale chip drops to its own line when it doesn't fit.
@@ -469,7 +469,7 @@ struct HomeView: View {
               if let hours = waitingHours(task), hours > 48 {
                 let chip = GLChip(
                   label: "Menunggu \(hours) jam", icon: "list.bullet.clipboard",
-                  background: .white, outlined: true, height: 24, fontSize: 12, iconSize: 15
+                  background: GLTheme.surface, outlined: true, height: 24, fontSize: 12, iconSize: 15
                 ).fixedSize()
                 ViewThatFits(in: .horizontal) {
                   HStack(spacing: 6) { from; chip }
@@ -561,7 +561,7 @@ struct HomeView: View {
         }.buttonStyle(.plain)
       }.padding(.top, 6)
     }.padding(.vertical, 28).padding(.horizontal, 22).frame(maxWidth: .infinity, alignment: .leading)
-      .background(.white, in: RoundedRectangle(cornerRadius: 32, style: .continuous))
+      .background(GLTheme.surface, in: RoundedRectangle(cornerRadius: 32, style: .continuous))
   }
 
   private func waitingHours(_ task: GLTask) -> Int? {
@@ -596,7 +596,7 @@ struct HomeProjectCard: View {
     let done = tasks.filter { $0.status == .done }.count
     HStack(spacing: 14) {
       GLIcon(group?.icon ?? "folder", size: 22).frame(width: 48, height: 48)
-        .background(Color(hex: group?.tint ?? "FFFFFF"), in: Circle())
+        .background(Color(tint: group?.tint ?? "FFFFFF"), in: Circle())
       VStack(alignment: .leading, spacing: 8) {
         VStack(alignment: .leading, spacing: 1) {
           Text(project.title).gl(16, .semibold)

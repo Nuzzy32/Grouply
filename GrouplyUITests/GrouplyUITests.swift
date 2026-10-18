@@ -114,6 +114,48 @@ final class GrouplyUITests: XCTestCase {
   }
 
   @MainActor
+  func testDarkModeMainScreens() throws {
+    XCUIDevice.shared.appearance = .dark
+    defer { XCUIDevice.shared.appearance = .light }
+    app.terminate()
+    app.launch()
+    screenshot("D0-Welcome")
+    login("u1")
+    XCTAssertTrue(app.buttons["open-profile"].waitForExistence(timeout: 5))
+    screenshot("D1-Beranda")
+    app.buttons["tab-1"].tap()
+    XCTAssertTrue(app.staticTexts["Basis Data · Kelompok 3"].waitForExistence(timeout: 5))
+    screenshot("D2-Grup")
+    app.staticTexts["Basis Data · Kelompok 3"].tap()
+    let project = app.staticTexts["Sistem Informasi Perpustakaan"].firstMatch
+    reveal(project)
+    project.tap()
+    XCTAssertTrue(app.buttons["add-task"].waitForExistence(timeout: 5))
+    screenshot("D3-Proyek")
+    app.terminate()
+    app.launch()
+    login("u1")
+    app.buttons["tab-2"].tap()
+    let chat = app.staticTexts["Basis Data · Kelompok 3"].firstMatch
+    XCTAssertTrue(chat.waitForExistence(timeout: 5))
+    chat.tap()
+    screenshot("D4-Chat")
+    app.terminate()
+    app.launch()
+    login("u1")
+    app.buttons["tab-3"].tap()
+    screenshot("D5-Tugas-Saya")
+    let erd = app.staticTexts["Draft diagram ERD"].firstMatch
+    reveal(erd)
+    erd.tap()
+    XCTAssertTrue(app.buttons["open-review"].waitForExistence(timeout: 5))
+    screenshot("D6-Detail-Tugas")
+    app.buttons["open-review"].tap()
+    XCTAssertTrue(app.buttons["approve-work"].waitForExistence(timeout: 5))
+    screenshot("D7-Review")
+  }
+
+  @MainActor
   private func login(_ persona: String) {
     let button = app.buttons["persona-\(persona)"]
     reveal(button)

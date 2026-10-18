@@ -31,6 +31,12 @@ Setiap warna di UI harus berasal dari token. Hex inline dan `.white`/`Colors.whi
 | `danger` | A8231B | FF8A80 | |
 | `link` (baru) | 1F4F86 / 1F3F76 | 8AB4F8 | Tautan/aksi biru |
 
+| `raised` (baru) | FFFFFF | 2E3134 | Pill/lingkaran kecil berbayangan yang mengambang di atas layar |
+
+**Pastel dari data** (`user.tint`, `group.tint`, latar chip status proyek): di gelap dipetakan DED2FF→3A3354, C9F2D6→1F3D2B, D8EAF4→1E3442, F9E9BE→413720, F6CED1→47282B, ECEEEB→26292B, FFFFFF→1C1E20. Hex lain (mis. `D6E4FF` default server) dicampur 28% warna asli + 72% `1C1E20` per kanal. Teks di atasnya tetap `ink`.
+
+Kasus khusus: tombol "Masuk dengan Akun" hitam di terang dan ECEDEE di gelap (teks `onInk`); knob toggle tetap putih; tombol Sign in with Apple memakai gaya putih di gelap.
+
 Tetap sama di kedua mode (nada menengah, terbaca di latar gelap): warna ring status `E6C25E`, `86B8D6`, `A893EE`, `E08C94`, `62C484`, serta hijau `34C759`.
 
 Kontras yang sudah dihitung (gelap): ink/background 15.9, ink/surface 14.3, secondary/surface 7.0, secondary/chip 6.1, onInk/ink 14.7, ink di atas tiap pastel ≥ 10.0, danger/surface 7.3, link/surface 7.9.

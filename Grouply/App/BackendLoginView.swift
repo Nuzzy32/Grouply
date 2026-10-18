@@ -4,6 +4,7 @@ import SwiftUI
 struct BackendLoginView: View {
   @Environment(DemoStore.self) private var store
   @Environment(\.dismiss) private var dismiss
+  @Environment(\.colorScheme) private var colorScheme
   @State private var email = ""
   @State private var password = ""
   @State private var nonce: AppleSignInNonce?
@@ -46,7 +47,7 @@ struct BackendLoginView: View {
                 } catch { self.error = error.localizedDescription }
               }
             }
-            .signInWithAppleButtonStyle(.black).frame(height: 54)
+            .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black).frame(height: 54)
             Text(
               "Memerlukan capability Sign in with Apple dan provider Apple yang dikonfigurasi pada proyek Supabase."
             )
