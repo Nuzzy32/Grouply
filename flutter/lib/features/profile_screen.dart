@@ -151,6 +151,7 @@ class _ProfileSwitch extends StatelessWidget {
   Widget build(BuildContext context) => CupertinoSwitch(
     value: on,
     activeTrackColor: Color(0xFF34C759),
+    thumbColor: Colors.white,
     inactiveTrackColor: GLTheme.hairline,
     onChanged: (_) => onChanged(),
   );

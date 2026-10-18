@@ -13,9 +13,26 @@ export '../theme.dart';
 /// `Color(hex:)` — accepts "#DED2FF" or "DED2FF".
 Color glHex(String? hex, [Color? fallback]) {
   final value = int.tryParse((hex ?? '').replaceAll('#', ''), radix: 16);
-  return value == null
-      ? (fallback ?? GLTheme.lavender)
-      : Color(0xFF000000 | value);
+  if (value == null) return fallback ?? GLTheme.lavender;
+  if (!GLTheme.dark) return Color(0xFF000000 | value);
+  const mapped = <int, int>{
+    0xDED2FF: 0x3A3354,
+    0xC9F2D6: 0x1F3D2B,
+    0xD8EAF4: 0x1E3442,
+    0xF9E9BE: 0x413720,
+    0xF6CED1: 0x47282B,
+    0xECEEEB: 0x26292B,
+    0xFFFFFF: 0x1C1E20,
+  };
+  final direct = mapped[value];
+  if (direct != null) return Color(0xFF000000 | direct);
+  int mix(int channel) => ((channel * 28 + 0x1C * 72) / 100).round();
+  return Color.fromARGB(
+    255,
+    mix((value >> 16) & 0xFF),
+    mix((value >> 8) & 0xFF),
+    mix(value & 0xFF),
+  );
 }
 
 /// SwiftUI renders SF with Display optics from ~19pt and applies Apple's size-specific
@@ -737,7 +754,7 @@ class GLCircleButton extends StatelessWidget {
       width: 44,
       height: 44,
       decoration: BoxDecoration(
-        color: background,
+        color: background ?? GLTheme.raised,
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(

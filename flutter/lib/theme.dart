@@ -14,6 +14,7 @@ abstract final class GLTheme {
   static Color get muted => Color(dark ? 0xFF222527 : 0xFFF0F3F1);
   static Color get border => Color(dark ? 0xFF2E3134 : 0xFFE8E9E7);
   static Color get chip => Color(dark ? 0xFF26292B : 0xFFECEEEB);
+  static Color get raised => Color(dark ? 0xFF2E3134 : 0xFFFFFFFF);
   static Color get placeholder => Color(dark ? 0xFF868C93 : 0xFF9AA0A6);
   static Color get disabled => Color(dark ? 0xFF4A4F53 : 0xFFC4C7C5);
   static Color get faint => Color(dark ? 0xFF5B6166 : 0xFFB4B8BC);
