@@ -9,8 +9,8 @@ Client baru berada di `flutter/`. Source SwiftUI, proyek Xcode native, backend, 
 ## Yang tersedia
 
 - Empat tab Beranda, Grup, Chat, Tugas Saya dan profil, menggunakan identitas Soft Future serta app icon Grouply yang sudah ada.
-- Demo lokal tersimpan terpisah dengan persona, group/project/task CRUD, assignment, start, submission append-only, review/revisi, archive/restore, invitations, coordinator/membership, diskusi, unread, laporan, block/unblock, dan penghapusan identitas demo.
-- Client Supabase Auth email/password untuk login dan pendaftaran akun baru; sesi/PKCE melalui secure storage. SharedPreferences menyimpan demo dan penanda signed-out nonrahasia, bukan token. Konfigurasi menolak secret/service-role key dan HTTP remote.
+- (Historis, demo dihapus 17 Oktober 2026) Demo lokal tersimpan terpisah dengan persona, group/project/task CRUD, assignment, start, submission append-only, review/revisi, archive/restore, invitations, coordinator/membership, diskusi, unread, laporan, block/unblock, dan penghapusan identitas demo.
+- Client Supabase Auth email/password untuk login, pendaftaran, dan atur ulang kata sandi lewat kode email; sesi/PKCE melalui secure storage. SharedPreferences hanya menyimpan penanda signed-out nonrahasia, bukan token. Konfigurasi menolak secret/service-role key dan HTTP remote.
 - RPC `grouply_snapshot` / `grouply_mutate` memakai nama action dan payload camelCase dari client Swift. Mode backend menunggu server dan tidak melakukan fallback mutasi demo ketika jaringan gagal.
 - Realtime group chat, sinkronisasi read IDs, refresh foreground/reconnect, pembatasan membership, optimistic version check tugas, dan ID pesan stabil untuk retry. Read receipts hanya menandai pesan yang teramati di viewport.
 - Deep link lokal `grouply://task/<id>` memeriksa keberadaan tugas dan membership setelah autentikasi; state navigasi dibersihkan ketika akun berganti.
@@ -50,18 +50,38 @@ Port awal memakai desain Material buatan sendiri (Beranda "Fokus hari ini", `Nav
 
 - `flutter/lib/ui/gl.dart` mencerminkan `Grouply/Core/DesignSystem.swift`: token warna, `gl()` (ukuran/berat/tracking, tinggi baris SF ~1.19, SF Pro Display mulai 19pt plus tabel tracking Apple), ikon SF Symbol → Cupertino Icons, sudut continuous (`RoundedSuperellipseBorder`), kartu, chip, sheet, dialog konfirmasi, toast, header detail.
 - Tema: transisi push/swipe-back iOS, scroll bounce, tanpa ripple Material, locale `id_ID`, di Android dan iOS.
+- Tema terang/gelap Flutter mengikuti pengaturan kecerahan sistem.
 - Layar: Welcome + persona demo, sheet login email, tab bar kapsul mengambang, Beranda, Grup (detail/anggota/pengaturan/undangan/gabung), Proyek (Group Pulse, filter, editor), Tugas Saya dan detail tugas (Ringkasan/Hasil kerja/Diskusi, kirim hasil, review, alihkan, editor), Chat (daftar, percakapan, moderasi), Profil (notifikasi, diblokir, tentang/privasi, hapus akun, panel demo). Kontrak action/payload store tidak berubah.
 - Seed demo = `Grouply/Core/DemoSeed.swift` (Alex u1 … Laras u7). Key penyimpanan demo naik ke `grouply.demo.v2`, sehingga data demo lama port awal tidak dipakai lagi.
 - Perbedaan yang tersisa: beberapa glyph Cupertino tidak identik dengan SF Symbol (mis. database, grid, kunci); Flutter belum punya Sign in with Apple dan date picker iOS (diganti kalender dalam sheet). Android memakai Roboto karena SF tidak boleh dibundel; tata letak dan ukuran tetap sama.
 
 Verifikasi: `flutter analyze` bersih; `flutter test` 126 lulus, 1 integrasi lokal opt-in dilewati (tidak dijalankan ulang pada perubahan UI ini); `flutter build apk --debug` dan `flutter build ios --simulator --debug` berhasil. Perbandingan berdampingan Swift (iPhone 17 Pro) vs Flutter (iPhone 17), iOS 26.4: Welcome, Beranda, Grup, Chat, Tugas Saya, dan detail tugas sudah dicek secara visual; contoh di `docs/screenshots/flutter/compare-welcome.png` dan `compare-home.png`. Belum diuji di emulator atau perangkat Android.
 
+## Daftar akun dan atur ulang kata sandi — 17 Oktober 2026
+
+- Sheet akun memakai komponen Soft Future yang sama dengan sheet lain (`showGLSheet`, `GLField`, `glInputDecoration`, `GLSubmitButton`, `GLFormError`, `GLNotice`): toggle Masuk/Daftar bergaya pill, tombol tampil/sembunyikan sandi, indikator minimal 8 karakter, dan Atur Ulang Sandi dua langkah. Daftar meminta nama ≤80, email, kata sandi ≥8. Screenshot: `docs/screenshots/flutter/auth-signup-ios.png`, `auth-reset-code-ios.png`. Nama dikirim sebagai metadata dan dipakai trigger profil yang sudah ada; tidak ada migration baru.
+- Pemulihan memakai kode 6 digit di email (`verifyOTP` tipe recovery lalu `updateUser`), bukan tautan, sehingga tidak butuh deep link/Universal Link. Template lokal: `supabase/templates/recovery.html` lewat `[auth.email.template.recovery]` di `supabase/config.toml`. Jika `updateUser` gagal setelah kode diterima, sesi ditutup dan pengguna diminta kode baru.
+- Respons pendaftaran tanpa sesi (konfirmasi email aktif) tidak login otomatis; sheet kembali ke Masuk dengan pesan untuk membuka email konfirmasi. Lokal `enable_confirmations = false`.
+- Kode error Auth (`user_already_exists`, `weak_password`, `otp_expired`, rate limit, dll.) dipetakan ke pesan Indonesia. Pesan kirim kode tidak membocorkan apakah email terdaftar.
+- **Cloud:** template recovery di dashboard Supabase harus diganti agar memuat `{{ .Token }}`, SMTP produksi harus dipasang, dan keputusan konfirmasi email/panjang sandi minimum perlu ditetapkan. Belum dilakukan.
+
+Verifikasi: `flutter analyze` bersih; `flutter test` 131 lulus (5 tes baru: store dan widget sheet), 2 integrasi lokal opt-in dilewati secara default. `GROUPLY_LOCAL_INTEGRATION=1 flutter test test/local_backend_test.dart` lulus 2/2, termasuk tes baru: daftar → nama sampai ke profil → duplikat ditolak → kirim kode → kode dibaca dari Mailpit lokal → kode salah ditolak → kode benar → sandi lama ditolak, sandi baru diterima → akun dihapus lewat `deleteAccount`. Smoke UI iPhone 17 (iOS 26.4, simulator terpisah dari Swift): daftar akun dari sheet sampai Beranda menampilkan nama; akun tes kemudian dihapus. Header sheet diperbaiki (tombol Batal sebelumnya menumpuk di judul). APK debug dan iOS simulator dibangun ulang. Belum diuji di Android runtime atau cloud.
+
+## Penghapusan mode demo — 17 Oktober 2026
+
+- Aplikasi Flutter tidak lagi berisi demo: `lib/core/demo.dart`, persona di Welcome, panel demo/ganti persona di Profil, kode undangan contoh, banner offline, teks simulasi hapus akun/laporan, dan penyimpanan `grouply.demo.*` dihapus dari `lib/`. `GrouplyStore` hanya memanggil backend; tanpa konfigurasi, sheet akun menampilkan pemberitahuan server belum dikonfigurasi.
+- Welcome kini berisi **Masuk dengan Akun** dan **Belum punya akun? Daftar**. Kode undangan dikirim apa adanya (dipangkas), karena token server peka huruf besar/kecil.
+- Seed lama dipindah ke `test/demo_backend.dart` (fake `GrouplyBackend` khusus tes) agar tes widget tetap punya data. Tes yang hanya memeriksa aturan workflow versi demo dan persistence demo dihapus; aturan tersebut ditegakkan server.
+- Catatan: perangkat yang pernah menjalankan versi lama masih menyimpan key `grouply.demo.v2` di SharedPreferences; tidak dibaca lagi.
+
+Verifikasi: `flutter analyze` bersih; `flutter test` 125 lulus, 2 integrasi opt-in dilewati; `GROUPLY_LOCAL_INTEGRATION=1 flutter test test/local_backend_test.dart` 2/2 lulus; APK debug dan iOS simulator dibangun ulang; Welcome tanpa persona dicek di simulator iPhone 17.
+
 ## Belum merupakan pengganti rilis penuh
 
-- Login Apple dan jalur auth produksi Android belum dipasang/disahkan. Pendaftaran email/password serta pemulihan kata sandi melalui kode OTP email tersedia sesuai konfigurasi server.
+- Login Apple dan jalur auth produksi Android belum dipasang/disahkan. Daftar akun dan atur ulang kata sandi email sudah ada (lihat bagian di atas), tetapi baru teruji di localhost.
 - Push APNs/FCM, domain universal/app links, moderasi operasional produksi, dan kebijakan retensi masih memerlukan konfigurasi/validasi.
-- Belum ada migrasi otomatis snapshot demo/sesi dari sandbox Swift ke Flutter. Bundle ID keduanya `id.grouply.app`: jangan mengganti instalasi pengguna yang berisi data tanpa backup/rencana migrasi. Uji Flutter menggunakan simulator iPhone 17 terpisah dari simulator utama Swift iPhone 17 Pro.
-- Draf gagal chat dipertahankan selama layar terbuka, bukan offline write queue atau draft lintas restart. Demo tidak menyinkronkan data ke akun lain.
+- Belum ada migrasi otomatis sesi dari sandbox Swift ke Flutter. Bundle ID keduanya `id.grouply.app`: jangan mengganti instalasi pengguna yang berisi data tanpa backup/rencana migrasi. Uji Flutter menggunakan simulator iPhone 17 terpisah dari simulator utama Swift iPhone 17 Pro.
+- Draf gagal chat dipertahankan selama layar terbuka, bukan offline write queue atau draft lintas restart.
 - APK debug bukan AAB bertanda tangan produksi dan bukan publikasi Play Store. App Store/Play Store, runtime Android/perangkat fisik, login provider, pengiriman push, dan interoperabilitas cloud antarperangkat belum dinyatakan lulus.
 - Android SDK tersedia tetapi inventaris device tidak menemukan Android Emulator yang siap dipakai (`avdmanager list avd` gagal). Build APK tidak membuktikan pengujian runtime Android.
 

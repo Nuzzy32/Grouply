@@ -33,6 +33,17 @@ class _MemorySession extends LocalStorage {
   Future<void> removePersistedSession() async => _session = null;
 }
 
+class _MemoryPKCE extends GotrueAsyncStorage {
+  final _items = <String, String>{};
+  @override
+  Future<String?> getItem({required String key}) async => _items[key];
+  @override
+  Future<void> setItem({required String key, required String value}) async =>
+      _items[key] = value;
+  @override
+  Future<void> removeItem({required String key}) async => _items.remove(key);
+}
+
 void _check(bool condition, String message) {
   if (!condition) throw TestFailure(message);
 }
@@ -129,7 +140,6 @@ void main() {
 
         stage = 'three real email sign-ins';
         SharedPreferences.setMockInitialValues({});
-        final preferences = await SharedPreferences.getInstance();
         final accounts = fixture['accounts'] as JsonMap;
         for (final name in ['alex', 'raka', 'nadia']) {
           final account = accounts[name] as JsonMap;
@@ -140,10 +150,7 @@ void main() {
             client: client,
             sessionStorage: _MemorySession(),
           );
-          final store = GrouplyStore(
-            backend: backend,
-            preferences: preferences,
-          );
+          final store = GrouplyStore(backend: backend);
           clients.add(client);
           backends.add(backend);
           stores.add(store);
@@ -154,7 +161,6 @@ void main() {
           );
           _check(
             store.authenticated &&
-                !store.demoMode &&
                 store.currentUserID == account['id'] &&
                 store.error == null,
             'Real account identity was not confirmed.',
@@ -393,5 +399,112 @@ void main() {
         ? 'Opt in with GROUPLY_LOCAL_INTEGRATION=1; existing localhost backend only.'
         : false,
     timeout: const Timeout(Duration(minutes: 3)),
+  );
+
+  test(
+    'local sign-up and emailed-code password reset',
+    () async {
+      final environment = Platform.environment;
+      final path =
+          environment['GROUPLY_LOCAL_ACCOUNTS_PATH'] ??
+          '${environment['HOME']}/Library/Application Support/'
+              'GrouplyDevelopment/accounts.json';
+      final fixture = jsonDecode(await File(path).readAsString()) as JsonMap;
+      final url = fixture['url'] as String, key = fixture['publishableKey'];
+      _check(
+        url == 'http://127.0.0.1:55321' || url == 'http://localhost:55321',
+        'Only loopback HTTP port 55321 is allowed.',
+      );
+      SharedPreferences.setMockInitialValues({});
+      final backend = SupabaseGrouplyBackend(
+        url: url,
+        anonKey: key as String,
+        // Sign-up and recovery use PKCE, which needs code-verifier storage.
+        client: SupabaseClient(
+          url,
+          key,
+          authOptions: AuthClientOptions(pkceAsyncStorage: _MemoryPKCE()),
+        ),
+        sessionStorage: _MemorySession(),
+      );
+      final store = GrouplyStore(backend: backend);
+      addTearDown(store.dispose);
+      await store.initialize();
+      final email =
+          'flutter-auth-${DateTime.now().microsecondsSinceEpoch}@example.test';
+      final first = 'Pertama-${_messageID()}', second = 'Kedua-${_messageID()}';
+
+      _check(await store.signUp('Uji Daftar', email, first), 'No session.');
+      _check(
+        store.user(store.currentUserID)?.text('name') == 'Uji Daftar',
+        'Sign-up name did not reach the profile.',
+      );
+      await store.signOut();
+      await expectLater(
+        store.signUp('Uji Daftar', email, first),
+        throwsA(
+          isA<GrouplyException>().having(
+            (e) => e.message,
+            'message',
+            'Email sudah terdaftar. Silakan masuk.',
+          ),
+        ),
+      );
+
+      await store.sendPasswordReset(email);
+      final mail = HttpClient();
+      addTearDown(() => mail.close(force: true));
+      Future<JsonMap> mailpit(String route) async {
+        final request = await mail.getUrl(
+          Uri.parse('http://127.0.0.1:55324/api/v1/$route'),
+        );
+        final response = await request.close();
+        return jsonDecode(await response.transform(utf8.decoder).join())
+            as JsonMap;
+      }
+
+      String? code;
+      final deadline = DateTime.now().add(const Duration(seconds: 15));
+      while (code == null && DateTime.now().isBefore(deadline)) {
+        final list = await mailpit(
+          'search?query=to:${Uri.encodeComponent(email)}',
+        );
+        final messages = list['messages'] as List;
+        if (messages.isNotEmpty) {
+          final id = (messages.first as Map)['ID'] as String;
+          final text = (await mailpit('message/$id'))['Text'] as String;
+          code = RegExp(r'\b\d{6}\b').firstMatch(text)?.group(0);
+        } else {
+          await Future<void>.delayed(const Duration(milliseconds: 200));
+        }
+      }
+      _check(code != null, 'Recovery code email did not arrive.');
+
+      await expectLater(
+        store.resetPassword(
+          email,
+          code == '000000' ? '111111' : '000000',
+          second,
+        ),
+        throwsA(isA<GrouplyException>()),
+      );
+      _check(!store.authenticated, 'Wrong code signed in.');
+      await store.resetPassword(email, code!, second);
+      _check(store.authenticated, 'Correct code did not sign in.');
+      await store.signOut();
+      await expectLater(store.signIn(email, first), throwsA(anything));
+      await store.signIn(email, second);
+      _check(store.authenticated, 'New password was not accepted.');
+
+      await store.mutate('deleteAccount', {});
+      _check(!store.authenticated, 'Test account was not removed.');
+      debugPrint(
+        'PASS: sign-up, duplicate, reset code, new password, cleanup.',
+      );
+    },
+    skip: Platform.environment['GROUPLY_LOCAL_INTEGRATION'] != '1'
+        ? 'Opt in with GROUPLY_LOCAL_INTEGRATION=1; existing localhost backend only.'
+        : false,
+    timeout: const Timeout(Duration(minutes: 1)),
   );
 }

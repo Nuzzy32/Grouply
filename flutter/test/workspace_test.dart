@@ -3,13 +3,16 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:grouply/core/store.dart';
 import 'package:grouply/features/workspace_screens.dart';
 import 'package:grouply/ui/gl.dart';
 
+import 'demo_backend.dart';
+
 class _DemoStore extends GrouplyStore {
+  _DemoStore(this.demo) : super(backend: demo);
+  final DemoBackend demo;
   final calls = <({String action, JsonMap payload})>[];
   Completer<void>? gate;
 
@@ -69,9 +72,8 @@ void main() {
   late _DemoStore store;
 
   setUp(() async {
-    SharedPreferences.setMockInitialValues({});
-    store = _DemoStore();
-    await store.startDemo();
+    store = _DemoStore(DemoBackend());
+    await store.signIn('u1', 'demo');
   });
 
   tearDown(() => store.dispose());
@@ -177,7 +179,7 @@ void main() {
     'review requires feedback; revision history and approval remain append-only',
     (tester) async {
       // t11: Raka (u2) executes, Nadia (u3, not coordinator of g1) reviews.
-      await store.switchDemoUser('u2');
+      await tester.runAsync(() => store.signIn('u2', 'demo'));
       await store.mutate('startTask', {'id': 't11', 'expectedVersion': 1});
       await store.mutate('submitWork', {
         'taskID': 't11',
@@ -185,7 +187,7 @@ void main() {
         'links': <String>[],
         'expectedVersion': 2,
       });
-      await store.switchDemoUser('u3');
+      await tester.runAsync(() => store.signIn('u3', 'demo'));
       store.calls.clear();
       await _show(tester, TaskScreen(store: store, taskID: 't11'));
       // Reviewer is not coordinator: reassign is locked and sends nothing.
@@ -216,7 +218,7 @@ void main() {
       });
       expect(store.task('t11')!.text('status'), 'needs_revision');
 
-      await store.switchDemoUser('u2');
+      await tester.runAsync(() => store.signIn('u2', 'demo'));
       await tester.pumpAndSettle();
       await _tap(tester, 'Kirim revisi');
       await _fill(
@@ -228,7 +230,7 @@ void main() {
       expect(store.calls.last.action, 'submitWork');
       expect(store.calls.last.payload['expectedVersion'], 4);
 
-      await store.switchDemoUser('u3');
+      await tester.runAsync(() => store.signIn('u3', 'demo'));
       await tester.pumpAndSettle();
       await _tapOn(tester, find.byKey(const Key('open-review')));
       await _tapOn(tester, find.byKey(const Key('approve-work')));
@@ -297,7 +299,7 @@ void main() {
       expect(find.text('Proyek diarsipkan'), findsOneWidget);
       expect(find.byKey(const Key('task-title')), findsNothing);
       await _tap(tester, 'Mengerti');
-      await store.switchDemoUser('u3');
+      await tester.runAsync(() => store.signIn('u3', 'demo'));
       await tester.pumpAndSettle();
       await _tap(tester, 'Pulihkan Proyek');
       expect(store.calls, isEmpty);
@@ -355,7 +357,7 @@ void main() {
   testWidgets('discussion uses task context and one UUID across submission', (
     tester,
   ) async {
-    store.simulateSendFailure = true;
+    store.demo.simulateSendFailure = true;
     await _show(tester, TaskScreen(store: store, taskID: 't1'));
     await _tap(tester, 'Diskusi');
     await _fill(
@@ -379,7 +381,7 @@ void main() {
     );
     expect(store.messages.last.text('text'), 'Mari cek alurnya bersama.');
     expect(store.messages.last.text('delivery'), 'failed');
-    store.simulateSendFailure = false;
+    store.demo.simulateSendFailure = false;
     await _tap(tester, 'Gagal terkirim · Coba lagi');
     expect(store.calls.last.action, 'sendMessage');
     expect(store.calls.last.payload, call.payload);
@@ -405,7 +407,8 @@ void main() {
         find.byKey(const Key('task-title')),
         'Judul yang belum tersimpan',
       );
-      store.task('t11')!['version'] = 99;
+      // Another member saved first: only the server copy moved on.
+      store.demo.task('t11')!['version'] = 99;
       await _tap(tester, 'Simpan perubahan');
       expect(find.byKey(const Key('form-error')), findsOneWidget);
       expect(
@@ -415,18 +418,18 @@ void main() {
       expect(store.calls.single.action, 'updateTask');
       expect(store.calls.single.payload['expectedVersion'], 1);
       expect(store.task('t11')!.text('title'), 'Kamus data');
-      expect(store.task('t11')!.number('version'), 99);
+      expect(store.task('t11')!.number('version'), 1);
       expect(find.byKey(const Key('task-title')), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );
 
-  testWidgets('join normalizes invitation code and opens the joined group', (
+  testWidgets('join trims invitation code and opens the joined group', (
     tester,
   ) async {
     await _show(tester, GroupsScreen(store: store));
     await _tap(tester, 'Gabung dengan kode undangan');
-    await _fill(tester, find.byKey(const Key('join-code')), ' stat-k1q ');
+    await _fill(tester, find.byKey(const Key('join-code')), ' STAT-K1Q ');
     await _tapOn(tester, find.byKey(const Key('group-save')));
     expect(store.calls.single.action, 'joinGroup');
     expect(store.calls.single.payload, {'code': 'STAT-K1Q'});

@@ -1,20 +1,32 @@
 import SwiftUI
 
 // Values mirror the v3.1 prototype ("Grouply App.dc.html") one-to-one; pt == CSS px.
+// Each token pairs the light value with its dark-mode value (docs/DARK_THEME.md).
 enum GLTheme {
-  static let background = Color(hex: "F8F9F7")
-  static let ink = Color(hex: "202124")
-  static let secondary = Color(hex: "62676B")
-  static let text2 = Color(hex: "4D5155")
-  static let text3 = Color(hex: "3C4043")
-  static let muted = Color(hex: "F0F3F1")
-  static let border = Color(hex: "E8E9E7")
-  static let lavender = Color(hex: "DED2FF")
-  static let mint = Color(hex: "C9F2D6")
-  static let sky = Color(hex: "D8EAF4")
-  static let butter = Color(hex: "F9E9BE")
-  static let coral = Color(hex: "F6CED1")
-  static let danger = Color(hex: "A8231B")
+  static let background = Color(light: "F8F9F7", dark: "121314")
+  static let surface = Color(light: "FFFFFF", dark: "1C1E20")
+  /// Small floating controls (shadowed pills/circles) that must stand out from the screen.
+  static let raised = Color(light: "FFFFFF", dark: "2E3134")
+  static let ink = Color(light: "202124", dark: "ECEDEE")
+  static let onInk = Color(light: "FFFFFF", dark: "1A1B1D")
+  static let secondary = Color(light: "62676B", dark: "A3A8AD")
+  static let text2 = Color(light: "4D5155", dark: "C2C6CA")
+  static let text3 = Color(light: "3C4043", dark: "D5D8DB")
+  static let muted = Color(light: "F0F3F1", dark: "222527")
+  static let border = Color(light: "E8E9E7", dark: "2E3134")
+  static let chip = Color(light: "ECEEEB", dark: "26292B")
+  static let placeholder = Color(light: "9AA0A6", dark: "868C93")
+  static let disabled = Color(light: "C4C7C5", dark: "4A4F53")
+  static let faint = Color(light: "B4B8BC", dark: "5B6166")
+  static let hairline = Color(light: "D5D8DB", dark: "3A3E42")
+  static let tertiary = Color(light: "80868B", dark: "9AA0A6")
+  static let lavender = Color(light: "DED2FF", dark: "3A3354")
+  static let mint = Color(light: "C9F2D6", dark: "1F3D2B")
+  static let sky = Color(light: "D8EAF4", dark: "1E3442")
+  static let butter = Color(light: "F9E9BE", dark: "413720")
+  static let coral = Color(light: "F6CED1", dark: "47282B")
+  static let danger = Color(light: "A8231B", dark: "FF8A80")
+  static let link = Color(light: "1F4F86", dark: "8AB4F8")
 }
 
 extension Color {
@@ -24,6 +36,22 @@ extension Color {
     self.init(
       .sRGB, red: Double((value >> 16) & 255) / 255,
       green: Double((value >> 8) & 255) / 255, blue: Double(value & 255) / 255, opacity: 1)
+  }
+  /// Data-driven pastel (user/group `tint`, status chips): the light value as stored, and in dark mode
+  /// the matching dark pastel from docs/DARK_THEME.md, or a 28% mix into `surface` for any other hex.
+  init(tint hex: String) {
+    let key = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted).uppercased()
+    let known = ["DED2FF": "3A3354", "C9F2D6": "1F3D2B", "D8EAF4": "1E3442", "F9E9BE": "413720",
+                 "F6CED1": "47282B", "ECEEEB": "26292B", "FFFFFF": "1C1E20"]
+    if let dark = known[key] { self.init(light: key, dark: dark); return }
+    let v = UInt64(key, radix: 16) ?? 0
+    let mix = { (c: UInt64, base: Double) in String(format: "%02X", Int(Double(c & 255) * 0.28 + base * 0.72)) }
+    self.init(light: key, dark: mix(v >> 16, 0x1C) + mix(v >> 8, 0x1E) + mix(v, 0x20))
+  }
+  /// Resolves per trait collection, so it follows the system appearance.
+  init(light: String, dark: String) {
+    self.init(
+      UIColor { $0.userInterfaceStyle == .dark ? UIColor(Color(hex: dark)) : UIColor(Color(hex: light)) })
   }
 }
 
@@ -44,13 +72,13 @@ extension View {
     modifier(GLScaledFont(size: size, weight: weight)).tracking(size * em)
   }
   /// White surface used by the prototype's cards.
-  func glSurface(_ radius: CGFloat = 24, _ color: Color = .white) -> some View {
+  func glSurface(_ radius: CGFloat = 24, _ color: Color = GLTheme.surface) -> some View {
     background {
       RoundedRectangle(cornerRadius: radius, style: .continuous).fill(color)
         .shadow(color: .black.opacity(0.04), radius: 1, y: 1)
     }
   }
-  func glCard(_ color: Color = .white) -> some View {
+  func glCard(_ color: Color = GLTheme.surface) -> some View {
     padding(18).frame(maxWidth: .infinity, alignment: .leading)
       .background(color, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
   }
@@ -100,7 +128,7 @@ struct GLButtonStyle: ButtonStyle {
   @Environment(\.isEnabled) private var isEnabled
   var radius: CGFloat = 20
   func makeBody(configuration: Configuration) -> some View {
-    configuration.label.foregroundStyle(.white)
+    configuration.label.foregroundStyle(GLTheme.onInk)
       .background(
         GLTheme.ink.opacity(isEnabled ? 1 : 0.35),
         in: RoundedRectangle(cornerRadius: radius, style: .continuous)
@@ -132,7 +160,7 @@ struct GLAvatar: View {
     Text(String(user?.name.prefix(2) ?? "??").uppercased())
       .gl(fontSize ?? (size <= 32 ? 11 : size <= 40 ? 13 : 15), .bold)
       .frame(width: size, height: size)
-      .background(Color(hex: user?.tint ?? "DED2FF"), in: Circle())
+      .background(Color(tint: user?.tint ?? "DED2FF"), in: Circle())
       .accessibilityLabel(user?.name ?? "Anggota")
   }
 }
@@ -166,7 +194,7 @@ struct GLCountBadge: View {
   let count: Int
   var size: CGFloat = 30
   var body: some View {
-    Text("\(count)").gl(size >= 30 ? 14 : 12, .bold).foregroundStyle(.white)
+    Text("\(count)").gl(size >= 30 ? 14 : 12, .bold).foregroundStyle(GLTheme.onInk)
       .padding(.horizontal, size >= 30 ? 9 : 7).frame(minWidth: size, minHeight: size)
       .background(GLTheme.ink, in: Capsule())
   }
@@ -222,7 +250,7 @@ struct GLEmptyState: View {
       Text(message).gl(15).lineSpacing(4).foregroundStyle(GLTheme.secondary)
     }.multilineTextAlignment(.center).frame(maxWidth: .infinity)
       .padding(.vertical, 28).padding(.horizontal, 22)
-      .background(.white, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+      .background(GLTheme.surface, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
   }
 }
 
@@ -333,7 +361,7 @@ struct GLCircleButton: View {
   let icon: String
   let label: String
   var iconSize: CGFloat = 22
-  var background: Color = .white
+  var background: Color = GLTheme.surface
   let action: () -> Void
   var body: some View {
     Button(action: action) {
@@ -381,14 +409,14 @@ struct GLSheet<Content: View>: View {
   var body: some View {
     ScrollView {
       VStack(alignment: .leading, spacing: 16) {
-        Capsule().fill(Color(hex: "C4C7C5")).frame(width: 38, height: 5)
+        Capsule().fill(GLTheme.disabled).frame(width: 38, height: 5)
           .frame(maxWidth: .infinity)
         HStack(spacing: 8) {
           Text(title).gl(22, .bold, em: -0.02)
           Spacer(minLength: 0)
           Button { dismiss() } label: {
             GLIcon("xmark", size: 22).frame(width: 44, height: 44)
-              .background(Color(hex: "ECEEEB"), in: Circle())
+              .background(GLTheme.chip, in: Circle())
           }.buttonStyle(.plain).accessibilityLabel("Tutup")
         }
         if let subtitle {
@@ -445,7 +473,7 @@ extension View {
   func glInput(height: CGFloat? = 50, radius: CGFloat = 16) -> some View {
     padding(.horizontal, 16).padding(.vertical, height == nil ? 14 : 0)
       .frame(minHeight: height, alignment: .leading)
-      .background(.white, in: RoundedRectangle(cornerRadius: radius, style: .continuous))
+      .background(GLTheme.surface, in: RoundedRectangle(cornerRadius: radius, style: .continuous))
       .overlay(
         RoundedRectangle(cornerRadius: radius, style: .continuous).strokeBorder(GLTheme.border))
   }
@@ -474,9 +502,9 @@ struct GLSubmitButton: View {
   var body: some View {
     Button(action: action) {
       HStack(spacing: 8) {
-        if busy { ProgressView().tint(.white) }
+        if busy { ProgressView().tint(GLTheme.onInk) }
         Text(title).gl(17, .semibold)
-      }.frame(maxWidth: .infinity).frame(height: 56).foregroundStyle(.white)
+      }.frame(maxWidth: .infinity).frame(height: 56).foregroundStyle(GLTheme.onInk)
         .background(background, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .opacity(busy ? 0.6 : 1)
     }.buttonStyle(.plain).disabled(busy)
@@ -533,14 +561,14 @@ extension View {
               if !c.info {
                 Button { item.wrappedValue = nil } label: {
                   Text("Batal").gl(15, .semibold).frame(maxWidth: .infinity).frame(height: 50)
-                    .background(Color(hex: "ECEEEB"), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .background(GLTheme.chip, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                 }.buttonStyle(.plain)
               }
               Button {
                 item.wrappedValue = nil
                 c.run()
               } label: {
-                Text(c.ok).gl(15, .semibold).foregroundStyle(.white).frame(maxWidth: .infinity)
+                Text(c.ok).gl(15, .semibold).foregroundStyle(GLTheme.onInk).frame(maxWidth: .infinity)
                   .frame(height: 50)
                   .background(
                     c.destructive ? GLTheme.danger : GLTheme.ink,
@@ -549,7 +577,7 @@ extension View {
             }.padding(.top, 6)
           }
           .foregroundStyle(GLTheme.ink).padding(22).frame(maxWidth: 340, alignment: .leading)
-          .background(.white, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+          .background(GLTheme.surface, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
           .padding(28).accessibilityAddTraits(.isModal)
         }.transition(.opacity)
       }
@@ -570,7 +598,7 @@ struct GLToastView: View {
       ).foregroundStyle(kind == .err ? GLTheme.coral : kind == .info ? GLTheme.sky : GLTheme.mint)
       Text(text).gl(14, .medium).lineSpacing(2)
     }
-    .foregroundStyle(.white).padding(.vertical, 12).padding(.horizontal, 16)
+    .foregroundStyle(GLTheme.onInk).padding(.vertical, 12).padding(.horizontal, 16)
     .background(GLTheme.ink, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
     .shadow(color: .black.opacity(0.4), radius: 15, y: 12)
     .padding(.horizontal, 16).accessibilityAddTraits(.updatesFrequently)
@@ -593,7 +621,7 @@ struct GLAccessDenied: View {
           Text(text).gl(15).lineSpacing(4).foregroundStyle(GLTheme.secondary)
         }.multilineTextAlignment(.center).frame(maxWidth: .infinity)
           .padding(.vertical, 28).padding(.horizontal, 22)
-          .background(.white, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+          .background(GLTheme.surface, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
       }.padding(.horizontal, 20).padding(.top, 10)
     }.glDetailScreen()
   }

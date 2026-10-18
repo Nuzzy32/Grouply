@@ -31,7 +31,7 @@ struct ChatsView: View {
             }
           }
           .padding(.leading, 14).padding(.trailing, 4).frame(height: 48)
-          .background(.white, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+          .background(GLTheme.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
           .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(GLTheme.border))
         }
@@ -69,7 +69,7 @@ struct ChatsView: View {
     let last = store.messages(groupID: group.id).last
     return HStack(spacing: 14) {
       GLIcon(group.icon, size: 26).frame(width: 52, height: 52)
-        .background(Color(hex: group.tint), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .background(Color(tint: group.tint), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
       VStack(alignment: .leading, spacing: 3) {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
           Text(group.name).gl(16, unread > 0 ? .bold : .semibold).lineLimit(1)
@@ -86,7 +86,7 @@ struct ChatsView: View {
             .lineLimit(2).multilineTextAlignment(.leading)
           Spacer(minLength: 0)
           if unread > 0 {
-            Text("\(unread)").gl(12, .bold).foregroundStyle(.white).padding(.horizontal, 7)
+            Text("\(unread)").gl(12, .bold).foregroundStyle(GLTheme.onInk).padding(.horizontal, 7)
               .frame(minWidth: 24, minHeight: 24).background(GLTheme.ink, in: Capsule())
               .accessibilityLabel("\(unread) pesan belum dibaca")
           }
@@ -183,7 +183,7 @@ struct ChatDetailView: View {
       }.buttonStyle(.plain).accessibilityLabel("Kembali")
       GLIcon(group?.icon ?? "person.3", size: 22).frame(width: 42, height: 42)
         .background(
-          Color(hex: group?.tint ?? "FFFFFF"),
+          Color(tint: group?.tint ?? "FFFFFF"),
           in: RoundedRectangle(cornerRadius: 16, style: .continuous))
       VStack(alignment: .leading, spacing: 0) {
         Text(group?.name ?? "").gl(16, .bold).lineLimit(1).truncationMode(.tail)
@@ -192,7 +192,7 @@ struct ChatDetailView: View {
       NavigationLink(value: Route.group(groupID)) {
         GLIcon("person.2", size: 22).frame(width: 44, height: 44)
           .background {
-            Circle().fill(.white).shadow(color: .black.opacity(0.06), radius: 1, y: 1)
+            Circle().fill(GLTheme.raised).shadow(color: .black.opacity(0.06), radius: 1, y: 1)
           }
       }.buttonStyle(.plain).accessibilityLabel("Buka detail grup")
     }
@@ -225,16 +225,6 @@ struct ChatThread: View {
         Text("Realtime belum tersambung. Tarik untuk memuat ulang.")
           .gl(13).foregroundStyle(GLTheme.secondary).padding(.vertical, 8)
       }
-      if store.simulatedOffline {
-        HStack(spacing: 8) {
-          GLIcon("icloud.slash", size: 18)
-          Text("Kamu sedang offline. Pesan akan gagal terkirim.").gl(14, .medium)
-        }
-        .padding(.vertical, 10).padding(.horizontal, 14)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(GLTheme.butter, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .padding(.bottom, 8)
-      }
       ForEach(Array(list.enumerated()), id: \.element.id) { i, m in
         let day = ChatFormat.day(m.createdAt, now: store.now)
         if i == 0 || ChatFormat.day(list[i - 1].createdAt, now: store.now) != day {
@@ -266,7 +256,7 @@ struct ChatThread: View {
   private func daySeparator(_ label: String) -> some View {
     Text(label).gl(12, .semibold).foregroundStyle(GLTheme.text2)
       .padding(.horizontal, 12).frame(height: 26)
-      .background(Color(hex: "ECEEEB"), in: Capsule())
+      .background(GLTheme.chip, in: Capsule())
       .frame(maxWidth: .infinity)
       .padding(.top, 14).padding(.bottom, 6)
       .accessibilityAddTraits(.isHeader)
@@ -303,7 +293,7 @@ struct ChatThread: View {
     }
     .foregroundStyle(GLTheme.text3).multilineTextAlignment(.center)
     .padding(.vertical, 6).padding(.horizontal, 12)
-    .background(Color(hex: "ECEEEB"), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    .background(GLTheme.chip, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     .frame(maxWidth: width * 0.92).frame(maxWidth: .infinity)
     .padding(.vertical, 8)
     .accessibilityElement(children: .combine)
@@ -327,7 +317,7 @@ struct ChatThread: View {
       }.buttonStyle(.plain).disabled(task == nil)
     }
     .padding(.vertical, 12).padding(.leading, 14).padding(.trailing, 12)
-    .background(.white, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+    .background(GLTheme.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
     .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).strokeBorder(GLTheme.border))
     .padding(.vertical, 10).padding(.horizontal, 6)
   }
@@ -358,11 +348,11 @@ struct ChatThread: View {
             }
             .foregroundStyle(GLTheme.text3).padding(.vertical, 8).padding(.horizontal, 12)
             .frame(minHeight: 44)
-            .overlay(shape.strokeBorder(Color(hex: "9AA0A6"), style: StrokeStyle(lineWidth: 1.5, dash: [4, 3])))
+            .overlay(shape.strokeBorder(GLTheme.placeholder, style: StrokeStyle(lineWidth: 1.5, dash: [4, 3])))
             .contentShape(shape)
           }.buttonStyle(.plain)
         } else {
-          bubble(m, color: .white, link: Color(hex: "1F4F86"), shape: shape)
+          bubble(m, color: GLTheme.surface, link: GLTheme.link, shape: shape)
             .shadow(color: .black.opacity(0.06), radius: 0.75, y: 1)
         }
         if !sameNext {
@@ -382,7 +372,7 @@ struct ChatThread: View {
       bottomTrailingRadius: sameNext ? 6 : 18, topTrailingRadius: samePrev ? 6 : 18,
       style: .continuous)
     return VStack(alignment: .trailing, spacing: 3) {
-      bubble(m, color: GLTheme.lavender, link: Color(hex: "1F3F76"), shape: shape)
+      bubble(m, color: GLTheme.lavender, link: Color(light: "1F3F76", dark: "C9BFFF"), shape: shape)
         .opacity(m.delivery == .sending ? 0.6 : 1)
         .animation(.easeOut(duration: 0.2), value: m.delivery)
       switch m.delivery {
@@ -574,7 +564,7 @@ private struct ChatSheetBody<Content: View>: View {
   var body: some View {
     ScrollView {
       VStack(alignment: .leading, spacing: 14) {
-        Capsule().fill(Color(hex: "C4C7C5")).frame(width: 38, height: 5).frame(maxWidth: .infinity)
+        Capsule().fill(GLTheme.disabled).frame(width: 38, height: 5).frame(maxWidth: .infinity)
         content
       }
       .padding(.top, 10).padding(.horizontal, 20).padding(.bottom, 34)
@@ -609,7 +599,7 @@ private struct ChatMessageSheet: View {
         }
         .padding(.vertical, 14).padding(.horizontal, 16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.white, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .background(GLTheme.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .accessibilityElement(children: .combine)
         VStack(spacing: 0) {
           actionRow("Salin teks", icon: "doc.on.doc", color: GLTheme.ink, .copy)
@@ -626,11 +616,11 @@ private struct ChatMessageSheet: View {
           }
         }
         .padding(.vertical, 4).padding(.horizontal, 16)
-        .background(.white, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .background(GLTheme.surface, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
       }
       Button { dismiss() } label: {
         Text("Batal").gl(16, .semibold).frame(maxWidth: .infinity).frame(height: 52)
-          .background(Color(hex: "ECEEEB"), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+          .background(GLTheme.chip, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
       }.buttonStyle(.plain)
     }
   }
@@ -673,7 +663,7 @@ private struct ChatReportSheet: View {
         Spacer(minLength: 0)
         Button { dismiss() } label: {
           GLIcon("xmark", size: 22).frame(width: 44, height: 44)
-            .background(Color(hex: "ECEEEB"), in: Circle())
+            .background(GLTheme.chip, in: Circle())
         }.buttonStyle(.plain).accessibilityLabel("Tutup")
       }
       Text("Pengirim tidak akan tahu siapa yang melapor.").gl(14).foregroundStyle(GLTheme.text3)
@@ -694,14 +684,14 @@ private struct ChatReportSheet: View {
         }
       }
       .padding(.vertical, 4).padding(.horizontal, 16)
-      .background(.white, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+      .background(GLTheme.surface, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
       VStack(alignment: .leading, spacing: 6) {
         Text("Detail (opsional)").gl(14, .semibold)
         TextField("Ceritakan singkat apa yang terjadi", text: $details, axis: .vertical)
           .gl(16).lineSpacing(4).lineLimit(3, reservesSpace: true)
           .onChange(of: details) { _, v in if v.count > 500 { details = String(v.prefix(500)) } }
           .padding(.vertical, 12).padding(.horizontal, 16)
-          .background(.white, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+          .background(GLTheme.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
           .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(GLTheme.border))
       }
@@ -717,22 +707,16 @@ private struct ChatReportSheet: View {
       GLIcon("checkmark.circle", size: 32).frame(width: 64, height: 64)
         .background(GLTheme.mint, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
       Text("Laporan tersimpan").gl(21, .bold)
-      Text(store.isCloudMode
-        ? "Laporan masuk antrean privat untuk ditinjau operator berwenang. Belum ada jaminan waktu respons."
-        : "Terima kasih sudah menjaga grup tetap nyaman. Ini simulasi pelaporan lokal.")
+      Text("Laporan masuk antrean privat untuk ditinjau operator berwenang. Belum ada jaminan waktu respons.")
         .gl(15).lineSpacing(4).foregroundStyle(GLTheme.text3)
-      Text(
-        store.isCloudMode
-          ? "Laporan berhasil tersimpan di server."
-          : "Simulasi: laporan hanya disimpan di prototipe ini dan tidak dikirim ke moderator sungguhan."
-      )
+      Text("Laporan berhasil tersimpan di server.")
       .gl(13).lineSpacing(3).foregroundStyle(GLTheme.secondary)
       .padding(.vertical, 10).padding(.horizontal, 12)
       .overlay(
         RoundedRectangle(cornerRadius: 14, style: .continuous)
-          .strokeBorder(Color(hex: "9AA0A6"), style: StrokeStyle(lineWidth: 1.5, dash: [4, 3])))
+          .strokeBorder(GLTheme.placeholder, style: StrokeStyle(lineWidth: 1.5, dash: [4, 3])))
       Button { dismiss() } label: {
-        Text("Selesai").gl(16, .semibold).foregroundStyle(.white).frame(maxWidth: .infinity)
+        Text("Selesai").gl(16, .semibold).foregroundStyle(GLTheme.onInk).frame(maxWidth: .infinity)
           .frame(height: 54)
           .background(GLTheme.ink, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
       }.buttonStyle(.plain)
@@ -796,11 +780,11 @@ struct ChatComposer: View {
             .submitLabel(.send).onSubmit(send)
             .onChange(of: draft) { _, v in if v.count > 2000 { draft = String(v.prefix(2000)) } }
             .padding(.horizontal, 16).frame(height: 44)
-            .background(.white, in: Capsule())
+            .background(GLTheme.surface, in: Capsule())
             .overlay(Capsule().strokeBorder(GLTheme.border))
           Button(action: send) {
-            GLIcon("arrow.up", size: 22).foregroundStyle(.white).frame(width: 44, height: 44)
-              .background(hasText ? GLTheme.ink : Color(hex: "B4B8BC"), in: Circle())
+            GLIcon("arrow.up", size: 22).foregroundStyle(GLTheme.onInk).frame(width: 44, height: 44)
+              .background(hasText ? GLTheme.ink : GLTheme.faint, in: Circle())
               .animation(.easeOut(duration: 0.15), value: hasText)
           }
           .buttonStyle(ChatPressStyle()).accessibilityLabel("Kirim pesan")

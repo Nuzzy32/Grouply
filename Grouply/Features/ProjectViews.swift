@@ -12,7 +12,7 @@ struct GLProjectRow: View {
     VStack(alignment: .leading, spacing: 10) {
       HStack(spacing: 12) {
         RoundedRectangle(cornerRadius: 6, style: .continuous)
-          .fill(Color(hex: store.group(project.groupID)?.tint ?? "FFFFFF")).frame(width: 12, height: 40)
+          .fill(Color(tint: store.group(project.groupID)?.tint ?? "FFFFFF")).frame(width: 12, height: 40)
         VStack(alignment: .leading, spacing: 2) {
           Text(project.title).gl(16, .semibold)
           Text("Deadline \(GLFormat.date(project.dueAt))").gl(13).foregroundStyle(GLTheme.secondary)
@@ -50,7 +50,7 @@ private struct ProjectStatusChip: View {
       Text(label).gl(12, .semibold).lineLimit(1)
     }
     .padding(.leading, 7).padding(.trailing, 10).frame(height: 28)
-    .background(Color(hex: bg), in: Capsule()).fixedSize()
+    .background(Color(tint: bg), in: Capsule()).fixedSize()
   }
 }
 
@@ -117,7 +117,7 @@ struct ProjectDetailView: View {
             }.buttonStyle(.plain)
           }
           .padding(.vertical, 12).padding(.horizontal, 14)
-          .background(Color(hex: "ECEEEB"), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+          .background(GLTheme.chip, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         }
         if p.status == .completed {
           doneBanner(p, isCoord: isCoord)
@@ -212,7 +212,7 @@ struct ProjectDetailView: View {
         }
       }
       .padding(.horizontal, 14).padding(.vertical, 4)
-      .background(.white, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+      .background(GLTheme.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
       .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).strokeBorder(GLTheme.border))
     }
   }
@@ -272,13 +272,13 @@ struct ProjectDetailView: View {
       HStack(spacing: -8) {
         ForEach(members, id: \.self) { id in
           GLAvatar(user: store.user(id), size: 34, fontSize: 11)
-            .overlay(Circle().strokeBorder(.white, lineWidth: 2.5))
+            .overlay(Circle().strokeBorder(GLTheme.surface, lineWidth: 2.5))
             .accessibilityLabel(store.displayName(id))
         }
       }.padding(.top, 2)
     }
     .padding(.vertical, 22).padding(.horizontal, 20).frame(maxWidth: .infinity, alignment: .leading)
-    .background(.white, in: RoundedRectangle(cornerRadius: 32, style: .continuous))
+    .background(GLTheme.surface, in: RoundedRectangle(cornerRadius: 32, style: .continuous))
   }
 
   // MARK: Group Pulse
@@ -332,7 +332,7 @@ struct ProjectDetailView: View {
       }
     }
     .padding(20).frame(maxWidth: .infinity, alignment: .leading)
-    .background(.white, in: RoundedRectangle(cornerRadius: 32, style: .continuous))
+    .background(GLTheme.surface, in: RoundedRectangle(cornerRadius: 32, style: .continuous))
     .onGeometryChange(for: CGFloat.self) { $0.size.width - 40 } action: { pulseWidth = $0 }
   }
 
@@ -408,12 +408,12 @@ struct ProjectDetailView: View {
           .background {
             if selected {
               Circle().fill(GLTheme.ink).padding(-4.5)
-                .overlay(Circle().fill(.white).padding(-2.5))
+                .overlay(Circle().fill(GLTheme.surface).padding(-2.5))
             }
           }
           .overlay(alignment: .bottomTrailing) {
             Text("\(done)/\(tasks.count)").gl(11, .bold).padding(.horizontal, 5)
-              .frame(minWidth: 24, minHeight: 20).background(.white, in: Capsule())
+              .frame(minWidth: 24, minHeight: 20).background(GLTheme.surface, in: Capsule())
               .overlay(Capsule().stroke(GLTheme.border, lineWidth: 1).padding(-0.5))
               .fixedSize().offset(x: 4, y: 4)
           }
@@ -434,7 +434,7 @@ struct ProjectDetailView: View {
         Text((id == store.currentUserID ? "Tugasmu" : "Tugas \(name)") + " di proyek ini").gl(15, .bold)
         HStack(spacing: 10) {
           GeometryReader { geo in
-            Capsule().fill(.white).overlay(alignment: .leading) {
+            Capsule().fill(GLTheme.surface).overlay(alignment: .leading) {
               Capsule().fill(GLTheme.ink).frame(
                 width: tasks.isEmpty ? 0 : geo.size.width * Double(done) / Double(tasks.count))
             }
@@ -460,7 +460,7 @@ struct ProjectDetailView: View {
           }
           .multilineTextAlignment(.leading)
           .padding(.vertical, 10).padding(.horizontal, 12).frame(minHeight: 52)
-          .background(.white, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+          .background(GLTheme.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         }.buttonStyle(GLCardButtonStyle())
       }
       if tasks.isEmpty {
@@ -479,8 +479,8 @@ struct ProjectDetailView: View {
       withAnimation(.easeOut(duration: 0.2)) { filter = status }
     } label: {
       Text(label).gl(14, .semibold).padding(.horizontal, 16).frame(height: 44)
-        .foregroundStyle(on ? .white : GLTheme.ink)
-        .background(on ? GLTheme.ink : .white, in: Capsule())
+        .foregroundStyle(on ? GLTheme.onInk : GLTheme.ink)
+        .background(on ? GLTheme.ink : GLTheme.surface, in: Capsule())
         .overlay(Capsule().strokeBorder(GLTheme.ink, lineWidth: 1.5))
     }.buttonStyle(.plain).accessibilityAddTraits(on ? .isSelected : [])
   }
@@ -509,7 +509,7 @@ struct ProjectDetailView: View {
         ) { archive(p) }
       }
       .padding(.vertical, 4).padding(.horizontal, 16)
-      .background(.white, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+      .background(GLTheme.surface, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
       if !coord {
         HStack(spacing: 6) {
           GLIcon("lock", size: 16)
@@ -680,7 +680,7 @@ struct ProjectEditor: View {
     Calendar.current.date(byAdding: .day, value: n, to: Calendar.current.startOfDay(for: .now))!
   }
   private var gid: String { selectedGroup ?? groupID }
-  private var placeholder: Color { Color(hex: "80868B") }
+  private var placeholder: Color { GLTheme.tertiary }
 
   var body: some View {
     GLSheet(projectID == nil ? "Buat proyek" : "Edit proyek") {
@@ -693,9 +693,9 @@ struct ProjectEditor: View {
               Button { selectedGroup = g.id } label: {
                 Text(g.name).gl(14, .semibold).multilineTextAlignment(.leading)
                   .padding(.vertical, 8).padding(.horizontal, 14).frame(minHeight: 44)
-                  .foregroundStyle(on ? .white : GLTheme.ink)
+                  .foregroundStyle(on ? GLTheme.onInk : GLTheme.ink)
                   .background(
-                    on ? GLTheme.ink : .white, in: RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    on ? GLTheme.ink : GLTheme.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous)
                   )
                   .overlay(
                     RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(
@@ -738,7 +738,7 @@ struct ProjectEditor: View {
           Spacer(minLength: 0)
         }
         .padding(.horizontal, 14).frame(height: 50)
-        .background(.white, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(GLTheme.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(GLTheme.border))
         Text("\(GLFormat.weekday(dueAt)), \(GLFormat.date(dueAt)) · 23:59").gl(13)
           .foregroundStyle(GLTheme.secondary)
@@ -769,8 +769,8 @@ struct ProjectEditor: View {
     return Button { dueAt = Self.day(days) } label: {
       Text(label).gl(14, .semibold).lineLimit(1).minimumScaleFactor(0.8)
         .frame(maxWidth: .infinity).frame(height: 44)
-        .foregroundStyle(on ? .white : GLTheme.ink)
-        .background(on ? GLTheme.ink : .white, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .foregroundStyle(on ? GLTheme.onInk : GLTheme.ink)
+        .background(on ? GLTheme.ink : GLTheme.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(
           RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(GLTheme.ink, lineWidth: 1.5))
     }.buttonStyle(.plain)
@@ -811,12 +811,7 @@ struct ProjectEditor: View {
           onCreated(id)
         }
       } catch {
-        self.error =
-          store.simulatedOffline
-          ? (projectID == nil
-            ? "Gagal membuat proyek. Periksa koneksimu lalu coba lagi."
-            : "Gagal menyimpan perubahan. Coba lagi.")
-          : error.localizedDescription
+        self.error = error.localizedDescription
       }
     }
   }

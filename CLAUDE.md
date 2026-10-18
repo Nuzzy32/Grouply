@@ -4,7 +4,7 @@
 
 - Pengguna meminta migrasi ke Flutter untuk Android dan iOS. `flutter/` adalah client lintas platform baru; batas iOS-only di spesifikasi v1.3 berikut merupakan konteks historis, bukan larangan untuk migrasi yang telah diminta ini. Web tetap tidak termasuk scope.
 - Pertahankan source Swift, test native, dan migration Supabase yang sudah ada; jangan hapus atau menganggap Flutter sudah menggantikan rilis native sepenuhnya. Backend/RPC dipakai bersama, bukan disalin ke database baru.
-- Jalankan Flutter dari `flutter/`; baca `flutter/README.md` dan `docs/FLUTTER_MIGRATION.md` untuk konfigurasi, perintah, bukti pengujian, dan gap. Jangan klaim build/test lokal sebagai bukti cloud, perangkat fisik, atau rilis store. Login Apple, pendaftaran/pemulihan akun, push, dan migrasi otomatis data Swift belum tersedia pada client Flutter.
+- Jalankan Flutter dari `flutter/`; baca `flutter/README.md` dan `docs/FLUTTER_MIGRATION.md` untuk konfigurasi, perintah, bukti pengujian, dan gap. Jangan klaim build/test lokal sebagai bukti cloud, perangkat fisik, atau rilis store. Daftar akun dan atur ulang sandi lewat kode email tersedia di Flutter (teruji localhost); login Apple, push, dan migrasi otomatis data Swift belum tersedia.
 
 ## Sumber dan platform
 
@@ -25,18 +25,18 @@
 
 ## Status dan verifikasi
 
-Per 17 Oktober 2026 tersedia demo dan Supabase lokal yang benar-benar terhubung ke SwiftUI. Server canonical ada di supabase/migrations; docs DDL tetap target arsitektur yang lebih luas. Auth password lokal, RLS, workflow tiga akun dan Group Chat Realtime/unread/reconnect/revoke membership lintas client native teruji pada satu simulator + localhost. Apple provider/perangkat nyata, cloud deployment dan APNs belum diuji/terhubung. Jangan menyatakan layanan cloud/Apple/push bekerja tanpa bukti. Lihat docs/BACKEND_SETUP.md.
+Per 17 Oktober 2026 mode demo (persona, seed, snapshot JSON, simulasi) sudah dihapus dari SwiftUI dan Flutter atas permintaan pengguna; kedua client hanya memakai akun dan data Supabase lokal. Jangan menambahkan kembali data demo/persona ke aplikasi. Server canonical ada di supabase/migrations; docs DDL tetap target arsitektur yang lebih luas. Auth password lokal, RLS, workflow tiga akun dan Group Chat Realtime/unread/reconnect/revoke membership lintas client native teruji pada satu simulator + localhost. Apple provider/perangkat nyata, cloud deployment dan APNs belum diuji/terhubung. Jangan menyatakan layanan cloud/Apple/push bekerja tanpa bukti. Lihat docs/BACKEND_SETUP.md.
 
 Baca kode dan status Git sebelum melanjutkan; pertahankan implementasi yang sudah ada. Utamakan shared state lokal sederhana sampai integrasi cloud benar-benar diperlukan. Jalankan pemeriksaan domain dan build/simulator yang tersedia, laporkan terpisah dari uji multiakun/perangkat nyata. Jangan menambahkan kredensial ke source, log atau dokumen. Jangan push/deploy/mengubah secret atau data production tanpa otorisasi eksplisit. Commit/PR tidak memakai atribusi atau co-author AI.
 
 ## Peta kode dan perintah lokal
 
 - `Grouply/App/`: entry point, navigasi empat tab, welcome dan Beranda.
-- `Grouply/Core/`: model, seed, design system dan `DemoStore` dengan snapshot JSON lokal.
+- `Grouply/Core/`: model, design system dan `DemoStore` (nama historis; store yang hanya terhubung ke server).
 - `Grouply/Features/`: grup/anggota/undangan, proyek, tugas/submission/review, chat dan profil.
-- `GrouplyTests/WorkflowTests.swift`: pemeriksaan domain/store. `GrouplyUITests/GrouplyUITests.swift`: empat skenario UI.
+- `GrouplyTests/WorkflowTests.swift`: pemeriksaan store tanpa server. `BackendClientTests`/`BackendIntegrationTests`: client mock dan integrasi localhost. `GrouplyUITests/BackendUITests.swift`: form login.
 - `project.yml`: sumber konfigurasi XcodeGen; `Grouply.xcodeproj` sudah tersedia. Regenerasi hanya bila konfigurasi target berubah: `xcodegen generate`.
-- Snapshot: sandbox app, `Application Support/Grouply/demo-v1.json`; reset lewat panel demo. Launch `--uitesting` memakai seed in-memory agar uji UI tidak merusak snapshot pengguna.
+- Launch `--uitesting` hanya melewati pemulihan sesi tersimpan agar uji UI mulai dari Welcome. Flutter: `flutter/test/demo_backend.dart` adalah fake backend khusus tes (seed lama) dan tidak dibundel ke aplikasi.
 
 ```sh
 xcodebuild -project Grouply.xcodeproj -scheme Grouply \
@@ -48,7 +48,7 @@ Verifikasi: build simulator dan regresi akhir **13 core + 5 UI lulus** di iPhone
 
 ## Integrasi server lokal
 
-- DemoStore kini menyediakan demo dan bridge async server; semua mutasi UI menunggu server, tanpa fallback mutasi lokal dalam mode cloud. Cloud state tidak dipersist ke JSON demo.
+- DemoStore hanya bridge async ke server; semua mutasi UI menunggu server dan tidak ada fallback mutasi lokal. State tidak dipersist ke file.
 - Public RPC grouply_snapshot/grouply_mutate membungkus helper privat; payload camelCase mengikuti StoreBackendActions.swift. Baca migration actual sebelum mengubah kontrak.
 - API lokal port55321, DB55322 agar tidak mengganggu proyek lain. scripts/backend_local.py setup menghasilkan akun/kredensial lokal privat di luar repo dan konfigurasi publik ignored.
 - Token/refresh token hanya Keychain. Test store memakai injectable token store untuk isolasi; jangan mengganti production storage dengan UserDefaults atau file. Simulator harus ad-hoc signed untuk Keychain.

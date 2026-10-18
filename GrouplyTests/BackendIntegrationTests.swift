@@ -50,8 +50,8 @@ final class BackendIntegrationTests: XCTestCase {
     let alex = try config.account("alex")
     let raka = try config.account("raka")
     try await sender.signIn(email: alex.email, password: alex.password)
-    let receiver = DemoStore(persist: false, backendFactory: { SupabaseBackend(configuration: $0, tokenStore: IntegrationTokenStore()) })
-    let otherDevice = DemoStore(persist: false, backendFactory: { SupabaseBackend(configuration: $0, tokenStore: IntegrationTokenStore()) })
+    let receiver = DemoStore(backendFactory: { SupabaseBackend(configuration: $0, tokenStore: IntegrationTokenStore()) })
+    let otherDevice = DemoStore(backendFactory: { SupabaseBackend(configuration: $0, tokenStore: IntegrationTokenStore()) })
     defer { receiver.setBackendActive(false); otherDevice.setBackendActive(false) }
     try await receiver.connectBackend(email: raka.email, password: raka.password)
     try await otherDevice.connectBackend(email: raka.email, password: raka.password)
@@ -220,7 +220,6 @@ final class BackendIntegrationTests: XCTestCase {
     }
     let account = try config.account("alex")
     let first = DemoStore(
-      persist: false,
       backendFactory: { SupabaseBackend(configuration: $0, tokenStore: IntegrationTokenStore()) })
     try await first.connectBackend(email: account.email, password: account.password)
     XCTAssertTrue(first.isCloudMode)
@@ -234,7 +233,6 @@ final class BackendIntegrationTests: XCTestCase {
     XCTAssertEqual(first.invites.first { $0.id == invitation.id }?.code, invitation.code)
     XCTAssertNil(first.groupsJoinError(code: "opaque-token-not-present-in-snapshot"))
     let second = DemoStore(
-      persist: false,
       backendFactory: { SupabaseBackend(configuration: $0, tokenStore: IntegrationTokenStore()) })
     try await second.connectBackend(email: account.email, password: account.password)
     XCTAssertTrue(second.groups.contains { $0.id == groupID })
@@ -243,10 +241,11 @@ final class BackendIntegrationTests: XCTestCase {
       GLReport(
         messageID: "server-only-id", reporterID: first.currentUserID!, reason: "server-only-report",
         createdAt: Date()))
+    try await waitForRealtime("Realtime refresh settles before sign-out") { !first.isBusy }
     try await first.signOut()
     XCTAssertTrue(first.reports.isEmpty)
-    first.signIn(as: "u1")
-    XCTAssertTrue(first.reports.isEmpty)
+    XCTAssertNil(first.currentUserID)
+    XCTAssertTrue(first.groups.isEmpty)
     try await second.signOut()
   }
 }

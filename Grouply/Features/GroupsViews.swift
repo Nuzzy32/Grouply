@@ -14,7 +14,7 @@ struct GroupsView: View {
           Button {
             sheet = "create"
           } label: {
-            GLIcon("plus", size: 28).foregroundStyle(.white).frame(width: 52, height: 52)
+            GLIcon("plus", size: 28).foregroundStyle(GLTheme.onInk).frame(width: 52, height: 52)
               .background(GLTheme.ink, in: Circle())
           }.buttonStyle(.plain).accessibilityLabel("Buat grup").accessibilityIdentifier("group-create")
         }
@@ -71,7 +71,7 @@ struct GroupCard: View {
     VStack(alignment: .leading, spacing: 14) {
       HStack(spacing: 14) {
         GLIcon(group.icon, size: 26).frame(width: 52, height: 52)
-          .background(Color(hex: group.tint), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+          .background(Color(tint: group.tint), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         VStack(alignment: .leading, spacing: 2) {
           Text(group.name).gl(18, .bold, em: -0.015).multilineTextAlignment(.leading)
           Text(group.course).gl(14).foregroundStyle(GLTheme.secondary)
@@ -83,7 +83,7 @@ struct GroupCard: View {
         HStack(spacing: -8) {
           ForEach(Array(group.memberIDs.prefix(5)), id: \.self) { id in
             GLAvatar(user: store.user(id), size: 32, fontSize: 11)
-              .overlay(Circle().stroke(.white, lineWidth: 2.5))
+              .overlay(Circle().stroke(GLTheme.surface, lineWidth: 2.5))
           }
         }.padding(.trailing, 8)
         Text(
@@ -98,7 +98,7 @@ struct GroupCard: View {
         if unread > 0 {
           GLChip(
             label: "\(unread) pesan baru", icon: "bubble.left", background: GLTheme.ink,
-            foreground: .white, fontSize: 12, iconSize: 15)
+            foreground: GLTheme.onInk, fontSize: 12, iconSize: 15)
         }
       }
     }
@@ -181,7 +181,7 @@ struct GroupDetailView: View {
         VStack(alignment: .leading, spacing: 14) {
           HStack(spacing: 14) {
             GLIcon(group.icon, size: 28).frame(width: 58, height: 58)
-              .background(Color(hex: group.tint), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+              .background(Color(tint: group.tint), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
             VStack(alignment: .leading, spacing: 2) {
               Text(group.name).gl(23, .bold, em: -0.02).multilineTextAlignment(.leading)
               Text(group.course).gl(14).foregroundStyle(GLTheme.secondary)
@@ -205,7 +205,7 @@ struct GroupDetailView: View {
                     .padding(.horizontal, 6).frame(minWidth: 22, minHeight: 22)
                     .background(GLTheme.mint, in: Capsule())
                 }
-              }.foregroundStyle(.white).frame(maxWidth: .infinity).frame(height: 48)
+              }.foregroundStyle(GLTheme.onInk).frame(maxWidth: .infinity).frame(height: 48)
                 .background(GLTheme.ink, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
             }.buttonStyle(.plain)
               .accessibilityLabel(unread > 0 ? "Chat grup, \(unread) pesan baru" : "Chat grup")
@@ -215,7 +215,7 @@ struct GroupDetailView: View {
           }
         }
         .padding(20).frame(maxWidth: .infinity, alignment: .leading)
-        .background(.white, in: RoundedRectangle(cornerRadius: 32, style: .continuous))
+        .background(GLTheme.surface, in: RoundedRectangle(cornerRadius: 32, style: .continuous))
 
         // Members
         VStack(alignment: .leading, spacing: 10) {
@@ -259,7 +259,7 @@ struct GroupDetailView: View {
               .gl(14).lineSpacing(4).foregroundStyle(GLTheme.text3)
               .padding(.vertical, 14).padding(.horizontal, 16)
               .frame(maxWidth: .infinity, alignment: .leading)
-              .background(.white, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+              .background(GLTheme.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
           }
         }
 
@@ -272,7 +272,7 @@ struct GroupDetailView: View {
               HStack(spacing: 4) {
                 GLIcon(coord ? "plus" : "lock", size: 19)
                 Text("Buat proyek").gl(14, .semibold)
-              }.foregroundStyle(.white).padding(.leading, 10).padding(.trailing, 14).frame(height: 44)
+              }.foregroundStyle(GLTheme.onInk).padding(.leading, 10).padding(.trailing, 14).frame(height: 44)
                 .background(GLTheme.ink, in: Capsule())
             }.buttonStyle(.plain).accessibilityLabel("Buat proyek")
               .accessibilityIdentifier("create-project")
@@ -285,8 +285,8 @@ struct GroupDetailView: View {
                   withAnimation(.easeOut(duration: 0.2)) { filter = f.key }
                 } label: {
                   Text("\(f.label) · \(f.items.count)").gl(14, .semibold)
-                    .foregroundStyle(on ? .white : GLTheme.ink).padding(.horizontal, 16).frame(height: 44)
-                    .background(on ? GLTheme.ink : .white, in: Capsule())
+                    .foregroundStyle(on ? GLTheme.onInk : GLTheme.ink).padding(.horizontal, 16).frame(height: 44)
+                    .background(on ? GLTheme.ink : GLTheme.surface, in: Capsule())
                     .overlay(Capsule().strokeBorder(GLTheme.ink, lineWidth: 1.5))
                 }.buttonStyle(.plain).accessibilityAddTraits(on ? .isSelected : [])
               }
@@ -308,14 +308,14 @@ struct GroupDetailView: View {
               ).gl(15).lineSpacing(4).foregroundStyle(GLTheme.secondary)
               if coord {
                 Button(action: newProjectTapped) {
-                  Text("Buat Proyek").gl(15, .semibold).foregroundStyle(.white)
+                  Text("Buat Proyek").gl(15, .semibold).foregroundStyle(GLTheme.onInk)
                     .padding(.horizontal, 24).frame(height: 50)
                     .background(GLTheme.ink, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                 }.buttonStyle(.plain).padding(.top, 4)
               }
             }.multilineTextAlignment(.center).frame(maxWidth: .infinity)
               .padding(.vertical, 26).padding(.horizontal, 22)
-              .background(.white, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+              .background(GLTheme.surface, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
           } else if current.items.isEmpty {
             Text(
               current.key == "archived"
@@ -352,14 +352,14 @@ private struct GroupProjectCard: View {
     let done = tasks.filter { $0.status == .done }.count
     let status: (label: String, bg: Color, icon: String) =
       switch project.status {
-      case .archived: ("Diarsipkan", Color(hex: "ECEEEB"), "archivebox")
+      case .archived: ("Diarsipkan", GLTheme.chip, "archivebox")
       case .completed: ("Selesai", GLTheme.mint, "checkmark.circle")
       case .active: ("Aktif", GLTheme.sky, "bolt")
       }
     VStack(alignment: .leading, spacing: 10) {
       HStack(spacing: 12) {
         RoundedRectangle(cornerRadius: 6, style: .continuous)
-          .fill(Color(hex: store.group(project.groupID)?.tint ?? "FFFFFF")).frame(width: 12, height: 40)
+          .fill(Color(tint: store.group(project.groupID)?.tint ?? "FFFFFF")).frame(width: 12, height: 40)
         VStack(alignment: .leading, spacing: 2) {
           Text(project.title).gl(16, .semibold).multilineTextAlignment(.leading)
           Text("Deadline \(GLFormat.date(project.dueAt))").gl(13).foregroundStyle(GLTheme.secondary)
@@ -411,7 +411,7 @@ private struct GroupMembersView: View {
                 HStack(spacing: 6) {
                   GLIcon(coord ? "person.badge.plus" : "lock", size: 19)
                   Text("Undang anggota").gl(14, .semibold)
-                }.foregroundStyle(.white).padding(.leading, 12).padding(.trailing, 16).frame(height: 44)
+                }.foregroundStyle(GLTheme.onInk).padding(.leading, 12).padding(.trailing, 16).frame(height: 44)
                   .background(GLTheme.ink, in: Capsule())
               }.buttonStyle(.plain)
             }
@@ -421,7 +421,7 @@ private struct GroupMembersView: View {
                   .buttonStyle(GLRowButtonStyle())
               }
             }.padding(.vertical, 4).padding(.horizontal, 14)
-              .background(.white, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+              .background(GLTheme.surface, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
             if group.memberIDs.count == 1 {
               Text("Belum ada anggota lain. Bagikan kode undangan supaya teman bisa bergabung.")
                 .gl(14).lineSpacing(4).padding(.vertical, 14).padding(.horizontal, 16)
@@ -528,7 +528,7 @@ private struct GroupSettingsView: View {
               if let error { GLFormError(text: error) }
               if coord {
                 Button { save(group) } label: {
-                  Text(store.isBusy ? "Menyimpan…" : "Simpan").gl(16, .semibold).foregroundStyle(.white)
+                  Text(store.isBusy ? "Menyimpan…" : "Simpan").gl(16, .semibold).foregroundStyle(GLTheme.onInk)
                     .frame(maxWidth: .infinity).frame(height: 50)
                     .background(GLTheme.ink, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                     .opacity(store.isBusy ? 0.6 : 1)
@@ -540,7 +540,7 @@ private struct GroupSettingsView: View {
                 }.foregroundStyle(GLTheme.text3)
               }
             }.disabled(!coord).padding(18).frame(maxWidth: .infinity, alignment: .leading)
-              .background(.white, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+              .background(GLTheme.surface, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
             VStack(spacing: 0) {
               settingsRow(coord ? "qrcode" : "lock", "Buat kode undangan", divider: true) {
                 Task { if let made = await store.groupsCreateInvite(groupID) { invite = made } }
@@ -550,7 +550,7 @@ private struct GroupSettingsView: View {
                 dismiss()
               }
             }.padding(.vertical, 4).padding(.horizontal, 16)
-              .background(.white, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+              .background(GLTheme.surface, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
             GroupLeaveButton {
               confirm = store.groupsLeaveConfirmation(
                 groupID: groupID, pickCoordinator: { showMembers = true }, onLeft: onLeft)
@@ -629,10 +629,6 @@ private struct GroupFormView: View {
   @State private var course = ""
   @State private var code = ""
   @State private var error: String?
-  private let samples = [
-    ("STAT-K1Q", "valid"), ("BD3-USED", "sudah dipakai"), ("UIX-OLD1", "kedaluwarsa"),
-    ("BD3-OFF9", "dinonaktifkan"),
-  ]
 
   var body: some View {
     Group {
@@ -666,27 +662,6 @@ private struct GroupFormView: View {
           .textInputAutocapitalization(.characters).autocorrectionDisabled()
           .glInput(height: 54).accessibilityIdentifier("join-code")
       }
-      if !store.isCloudMode {
-        VStack(alignment: .leading, spacing: 6) {
-          HStack(spacing: 6) {
-            Text("DEMO").gl(11, .bold).padding(.horizontal, 7).frame(height: 20)
-              .background(GLTheme.butter, in: Capsule())
-            Text("Coba kode contoh").gl(13, .semibold)
-          }
-          GroupsFlow(spacing: 6) {
-            ForEach(samples, id: \.0) { sample in
-              Button {
-                code = sample.0
-                error = nil
-              } label: {
-                Text("\(sample.0) · \(sample.1)").gl(13, .semibold).padding(.horizontal, 12).frame(height: 40)
-                  .background(.white, in: Capsule())
-                  .overlay(Capsule().strokeBorder(GLTheme.border))
-              }.buttonStyle(.plain)
-            }
-          }
-        }
-      }
       if let error { GLFormError(text: error) }
       GLSubmitButton(title: store.isBusy ? "Bergabung…" : "Gabung", busy: store.isBusy, action: join)
         .accessibilityIdentifier("group-save")
@@ -712,8 +687,7 @@ private struct GroupFormView: View {
 
   private func join() {
     let raw = code.trimmingCharacters(in: .whitespacesAndNewlines)
-    let token = raw.components(separatedBy: "/invite/").dropFirst().first ?? raw
-    let parsed = store.isCloudMode ? token : token.uppercased()
+    let parsed = raw.components(separatedBy: "/invite/").dropFirst().first ?? raw
     if let message = store.groupsJoinError(code: parsed) { return error = message }
     error = nil
     Task {
@@ -737,7 +711,7 @@ private struct GroupInviteSheet: View {
         let status = store.groupsInviteStatus(invite)
         let chip: (String, Color, String) =
           switch status {
-          case "valid": ("Undangan aktif", .white, "checkmark.circle")
+          case "valid": ("Undangan aktif", GLTheme.surface, "checkmark.circle")
           case "expired": ("Undangan kedaluwarsa", GLTheme.coral, "clock.badge.xmark")
           case "used": ("Undangan tidak berlaku · sudah dipakai", GLTheme.coral, "nosign")
           default: ("Undangan tidak berlaku", GLTheme.coral, "nosign")
@@ -771,7 +745,7 @@ private struct GroupInviteSheet: View {
           let share = HStack(spacing: 6) {
             GLIcon("square.and.arrow.up", size: 19)
             Text("Bagikan").gl(15, .semibold)
-          }.foregroundStyle(.white).frame(maxWidth: .infinity).frame(height: 52)
+          }.foregroundStyle(GLTheme.onInk).frame(maxWidth: .infinity).frame(height: 52)
             .background(GLTheme.ink, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
           if status == "valid" {
             ShareLink(item: "Gabung ke grup GROUPLY. Kode undangan: \(invite.code)") { share }
@@ -782,11 +756,7 @@ private struct GroupInviteSheet: View {
             } label: { share }.buttonStyle(.plain)
           }
         }
-        Text(
-          store.isCloudMode
-            ? "Bagikan kode ini kepada anggota yang ingin bergabung. Kode berlaku 7 hari dan sekali pakai."
-            : "Demo: ganti persona di panel demo, lalu buka Grup → Gabung dengan kode. Kode prototipe dibuat acak secara lokal, bukan kode aman produksi."
-        ).gl(13).lineSpacing(3).foregroundStyle(GLTheme.secondary)
+        Text("Bagikan kode ini kepada anggota yang ingin bergabung. Kode berlaku 7 hari dan sekali pakai.").gl(13).lineSpacing(3).foregroundStyle(GLTheme.secondary)
       }
     }
   }
@@ -856,7 +826,7 @@ private struct GroupMemberSheet: View {
               }.buttonStyle(GLRowButtonStyle())
             }
           }.padding(.vertical, 4).padding(.horizontal, 16)
-            .background(.white, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+            .background(GLTheme.surface, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
         }
         if !coord && !isSelf {
           Text("Aksi bertanda gembok hanya untuk koordinator.").gl(13).foregroundStyle(GLTheme.text3)
@@ -937,43 +907,6 @@ private struct GroupsPressStyle: ButtonStyle {
   }
 }
 
-/// Minimal wrapping row (CSS `flex-wrap:wrap`).
-private struct GroupsFlow: Layout {
-  var spacing: CGFloat
-  func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-    let width = proposal.width ?? .infinity
-    var x: CGFloat = 0, y: CGFloat = 0, rowH: CGFloat = 0, maxX: CGFloat = 0
-    for s in subviews {
-      let size = s.sizeThatFits(.unspecified)
-      if x > 0 && x + size.width > width {
-        x = 0
-        y += rowH + spacing
-        rowH = 0
-      }
-      x += size.width + spacing
-      rowH = max(rowH, size.height)
-      maxX = max(maxX, x - spacing)
-    }
-    return CGSize(width: maxX, height: y + rowH)
-  }
-  func placeSubviews(
-    in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()
-  ) {
-    var x = bounds.minX, y = bounds.minY, rowH: CGFloat = 0
-    for s in subviews {
-      let size = s.sizeThatFits(.unspecified)
-      if x > bounds.minX && x + size.width > bounds.maxX {
-        x = bounds.minX
-        y += rowH + spacing
-        rowH = 0
-      }
-      s.place(at: CGPoint(x: x, y: y), proposal: ProposedViewSize(size))
-      x += size.width + spacing
-      rowH = max(rowH, size.height)
-    }
-  }
-}
-
 extension DemoStore {
   /// Unfinished tasks assigned to `userID` in this group's projects.
   func groupsActiveTaskCount(groupID: String, userID: String) -> Int {
@@ -992,23 +925,9 @@ extension DemoStore {
     if invite.useCount >= invite.maxUses { return "used" }
     return "valid"
   }
-  /// Prototype `doJoin` messages, checked before the store call (which still enforces the rules).
+  /// Empty-code check before the server call; the server enforces the invite rules.
   func groupsJoinError(code: String) -> String? {
-    if isCloudMode { return code.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Isi kode undangan." : nil }
-    if code.isEmpty { return "Masukkan kode undangan." }
-    guard let invite = invites.first(where: { $0.code.uppercased() == code }) else {
-      return "Kode tidak ditemukan. Periksa lagi huruf dan angkanya."
-    }
-    let status = groupsInviteStatus(invite)
-    if status == "nogroup" { return "Undangan tidak berlaku. Grupnya sudah tidak ada." }
-    if isMember(groupID: invite.groupID) { return "Kamu sudah bergabung dengan grup ini." }
-    if status == "revoked" { return "Undangan tidak berlaku. Minta kode baru ke koordinator." }
-    if status == "expired" {
-      return "Undangan kedaluwarsa sejak \(GLFormat.date(invite.expiresAt)). Minta kode baru ke koordinator."
-    }
-    if status == "used" { return "Undangan tidak berlaku. Kode sudah mencapai batas pemakaian." }
-    if (group(invite.groupID)?.memberIDs.count ?? 0) >= 8 { return "Grup ini sudah penuh (8 anggota)." }
-    return nil
+    code.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Isi kode undangan." : nil
   }
   /// Prototype `invite(gid)`: permission/capacity checks, then a fresh 7-day code.
   func groupsCreateInvite(_ groupID: String) async -> GLInvite? {
@@ -1058,7 +977,7 @@ extension DemoStore {
       return GLConfirmation(
         title: "Kamu anggota terakhir",
         text:
-          "Kalau kamu keluar, \(g.name) beserta proyek, tugas, dan chat-nya dihapus dari data demo. Di versi produksi, data diproses sesuai kebijakan retensi.",
+          "Kalau kamu keluar, \(g.name) beserta proyek, tugas, dan chat-nya tidak bisa kamu buka lagi. Data diproses sesuai kebijakan retensi.",
         ok: "Keluar & hapus grup", destructive: true, run: { _ = leave() })
     }
     return GLConfirmation(

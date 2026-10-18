@@ -52,36 +52,9 @@ String _grInviteStatus(GrouplyStore store, JsonMap invite) {
   return 'valid';
 }
 
-/// Prototype `doJoin` messages, checked before the store call.
-String? _grJoinError(GrouplyStore store, String code) {
-  if (!store.demoMode) return code.trim().isEmpty ? 'Isi kode undangan.' : null;
-  if (code.isEmpty) return 'Masukkan kode undangan.';
-  final invite = store.invites
-      .where((row) => row.text('code').toUpperCase() == code)
-      .firstOrNull;
-  if (invite == null) {
-    return 'Kode tidak ditemukan. Periksa lagi huruf dan angkanya.';
-  }
-  final status = _grInviteStatus(store, invite);
-  final group = store.group(invite.text('groupID'));
-  if (status == 'nogroup') {
-    return 'Undangan tidak berlaku. Grupnya sudah tidak ada.';
-  }
-  if (_member(store, group)) return 'Kamu sudah bergabung dengan grup ini.';
-  if (status == 'revoked') {
-    return 'Undangan tidak berlaku. Minta kode baru ke koordinator.';
-  }
-  if (status == 'expired') {
-    return 'Undangan kedaluwarsa sejak ${GLFormat.date(invite.date('expiresAt') ?? DateTime.now())}. Minta kode baru ke koordinator.';
-  }
-  if (status == 'used') {
-    return 'Undangan tidak berlaku. Kode sudah mencapai batas pemakaian.';
-  }
-  if (group!.ids('memberIDs').length >= _maxMembers) {
-    return 'Grup ini sudah penuh (8 anggota).';
-  }
-  return null;
-}
+/// The server validates invites; the client only rejects an empty code.
+String? _grJoinError(String code) =>
+    code.trim().isEmpty ? 'Isi kode undangan.' : null;
 
 /// Button whose accessibility label replaces its visible text.
 Widget _grButton({
@@ -103,7 +76,7 @@ Widget _grButton({
       : GLTap(onTap: onTap, child: child),
 );
 
-const _grHairline = BoxDecoration(
+final _grHairline = BoxDecoration(
   border: Border(bottom: BorderSide(color: GLTheme.border)),
 );
 
@@ -208,7 +181,7 @@ mixin _GroupActions<T extends _WorkspaceScreen> on _WorkspaceState<T> {
   Widget _inviteBody(JsonMap invite) {
     final status = _grInviteStatus(store, invite);
     final (label, background, icon) = switch (status) {
-      'valid' => ('Undangan aktif', Colors.white, 'checkmark.circle'),
+      'valid' => ('Undangan aktif', GLTheme.surface, 'checkmark.circle'),
       'expired' => ('Undangan kedaluwarsa', GLTheme.coral, 'clock.badge.xmark'),
       'used' => (
         'Undangan tidak berlaku · sudah dipakai',
@@ -225,14 +198,14 @@ mixin _GroupActions<T extends _WorkspaceScreen> on _WorkspaceState<T> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const GLIcon('square.and.arrow.up', size: 19, color: Colors.white),
-          const SizedBox(width: 6),
+          GLIcon('square.and.arrow.up', size: 19, color: GLTheme.onInk),
+          SizedBox(width: 6),
           Flexible(
             child: Text(
               'Bagikan',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: gl(15, w600, 0, Colors.white),
+              style: gl(15, w600, 0, GLTheme.onInk),
             ),
           ),
         ],
@@ -242,7 +215,7 @@ mixin _GroupActions<T extends _WorkspaceScreen> on _WorkspaceState<T> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Container(
-          padding: const EdgeInsets.all(22),
+          padding: EdgeInsets.all(22),
           decoration: glBox(GLTheme.mint, 28),
           child: Column(
             children: [
@@ -251,35 +224,37 @@ mixin _GroupActions<T extends _WorkspaceScreen> on _WorkspaceState<T> {
                 textAlign: TextAlign.center,
                 style: gl(14, w600, 0, GLTheme.text3),
               ),
-              const SizedBox(height: 6),
+              SizedBox(height: 6),
               FittedBox(
                 fit: BoxFit.scaleDown,
                 child: SelectableText(
                   code,
                   maxLines: 1,
-                  style: gl(34, w800, 0.08).copyWith(
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                  ),
+                  style: gl(
+                    34,
+                    w800,
+                    0.08,
+                  ).copyWith(fontFeatures: [FontFeature.tabularFigures()]),
                 ),
               ),
-              const SizedBox(height: 6),
+              SizedBox(height: 6),
               Container(
                 height: 28,
-                padding: const EdgeInsets.only(left: 8, right: 11),
+                padding: EdgeInsets.only(left: 8, right: 11),
                 decoration: ShapeDecoration(
                   color: background,
-                  shape: const StadiumBorder(),
+                  shape: StadiumBorder(),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     GLIcon(icon, size: 16),
-                    const SizedBox(width: 4),
+                    SizedBox(width: 4),
                     Flexible(child: Text(label, style: gl(13, w600))),
                   ],
                 ),
               ),
-              const SizedBox(height: 6),
+              SizedBox(height: 6),
               Text(
                 'Berlaku sampai ${GLFormat.weekday(expires)}, ${GLFormat.date(expires)}, ${GLFormat.time(expires)} · ${invite.number('useCount')}/${invite.number('maxUses')} pemakaian',
                 textAlign: TextAlign.center,
@@ -289,17 +264,17 @@ mixin _GroupActions<T extends _WorkspaceScreen> on _WorkspaceState<T> {
           ),
         ),
         if (status == 'valid') ...[
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           Center(
             child: GLTap(
               onTap: () => _revoke(invite),
               child: ConstrainedBox(
-                constraints: const BoxConstraints(minHeight: 44),
+                constraints: BoxConstraints(minHeight: 44),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const GLIcon('nosign', size: 18, color: GLTheme.danger),
-                    const SizedBox(width: 6),
+                    GLIcon('nosign', size: 18, color: GLTheme.danger),
+                    SizedBox(width: 6),
                     Text(
                       'Nonaktifkan kode',
                       style: gl(14, w600, 0, GLTheme.danger),
@@ -310,7 +285,7 @@ mixin _GroupActions<T extends _WorkspaceScreen> on _WorkspaceState<T> {
             ),
           ),
         ],
-        const SizedBox(height: 16),
+        SizedBox(height: 16),
         Row(
           children: [
             Expanded(
@@ -322,7 +297,7 @@ mixin _GroupActions<T extends _WorkspaceScreen> on _WorkspaceState<T> {
                 onPressed: () => _copy(code, 'Kode $code disalin'),
               ),
             ),
-            const SizedBox(width: 10),
+            SizedBox(width: 10),
             Expanded(
               child: GLTap(
                 onTap: status == 'valid'
@@ -336,11 +311,9 @@ mixin _GroupActions<T extends _WorkspaceScreen> on _WorkspaceState<T> {
             ),
           ],
         ),
-        const SizedBox(height: 16),
+        SizedBox(height: 16),
         Text(
-          store.demoMode
-              ? 'Demo: ganti persona di panel demo, lalu buka Grup → Gabung dengan kode. Kode prototipe dibuat acak secara lokal, bukan kode aman produksi.'
-              : 'Bagikan kode ini kepada anggota yang ingin bergabung. Kode berlaku 7 hari dan sekali pakai.',
+          'Bagikan kode ini kepada anggota yang ingin bergabung. Kode berlaku 7 hari dan sekali pakai.',
           style: gl(13, w400, 0, GLTheme.secondary, 3),
         ),
       ],
@@ -399,7 +372,7 @@ mixin _GroupActions<T extends _WorkspaceScreen> on _WorkspaceState<T> {
 
   Widget _memberBody(BuildContext sheet, String groupID, String userID) {
     final group = store.group(groupID);
-    if (group == null) return const SizedBox.shrink();
+    if (group == null) return SizedBox.shrink();
     final coord = group.text('coordinatorID') == store.currentUserID;
     final isSelf = userID == store.currentUserID;
     final isC = userID == group.text('coordinatorID');
@@ -495,42 +468,42 @@ mixin _GroupActions<T extends _WorkspaceScreen> on _WorkspaceState<T> {
     // ponytail: Swift pulls the header up 30pt under the close row with a
     // negative padding; translating leaves 30pt extra space at the bottom.
     return Transform.translate(
-      offset: const Offset(0, -30),
+      offset: Offset(0, -30),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Column(
             children: [
               GLAvatar(user: user, size: 72, fontSize: 22),
-              const SizedBox(height: 6),
+              SizedBox(height: 6),
               Text(
                 '${user?.text('name') ?? 'Pengguna'}${isSelf ? ' (kamu)' : ''}',
                 textAlign: TextAlign.center,
                 style: gl(20, w700),
               ),
               if (email.isNotEmpty) ...[
-                const SizedBox(height: 6),
+                SizedBox(height: 6),
                 Text(
                   email,
                   textAlign: TextAlign.center,
                   style: gl(14, w400, 0, GLTheme.secondary),
                 ),
               ],
-              const SizedBox(height: 6),
+              SizedBox(height: 6),
               Container(
                 height: 28,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
+                padding: EdgeInsets.symmetric(horizontal: 12),
                 alignment: Alignment.center,
                 decoration: ShapeDecoration(
                   color: isC ? GLTheme.mint : GLTheme.muted,
-                  shape: const StadiumBorder(),
+                  shape: StadiumBorder(),
                 ),
                 child: Text(
                   isC ? 'Koordinator' : 'Anggota',
                   style: gl(13, w600),
                 ),
               ),
-              const SizedBox(height: 6),
+              SizedBox(height: 6),
               Text(
                 '${_grTaskCount(store, groupID, userID, done: false)} tugas aktif · ${_grTaskCount(store, groupID, userID, done: true)} tugas selesai di grup ini',
                 textAlign: TextAlign.center,
@@ -539,10 +512,10 @@ mixin _GroupActions<T extends _WorkspaceScreen> on _WorkspaceState<T> {
             ],
           ),
           if (rows.isNotEmpty) ...[
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             Container(
-              padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
-              decoration: glBox(Colors.white, 24),
+              padding: EdgeInsets.symmetric(vertical: 4, horizontal: 16),
+              decoration: glBox(GLTheme.surface, 24),
               child: Column(
                 children: [
                   for (final (label, icon, color, go) in rows)
@@ -552,12 +525,12 @@ mixin _GroupActions<T extends _WorkspaceScreen> on _WorkspaceState<T> {
                         go();
                       },
                       child: Container(
-                        constraints: const BoxConstraints(minHeight: 56),
+                        constraints: BoxConstraints(minHeight: 56),
                         decoration: _grHairline,
                         child: Row(
                           children: [
                             GLIcon(icon, size: 22, color: color),
-                            const SizedBox(width: 12),
+                            SizedBox(width: 12),
                             Expanded(
                               child: Text(label, style: gl(16, w600, 0, color)),
                             ),
@@ -570,7 +543,7 @@ mixin _GroupActions<T extends _WorkspaceScreen> on _WorkspaceState<T> {
             ),
           ],
           if (!coord && !isSelf) ...[
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             Text(
               'Aksi bertanda gembok hanya untuk koordinator.',
               textAlign: TextAlign.center,
@@ -604,7 +577,7 @@ mixin _GroupActions<T extends _WorkspaceScreen> on _WorkspaceState<T> {
     final ok = count == 1
         ? await confirm(
             'Kamu anggota terakhir',
-            'Kalau kamu keluar, $name beserta proyek, tugas, dan chat-nya dihapus dari data demo. Di versi produksi, data diproses sesuai kebijakan retensi.',
+            'Kalau kamu keluar, $name tidak punya anggota lagi dan tidak bisa dibuka siapa pun. Undangannya ikut dicabut.',
             ok: 'Keluar & hapus grup',
             destructive: true,
           )
@@ -635,17 +608,14 @@ mixin _GroupActions<T extends _WorkspaceScreen> on _WorkspaceState<T> {
       child: RefreshIndicator.adaptive(
         onRefresh: reload,
         child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(
+          physics: AlwaysScrollableScrollPhysics(
             parent: BouncingScrollPhysics(),
           ),
           keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-          padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+          padding: EdgeInsets.fromLTRB(20, 4, 20, 24),
           children: [
             GLDetailHeader(title, trailing: trailing),
-            for (final child in children) ...[
-              const SizedBox(height: 16),
-              child,
-            ],
+            for (final child in children) ...[SizedBox(height: 16), child],
           ],
         ),
       ),
@@ -680,7 +650,7 @@ class _GroupsState extends _WorkspaceState<GroupsScreen>
           child: RefreshIndicator.adaptive(
             onRefresh: reload,
             child: ListView(
-              physics: const AlwaysScrollableScrollPhysics(
+              physics: AlwaysScrollableScrollPhysics(
                 parent: BouncingScrollPhysics(),
               ),
               padding: EdgeInsets.fromLTRB(
@@ -699,28 +669,24 @@ class _GroupsState extends _WorkspaceState<GroupsScreen>
                       ),
                     ),
                     _grButton(
-                      key: const Key('group-create'),
+                      key: Key('group-create'),
                       label: 'Buat grup',
                       onTap: () => _sheet(joining: false),
                       child: Container(
                         width: 52,
                         height: 52,
-                        decoration: const BoxDecoration(
+                        decoration: BoxDecoration(
                           color: GLTheme.ink,
                           shape: BoxShape.circle,
                         ),
-                        child: const GLIcon(
-                          'plus',
-                          size: 28,
-                          color: Colors.white,
-                        ),
+                        child: GLIcon('plus', size: 28, color: GLTheme.onInk),
                       ),
                     ),
                   ],
                 ),
                 if (groups.isEmpty) ...[
-                  const SizedBox(height: 16),
-                  const GLEmptyState(
+                  SizedBox(height: 16),
+                  GLEmptyState(
                     title: 'Belum ada grup',
                     message:
                         'Grup menyatukan proyek, tugas, dan chat kelompokmu. Buat grup dengan tombol + atau gabung pakai kode undangan.',
@@ -728,7 +694,7 @@ class _GroupsState extends _WorkspaceState<GroupsScreen>
                   ),
                 ],
                 for (final group in groups) ...[
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
                   GLTap.card(
                     onTap: () => open(
                       GroupScreen(store: store, groupID: group.text('id')),
@@ -736,18 +702,18 @@ class _GroupsState extends _WorkspaceState<GroupsScreen>
                     child: MergeSemantics(child: _GroupCard(store, group)),
                   ),
                 ],
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 GLTap(
                   onTap: () => _sheet(joining: true),
                   child: CustomPaint(
-                    painter: const _DashedBorder(),
+                    painter: _DashedBorder(),
                     child: SizedBox(
                       height: 56,
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const GLIcon('key', size: 20),
-                          const SizedBox(width: 8),
+                          GLIcon('key', size: 20),
+                          SizedBox(width: 8),
                           Flexible(
                             child: Text(
                               'Gabung dengan kode undangan',
@@ -772,7 +738,7 @@ class _GroupsState extends _WorkspaceState<GroupsScreen>
 
 /// 20pt continuous rounded rect, 1.5pt ink(40%) dash [5, 4].
 class _DashedBorder extends CustomPainter {
-  const _DashedBorder();
+  _DashedBorder();
   @override
   void paint(Canvas canvas, Size size) {
     final path = glShape(20).getOuterPath((Offset.zero & size).deflate(0.75));
@@ -809,8 +775,8 @@ class _GroupCard extends StatelessWidget {
     final faces = members.take(5).toList();
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(18),
-      decoration: glBox(Colors.white, 28, shadow: true),
+      padding: EdgeInsets.all(18),
+      decoration: glBox(GLTheme.surface, 28, shadow: true),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -819,16 +785,16 @@ class _GroupCard extends StatelessWidget {
               Container(
                 width: 52,
                 height: 52,
-                decoration: glBox(glHex(group.text('tint')), 20),
+                decoration: glBox(glTint(group.text('tint')), 20),
                 child: GLIcon(group.text('icon'), size: 26),
               ),
-              const SizedBox(width: 14),
+              SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(group.text('name'), style: gl(18, w700, -0.015)),
-                    const SizedBox(height: 2),
+                    SizedBox(height: 2),
                     Text(
                       group.text('course'),
                       style: gl(14, w400, 0, GLTheme.secondary),
@@ -836,10 +802,10 @@ class _GroupCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const GLIcon('chevron.right', size: 22, color: GLTheme.secondary),
+              GLIcon('chevron.right', size: 22, color: GLTheme.secondary),
             ],
           ),
-          const SizedBox(height: 14),
+          SizedBox(height: 14),
           Row(
             children: [
               SizedBox(
@@ -855,7 +821,7 @@ class _GroupCard extends StatelessWidget {
                           foregroundDecoration: BoxDecoration(
                             shape: BoxShape.circle,
                             border: Border.all(
-                              color: Colors.white,
+                              color: GLTheme.surface,
                               width: 2.5,
                               strokeAlign: BorderSide.strokeAlignCenter,
                             ),
@@ -870,7 +836,7 @@ class _GroupCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(width: 18),
+              SizedBox(width: 18),
               Expanded(
                 child: Text(
                   '${members.length} anggota · ${active > 0 ? '$active proyek aktif' : 'Belum ada proyek aktif'}',
@@ -879,7 +845,7 @@ class _GroupCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 14),
+          SizedBox(height: 14),
           Wrap(
             spacing: 6,
             runSpacing: 6,
@@ -894,7 +860,7 @@ class _GroupCard extends StatelessWidget {
                   label: '$unread pesan baru',
                   icon: 'bubble.left',
                   background: GLTheme.ink,
-                  foreground: Colors.white,
+                  foreground: GLTheme.onInk,
                   fontSize: 12,
                   iconSize: 15,
                 ),
@@ -940,7 +906,7 @@ class _GroupState extends _WorkspaceState<GroupScreen>
     listenable: store,
     builder: (context, _) {
       final group = store.group(groupID);
-      if (!_member(store, group)) return const GLAccessDenied();
+      if (!_member(store, group)) return GLAccessDenied();
       return _content(group!);
     },
   );
@@ -983,8 +949,8 @@ class _GroupState extends _WorkspaceState<GroupScreen>
       children: [
         // Group card
         Container(
-          padding: const EdgeInsets.all(20),
-          decoration: glBox(Colors.white, 32),
+          padding: EdgeInsets.all(20),
+          decoration: glBox(GLTheme.surface, 32),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -993,16 +959,16 @@ class _GroupState extends _WorkspaceState<GroupScreen>
                   Container(
                     width: 58,
                     height: 58,
-                    decoration: glBox(glHex(group.text('tint')), 22),
+                    decoration: glBox(glTint(group.text('tint')), 22),
                     child: GLIcon(group.text('icon'), size: 28),
                   ),
-                  const SizedBox(width: 14),
+                  SizedBox(width: 14),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(group.text('name'), style: gl(23, w700, -0.02)),
-                        const SizedBox(height: 2),
+                        SizedBox(height: 2),
                         Text(
                           group.text('course'),
                           style: gl(14, w400, 0, GLTheme.secondary),
@@ -1013,21 +979,17 @@ class _GroupState extends _WorkspaceState<GroupScreen>
                 ],
               ),
               if (group.text('description').isNotEmpty) ...[
-                const SizedBox(height: 14),
+                SizedBox(height: 14),
                 Text(
                   group.text('description'),
                   style: gl(15, w400, 0, GLTheme.text3, 4),
                 ),
               ],
-              const SizedBox(height: 14),
+              SizedBox(height: 14),
               Row(
                 children: [
-                  const GLIcon(
-                    'chart.xyaxis.line',
-                    size: 18,
-                    color: GLTheme.text3,
-                  ),
-                  const SizedBox(width: 6),
+                  GLIcon('chart.xyaxis.line', size: 18, color: GLTheme.text3),
+                  SizedBox(width: 6),
                   Expanded(
                     child: Text(
                       '${lists[0].$3.length} proyek aktif · $running tugas berjalan',
@@ -1036,7 +998,7 @@ class _GroupState extends _WorkspaceState<GroupScreen>
                   ),
                 ],
               ),
-              const SizedBox(height: 14),
+              SizedBox(height: 14),
               Row(
                 children: [
                   Expanded(
@@ -1052,32 +1014,30 @@ class _GroupState extends _WorkspaceState<GroupScreen>
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const GLIcon(
+                            GLIcon(
                               'bubble.left',
                               size: 19,
-                              color: Colors.white,
+                              color: GLTheme.onInk,
                             ),
-                            const SizedBox(width: 6),
+                            SizedBox(width: 6),
                             Flexible(
                               child: Text(
                                 'Chat grup',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: gl(15, w600, 0, Colors.white),
+                                style: gl(15, w600, 0, GLTheme.onInk),
                               ),
                             ),
                             if (unread > 0) ...[
-                              const SizedBox(width: 6),
+                              SizedBox(width: 6),
                               Container(
-                                constraints: const BoxConstraints(
+                                constraints: BoxConstraints(
                                   minWidth: 22,
                                   minHeight: 22,
                                 ),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                ),
+                                padding: EdgeInsets.symmetric(horizontal: 6),
                                 alignment: Alignment.center,
-                                decoration: const ShapeDecoration(
+                                decoration: ShapeDecoration(
                                   color: GLTheme.mint,
                                   shape: StadiumBorder(),
                                 ),
@@ -1092,7 +1052,7 @@ class _GroupState extends _WorkspaceState<GroupScreen>
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  SizedBox(width: 8),
                   Expanded(
                     child: GLOutlineButton(
                       title: 'Anggota',
@@ -1126,14 +1086,14 @@ class _GroupState extends _WorkspaceState<GroupScreen>
                     ],
                   ),
                 ),
-                const SizedBox(width: 8),
+                SizedBox(width: 8),
                 _grButton(
                   label: 'Undang anggota',
                   onTap: () => createInvite(groupID),
                   child: Container(
                     height: 44,
-                    padding: const EdgeInsets.only(left: 10, right: 14),
-                    decoration: const ShapeDecoration(
+                    padding: EdgeInsets.only(left: 10, right: 14),
+                    decoration: ShapeDecoration(
                       shape: StadiumBorder(
                         side: BorderSide(color: GLTheme.ink, width: 1.5),
                       ),
@@ -1142,7 +1102,7 @@ class _GroupState extends _WorkspaceState<GroupScreen>
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         GLIcon(coord ? 'person.badge.plus' : 'lock', size: 19),
-                        const SizedBox(width: 4),
+                        SizedBox(width: 4),
                         Text('Undang', style: gl(14, w600)),
                       ],
                     ),
@@ -1150,29 +1110,26 @@ class _GroupState extends _WorkspaceState<GroupScreen>
                 ),
               ],
             ),
-            const SizedBox(height: 10),
+            SizedBox(height: 10),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               clipBehavior: Clip.none,
-              padding: const EdgeInsets.symmetric(vertical: 2),
+              padding: EdgeInsets.symmetric(vertical: 2),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   for (final id in members) ...[
-                    if (id != members.first) const SizedBox(width: 4),
+                    if (id != members.first) SizedBox(width: 4),
                     _memberChip(group, id),
                   ],
                 ],
               ),
             ),
             if (members.length == 1) ...[
-              const SizedBox(height: 10),
+              SizedBox(height: 10),
               Container(
-                padding: const EdgeInsets.symmetric(
-                  vertical: 14,
-                  horizontal: 16,
-                ),
-                decoration: glBox(Colors.white, 20),
+                padding: EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                decoration: glBox(GLTheme.surface, 20),
                 child: Text(
                   'Belum ada anggota lain. Undang teman sekelompok dengan kode undangan.',
                   style: gl(14, w400, 0, GLTheme.text3, 4),
@@ -1184,22 +1141,22 @@ class _GroupState extends _WorkspaceState<GroupScreen>
 
         // Projects
         Padding(
-          padding: const EdgeInsets.only(top: 4),
+          padding: EdgeInsets.only(top: 4),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Row(
                 children: [
                   Expanded(child: Text('Proyek', style: gl(21, w700, -0.02))),
-                  const SizedBox(width: 8),
+                  SizedBox(width: 8),
                   _grButton(
-                    key: const Key('create-project'),
+                    key: Key('create-project'),
                     label: 'Buat proyek',
                     onTap: () => _newProject(group),
                     child: Container(
                       height: 44,
-                      padding: const EdgeInsets.only(left: 10, right: 14),
-                      decoration: const ShapeDecoration(
+                      padding: EdgeInsets.only(left: 10, right: 14),
+                      decoration: ShapeDecoration(
                         color: GLTheme.ink,
                         shape: StadiumBorder(),
                       ),
@@ -1209,12 +1166,12 @@ class _GroupState extends _WorkspaceState<GroupScreen>
                           GLIcon(
                             coord ? 'plus' : 'lock',
                             size: 19,
-                            color: Colors.white,
+                            color: GLTheme.onInk,
                           ),
-                          const SizedBox(width: 4),
+                          SizedBox(width: 4),
                           Text(
                             'Buat proyek',
-                            style: gl(14, w600, 0, Colors.white),
+                            style: gl(14, w600, 0, GLTheme.onInk),
                           ),
                         ],
                       ),
@@ -1222,27 +1179,27 @@ class _GroupState extends _WorkspaceState<GroupScreen>
                   ),
                 ],
               ),
-              const SizedBox(height: 10),
+              SizedBox(height: 10),
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 clipBehavior: Clip.none,
                 child: Row(
                   children: [
                     for (final (key, label, items) in lists) ...[
-                      if (key != 'active') const SizedBox(width: 6),
+                      if (key != 'active') SizedBox(width: 6),
                       _grButton(
                         label: '$label · ${items.length}',
                         selected: key == current.$1,
                         onTap: () => setState(() => filter = key),
                         child: Container(
                           height: 44,
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          padding: EdgeInsets.symmetric(horizontal: 16),
                           alignment: Alignment.center,
                           decoration: ShapeDecoration(
                             color: key == current.$1
                                 ? GLTheme.ink
-                                : Colors.white,
-                            shape: const StadiumBorder(
+                                : GLTheme.surface,
+                            shape: StadiumBorder(
                               side: BorderSide(color: GLTheme.ink, width: 1.5),
                             ),
                           ),
@@ -1252,7 +1209,7 @@ class _GroupState extends _WorkspaceState<GroupScreen>
                               14,
                               w600,
                               0,
-                              key == current.$1 ? Colors.white : GLTheme.ink,
+                              key == current.$1 ? GLTheme.surface : GLTheme.ink,
                             ),
                           ),
                         ),
@@ -1262,7 +1219,7 @@ class _GroupState extends _WorkspaceState<GroupScreen>
                 ),
               ),
               for (final project in current.$3) ...[
-                const SizedBox(height: 10),
+                SizedBox(height: 10),
                 GLTap.card(
                   onTap: () => open(
                     ProjectScreen(store: store, projectID: project.text('id')),
@@ -1273,28 +1230,25 @@ class _GroupState extends _WorkspaceState<GroupScreen>
                 ),
               ],
               if (all.isEmpty) ...[
-                const SizedBox(height: 10),
+                SizedBox(height: 10),
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 26,
-                    horizontal: 22,
-                  ),
-                  decoration: glBox(Colors.white, 28),
+                  padding: EdgeInsets.symmetric(vertical: 26, horizontal: 22),
+                  decoration: glBox(GLTheme.surface, 28),
                   child: Column(
                     children: [
                       Container(
                         width: 56,
                         height: 56,
                         decoration: glBox(GLTheme.butter, 20),
-                        child: const GLIcon('folder', size: 28),
+                        child: GLIcon('folder', size: 28),
                       ),
-                      const SizedBox(height: 10),
+                      SizedBox(height: 10),
                       Text(
                         'Belum ada proyek',
                         textAlign: TextAlign.center,
                         style: gl(19, w700),
                       ),
-                      const SizedBox(height: 10),
+                      SizedBox(height: 10),
                       Text(
                         coord
                             ? 'Mulai proyek pertama untuk mengatur tugas dan kerja sama kelompokmu.'
@@ -1303,19 +1257,19 @@ class _GroupState extends _WorkspaceState<GroupScreen>
                         style: gl(15, w400, 0, GLTheme.secondary, 4),
                       ),
                       if (coord) ...[
-                        const SizedBox(height: 14),
+                        SizedBox(height: 14),
                         GLTap(
                           onTap: () => _newProject(group),
                           child: Container(
                             height: 50,
-                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                            padding: EdgeInsets.symmetric(horizontal: 24),
                             decoration: glBox(GLTheme.ink, 16),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
                                   'Buat Proyek',
-                                  style: gl(15, w600, 0, Colors.white),
+                                  style: gl(15, w600, 0, GLTheme.onInk),
                                 ),
                               ],
                             ),
@@ -1326,9 +1280,9 @@ class _GroupState extends _WorkspaceState<GroupScreen>
                   ),
                 ),
               ] else if (current.$3.isEmpty) ...[
-                const SizedBox(height: 10),
+                SizedBox(height: 10),
                 Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  padding: EdgeInsets.symmetric(vertical: 20),
                   child: Text(
                     current.$1 == 'archived'
                         ? 'Belum ada proyek yang diarsipkan.'
@@ -1360,14 +1314,14 @@ class _GroupState extends _WorkspaceState<GroupScreen>
       onTap: () => showMember(groupID, id),
       child: Container(
         width: 76,
-        constraints: const BoxConstraints(minHeight: 96),
-        padding: const EdgeInsets.symmetric(vertical: 4),
+        constraints: BoxConstraints(minHeight: 96),
+        padding: EdgeInsets.symmetric(vertical: 4),
         child: Column(
           children: [
             GLAvatar(user: store.user(id), size: 48, fontSize: 14),
-            const SizedBox(height: 4),
+            SizedBox(height: 4),
             ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 72),
+              constraints: BoxConstraints(maxWidth: 72),
               child: Text(
                 name,
                 maxLines: 1,
@@ -1376,12 +1330,12 @@ class _GroupState extends _WorkspaceState<GroupScreen>
                 style: gl(13, w600),
               ),
             ),
-            const SizedBox(height: 4),
+            SizedBox(height: 4),
             Container(
-              padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 7),
+              padding: EdgeInsets.symmetric(vertical: 2, horizontal: 7),
               decoration: ShapeDecoration(
                 color: isC ? GLTheme.mint : Colors.transparent,
-                shape: const StadiumBorder(),
+                shape: StadiumBorder(),
               ),
               child: Text(
                 role,
@@ -1409,15 +1363,15 @@ class _GroupProjectCard extends StatelessWidget {
         .toList();
     final done = tasks.where((t) => t.text('status') == 'done').length;
     final (label, background, icon) = switch (project.text('status')) {
-      'archived' => ('Diarsipkan', const Color(0xFFECEEEB), 'archivebox'),
+      'archived' => ('Diarsipkan', GLTheme.chip, 'archivebox'),
       'completed' => ('Selesai', GLTheme.mint, 'checkmark.circle'),
       _ => ('Aktif', GLTheme.sky, 'bolt'),
     };
     final due = project.date('dueAt');
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: glBox(Colors.white, 24, shadow: true),
+      padding: EdgeInsets.all(16),
+      decoration: glBox(GLTheme.surface, 24, shadow: true),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1427,20 +1381,20 @@ class _GroupProjectCard extends StatelessWidget {
                 width: 12,
                 height: 40,
                 decoration: glBox(
-                  glHex(
+                  glTint(
                     store.group(project.text('groupID'))?.text('tint'),
-                    Colors.white,
+                    GLTheme.surface,
                   ),
                   6,
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(project.text('title'), style: gl(16, w600)),
-                    const SizedBox(height: 2),
+                    SizedBox(height: 2),
                     Text(
                       'Deadline ${due == null ? '-' : GLFormat.date(due)}',
                       style: gl(13, w400, 0, GLTheme.secondary),
@@ -1448,26 +1402,26 @@ class _GroupProjectCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               Container(
                 height: 28,
-                padding: const EdgeInsets.only(left: 7, right: 10),
+                padding: EdgeInsets.only(left: 7, right: 10),
                 decoration: ShapeDecoration(
                   color: background,
-                  shape: const StadiumBorder(),
+                  shape: StadiumBorder(),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     GLIcon(icon, size: 15),
-                    const SizedBox(width: 4),
+                    SizedBox(width: 4),
                     Text(label, maxLines: 1, style: gl(12, w600)),
                   ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          SizedBox(height: 10),
           Row(
             children: [
               Expanded(
@@ -1475,13 +1429,13 @@ class _GroupProjectCard extends StatelessWidget {
                   value: tasks.isEmpty ? 0 : done / tasks.length,
                 ),
               ),
-              const SizedBox(width: 10),
+              SizedBox(width: 10),
               Text(
                 '$done/${tasks.length} selesai',
                 style: gl(
                   13,
                   w600,
-                ).copyWith(fontFeatures: const [FontFeature.tabularFigures()]),
+                ).copyWith(fontFeatures: [FontFeature.tabularFigures()]),
               ),
             ],
           ),
@@ -1508,7 +1462,7 @@ class _GroupMembersState extends _WorkspaceState<_GroupMembersScreen>
     builder: (context, _) {
       final groupID = widget.groupID;
       final group = store.group(groupID);
-      if (!_member(store, group)) return const GLAccessDenied();
+      if (!_member(store, group)) return GLAccessDenied();
       final coord = _coordinator(store, group);
       final members = group!.ids('memberIDs');
       return detailPage(
@@ -1522,13 +1476,13 @@ class _GroupMembersState extends _WorkspaceState<_GroupMembersScreen>
                   style: gl(15, w400, 0, GLTheme.text3),
                 ),
               ),
-              const SizedBox(width: 10),
+              SizedBox(width: 10),
               GLTap(
                 onTap: () => createInvite(groupID),
                 child: Container(
                   height: 44,
-                  padding: const EdgeInsets.only(left: 12, right: 16),
-                  decoration: const ShapeDecoration(
+                  padding: EdgeInsets.only(left: 12, right: 16),
+                  decoration: ShapeDecoration(
                     color: GLTheme.ink,
                     shape: StadiumBorder(),
                   ),
@@ -1538,12 +1492,12 @@ class _GroupMembersState extends _WorkspaceState<_GroupMembersScreen>
                       GLIcon(
                         coord ? 'person.badge.plus' : 'lock',
                         size: 19,
-                        color: Colors.white,
+                        color: GLTheme.onInk,
                       ),
-                      const SizedBox(width: 6),
+                      SizedBox(width: 6),
                       Text(
                         'Undang anggota',
-                        style: gl(14, w600, 0, Colors.white),
+                        style: gl(14, w600, 0, GLTheme.onInk),
                       ),
                     ],
                   ),
@@ -1552,8 +1506,8 @@ class _GroupMembersState extends _WorkspaceState<_GroupMembersScreen>
             ],
           ),
           Container(
-            padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 14),
-            decoration: glBox(Colors.white, 24),
+            padding: EdgeInsets.symmetric(vertical: 4, horizontal: 14),
+            decoration: glBox(GLTheme.surface, 24),
             child: Column(
               children: [
                 for (final id in members)
@@ -1566,7 +1520,7 @@ class _GroupMembersState extends _WorkspaceState<_GroupMembersScreen>
           ),
           if (members.length == 1)
             Container(
-              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+              padding: EdgeInsets.symmetric(vertical: 14, horizontal: 16),
               decoration: glBox(GLTheme.muted, 20),
               child: Text(
                 'Belum ada anggota lain. Bagikan kode undangan supaya teman bisa bergabung.',
@@ -1585,19 +1539,19 @@ class _GroupMembersState extends _WorkspaceState<_GroupMembersScreen>
     final name =
         '${store.user(id)?.text('name') ?? 'Pengguna'}${id == store.currentUserID ? ' (kamu)' : ''}';
     return Container(
-      constraints: const BoxConstraints(minHeight: 64),
-      padding: const EdgeInsets.symmetric(vertical: 10),
+      constraints: BoxConstraints(minHeight: 64),
+      padding: EdgeInsets.symmetric(vertical: 10),
       decoration: _grHairline,
       child: Row(
         children: [
           GLAvatar(user: store.user(id), size: 44, fontSize: 14),
-          const SizedBox(width: 12),
+          SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(name, style: gl(16, w600)),
-                const SizedBox(height: 2),
+                SizedBox(height: 2),
                 Text(
                   '${isC ? 'Koordinator' : 'Anggota'} · ${_grTaskCount(store, widget.groupID, id, done: false)} tugas aktif',
                   style: gl(13, w400, 0, GLTheme.secondary),
@@ -1606,16 +1560,16 @@ class _GroupMembersState extends _WorkspaceState<_GroupMembersScreen>
             ),
           ),
           if (isC) ...[
-            const SizedBox(width: 12),
-            const _GroupsSmallChip(
+            SizedBox(width: 12),
+            _GroupsSmallChip(
               label: 'Koordinator',
               icon: 'person.badge.shield.checkmark',
               background: GLTheme.mint,
             ),
           ],
           if (blocked) ...[
-            const SizedBox(width: 12),
-            const _GroupsSmallChip(
+            SizedBox(width: 12),
+            _GroupsSmallChip(
               label: 'Diblokir',
               icon: 'nosign',
               background: GLTheme.coral,
@@ -1639,16 +1593,13 @@ class _GroupsSmallChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     height: 26,
-    padding: const EdgeInsets.only(left: 6, right: 9),
-    decoration: ShapeDecoration(
-      color: background,
-      shape: const StadiumBorder(),
-    ),
+    padding: EdgeInsets.only(left: 6, right: 9),
+    decoration: ShapeDecoration(color: background, shape: StadiumBorder()),
     child: Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         GLIcon(icon, size: 15),
-        const SizedBox(width: 3),
+        SizedBox(width: 3),
         Text(label, maxLines: 1, style: gl(12, w600)),
       ],
     ),
@@ -1673,12 +1624,12 @@ class _GroupLeaveButton extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const GLIcon(
+          GLIcon(
             'rectangle.portrait.and.arrow.right',
             size: 19,
             color: GLTheme.danger,
           ),
-          const SizedBox(width: 6),
+          SizedBox(width: 6),
           Flexible(
             child: Text(
               'Keluar dari grup',
@@ -1784,15 +1735,15 @@ class _GroupSettingsState extends _WorkspaceState<_GroupSettingsScreen>
   }) => GLTap(
     onTap: onTap,
     child: Container(
-      constraints: const BoxConstraints(minHeight: 58),
+      constraints: BoxConstraints(minHeight: 58),
       decoration: divider ? _grHairline : null,
       child: Row(
         children: [
           GLIcon(icon, size: 22),
-          const SizedBox(width: 12),
+          SizedBox(width: 12),
           Expanded(child: Text(title, style: gl(16, w600))),
-          const SizedBox(width: 12),
-          const GLIcon('chevron.right', size: 22, color: GLTheme.secondary),
+          SizedBox(width: 12),
+          GLIcon('chevron.right', size: 22, color: GLTheme.secondary),
         ],
       ),
     ),
@@ -1804,14 +1755,14 @@ class _GroupSettingsState extends _WorkspaceState<_GroupSettingsScreen>
     builder: (context, _) {
       final groupID = widget.groupID;
       final group = store.group(groupID);
-      if (!_member(store, group)) return const GLAccessDenied();
+      if (!_member(store, group)) return GLAccessDenied();
       final coord = _coordinator(store, group);
       return detailPage(
         title: 'Pengaturan grup',
         children: [
           Container(
-            padding: const EdgeInsets.all(18),
-            decoration: glBox(Colors.white, 24),
+            padding: EdgeInsets.all(18),
+            decoration: glBox(GLTheme.surface, 24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -1819,7 +1770,7 @@ class _GroupSettingsState extends _WorkspaceState<_GroupSettingsScreen>
                   'Nama grup',
                   child: _input(name, enabled: coord, max: 40),
                 ),
-                const SizedBox(height: 14),
+                SizedBox(height: 14),
                 GLField(
                   'Deskripsi',
                   trailing: '${desc.text.length}/140',
@@ -1833,10 +1784,10 @@ class _GroupSettingsState extends _WorkspaceState<_GroupSettingsScreen>
                   ),
                 ),
                 if (error != null) ...[
-                  const SizedBox(height: 14),
+                  SizedBox(height: 14),
                   GLFormError(error!),
                 ],
-                const SizedBox(height: 14),
+                SizedBox(height: 14),
                 if (coord)
                   GLTap(
                     onTap: busy ? null : () => _save(group!),
@@ -1848,7 +1799,7 @@ class _GroupSettingsState extends _WorkspaceState<_GroupSettingsScreen>
                         decoration: glBox(GLTheme.ink, 16),
                         child: Text(
                           busy ? 'Menyimpan…' : 'Simpan',
-                          style: gl(16, w600, 0, Colors.white),
+                          style: gl(16, w600, 0, GLTheme.onInk),
                         ),
                       ),
                     ),
@@ -1856,8 +1807,8 @@ class _GroupSettingsState extends _WorkspaceState<_GroupSettingsScreen>
                 else
                   Row(
                     children: [
-                      const GLIcon('lock', size: 18, color: GLTheme.text3),
-                      const SizedBox(width: 6),
+                      GLIcon('lock', size: 18, color: GLTheme.text3),
+                      SizedBox(width: 6),
                       Expanded(
                         child: Text(
                           'Hanya koordinator yang bisa mengubah pengaturan grup.',
@@ -1870,8 +1821,8 @@ class _GroupSettingsState extends _WorkspaceState<_GroupSettingsScreen>
             ),
           ),
           Container(
-            padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
-            decoration: glBox(Colors.white, 24),
+            padding: EdgeInsets.symmetric(vertical: 4, horizontal: 16),
+            decoration: glBox(GLTheme.surface, 24),
             child: Column(
               children: [
                 _settingsRow(
@@ -1930,24 +1881,6 @@ class _GroupFormSheetState extends State<_GroupFormSheet> {
     super.dispose();
   }
 
-  /// Demo sample codes (Swift lists its seed codes; ours come from the seed).
-  List<(String, String)> get samples => [
-    for (final invite in store.invites.where(
-      (i) =>
-          i.text('code').isNotEmpty &&
-          !_member(store, store.group(i.text('groupID'))),
-    ))
-      (
-        invite.text('code'),
-        switch (_grInviteStatus(store, invite)) {
-          'valid' => 'valid',
-          'used' => 'sudah dipakai',
-          'expired' => 'kedaluwarsa',
-          _ => 'dinonaktifkan',
-        },
-      ),
-  ].take(4).toList();
-
   Future<void> _submit(String action, JsonMap payload, String success) async {
     if (saving || store.loading) return;
     setState(() {
@@ -1993,11 +1926,10 @@ class _GroupFormSheetState extends State<_GroupFormSheet> {
     final raw = code.text.trim();
     final parts = raw.split('/invite/');
     final token = parts.length > 1 ? parts[1] : raw;
-    // Cloud tokens are case-sensitive hex; demo codes are uppercase.
-    final parsed = store.demoMode ? token.toUpperCase() : token;
-    final problem = _grJoinError(store, parsed);
+    // Cloud tokens are case-sensitive hex; send them as typed.
+    final problem = _grJoinError(token);
     if (problem != null) return setState(() => error = problem);
-    _submit('joinGroup', {'code': parsed}, 'Kamu bergabung ke {group}');
+    _submit('joinGroup', {'code': token}, 'Kamu bergabung ke {group}');
   }
 
   Widget _field(
@@ -2028,7 +1960,7 @@ class _GroupFormSheetState extends State<_GroupFormSheet> {
         maxLines: null,
         decoration: glInputDecoration(
           hint: hint,
-        ).copyWith(contentPadding: const EdgeInsets.symmetric(horizontal: 16)),
+        ).copyWith(contentPadding: EdgeInsets.symmetric(horizontal: 16)),
       ),
     ),
   );
@@ -2049,57 +1981,9 @@ class _GroupFormSheetState extends State<_GroupFormSheet> {
                 style: gl(18, w600, 0.06, GLTheme.ink),
               ),
             ),
-            if (store.demoMode && samples.isNotEmpty)
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        height: 20,
-                        padding: const EdgeInsets.symmetric(horizontal: 7),
-                        alignment: Alignment.center,
-                        decoration: const ShapeDecoration(
-                          color: GLTheme.butter,
-                          shape: StadiumBorder(),
-                        ),
-                        child: Text('DEMO', style: gl(11, w700)),
-                      ),
-                      const SizedBox(width: 6),
-                      Text('Coba kode contoh', style: gl(13, w600)),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: [
-                      for (final (value, label) in samples)
-                        GLTap(
-                          onTap: () => setState(() {
-                            code.text = value;
-                            error = null;
-                          }),
-                          child: Container(
-                            height: 40,
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            alignment: Alignment.center,
-                            decoration: const ShapeDecoration(
-                              color: Colors.white,
-                              shape: StadiumBorder(
-                                side: BorderSide(color: GLTheme.border),
-                              ),
-                            ),
-                            child: Text('$value · $label', style: gl(13, w600)),
-                          ),
-                        ),
-                    ],
-                  ),
-                ],
-              ),
             if (error != null) GLFormError(error!),
             GLSubmitButton(
-              key: const Key('group-save'),
+              key: Key('group-save'),
               title: busy ? 'Bergabung…' : 'Gabung',
               busy: busy,
               onPressed: _join,
@@ -2131,7 +2015,7 @@ class _GroupFormSheetState extends State<_GroupFormSheet> {
             ),
             if (error != null) GLFormError(error!),
             GLSubmitButton(
-              key: const Key('group-save'),
+              key: Key('group-save'),
               title: busy ? 'Membuat…' : 'Buat grup',
               busy: busy,
               onPressed: _create,
@@ -2143,7 +2027,7 @@ class _GroupFormSheetState extends State<_GroupFormSheet> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           for (final child in children) ...[
-            if (child != children.first) const SizedBox(height: 16),
+            if (child != children.first) SizedBox(height: 16),
             child,
           ],
         ],

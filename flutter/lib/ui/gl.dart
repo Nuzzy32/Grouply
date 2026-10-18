@@ -11,14 +11,34 @@ import '../theme.dart';
 export '../theme.dart';
 
 /// `Color(hex:)` — accepts "#DED2FF" or "DED2FF".
-Color glHex(String? hex, [Color fallback = GLTheme.lavender]) {
+Color glTint(String? hex, [Color? fallback]) {
   final value = int.tryParse((hex ?? '').replaceAll('#', ''), radix: 16);
-  return value == null ? fallback : Color(0xFF000000 | value);
+  if (value == null) return fallback ?? GLTheme.lavender;
+  if (!GLTheme.dark) return Color(0xFF000000 | value);
+  const mapped = <int, int>{
+    0xDED2FF: 0x3A3354,
+    0xC9F2D6: 0x1F3D2B,
+    0xD8EAF4: 0x1E3442,
+    0xF9E9BE: 0x413720,
+    0xF6CED1: 0x47282B,
+    0xECEEEB: 0x26292B,
+    0xFFFFFF: 0x1C1E20,
+  };
+  final direct = mapped[value];
+  if (direct != null) return Color(0xFF000000 | direct);
+  // 28% of the stored hex over the dark surface 1C1E20, per channel (as Swift `Color(tint:)`).
+  int mix(int channel, int base) => (channel * 0.28 + base * 0.72).floor();
+  return Color.fromARGB(
+    255,
+    mix((value >> 16) & 0xFF, 0x1C),
+    mix((value >> 8) & 0xFF, 0x1E),
+    mix(value & 0xFF, 0x20),
+  );
 }
 
 /// SwiftUI renders SF with Display optics from ~19pt and applies Apple's size-specific
 /// tracking; Flutter does neither, so mirror both (HIG tracking table, pt).
-const _tracking = <int, double>{
+final _tracking = <int, double>{
   // SF Pro Text
   11: 0.06, 12: 0, 13: -0.08, 14: -0.15, 15: -0.23, 16: -0.31, 17: -0.43,
   18: -0.44,
@@ -55,7 +75,6 @@ TextStyle gl(
   height: (size * 1.19 + lineSpacing) / size,
   leadingDistribution: TextLeadingDistribution.even,
 );
-
 const w400 = FontWeight.w400;
 const w500 = FontWeight.w500;
 const w600 = FontWeight.w600;
@@ -63,7 +82,7 @@ const w700 = FontWeight.w700;
 const w800 = FontWeight.w800;
 
 // SF Symbol name → glyph. Cupertino icons are the SF-style set; Material fills gaps.
-const _symbols = <String, IconData>{
+final _symbols = <String, IconData>{
   'archivebox': CupertinoIcons.archivebox,
   'arrow.clockwise': CupertinoIcons.arrow_clockwise,
   'arrow.counterclockwise': CupertinoIcons.arrow_counterclockwise,
@@ -145,7 +164,7 @@ const _symbols = <String, IconData>{
 };
 
 // Cupertino draws these glyphs smaller than the SF Symbols they stand in for.
-const _wide = {
+final _wide = {
   'person.2': 1.15,
   'person.2.fill': 1.15,
   'person.3': 1.35,
@@ -199,7 +218,7 @@ ShapeDecoration glBox(
           side: BorderSide(color: border, width: borderWidth),
         ),
   shadows: shadow
-      ? const [
+      ? [
           BoxShadow(
             color: Color(0x0A000000),
             blurRadius: 2,
@@ -215,32 +234,32 @@ class GLSurface extends StatelessWidget {
     super.key,
     required this.child,
     this.radius = 24,
-    this.color = Colors.white,
+    this.color,
     this.padding = EdgeInsets.zero,
   });
   final Widget child;
   final double radius;
-  final Color color;
+  final Color? color;
   final EdgeInsetsGeometry padding;
   @override
   Widget build(BuildContext context) => Container(
     width: double.infinity,
     padding: padding,
-    decoration: glBox(color, radius, shadow: true),
+    decoration: glBox(color ?? GLTheme.surface, radius, shadow: true),
     child: child,
   );
 }
 
 /// `.glCard(color)` — 18pt padding, radius 24, full width.
 class GLCard extends StatelessWidget {
-  const GLCard({super.key, required this.child, this.color = Colors.white});
+  const GLCard({super.key, required this.child, this.color});
   final Widget child;
-  final Color color;
+  final Color? color;
   @override
   Widget build(BuildContext context) => Container(
     width: double.infinity,
-    padding: const EdgeInsets.all(18),
-    decoration: glBox(color, 24),
+    padding: EdgeInsets.all(18),
+    decoration: glBox(color ?? GLTheme.surface, 24),
     child: child,
   );
 }
@@ -289,7 +308,7 @@ class _GLTapState extends State<GLTap> {
       child: widget.scale
           ? AnimatedScale(
               scale: _down ? 0.98 : 1,
-              duration: const Duration(milliseconds: 150),
+              duration: Duration(milliseconds: 150),
               curve: Curves.easeOut,
               child: widget.child,
             )
@@ -306,13 +325,13 @@ class GLInkButton extends StatelessWidget {
     required this.onPressed,
     this.radius = 20,
     this.height = 58,
-    this.color = GLTheme.ink,
+    this.color,
   });
   final Widget child;
   final VoidCallback? onPressed;
   final double radius;
   final double height;
-  final Color color;
+  final Color? color;
   @override
   Widget build(BuildContext context) => GLTap.card(
     onTap: onPressed,
@@ -320,13 +339,15 @@ class GLInkButton extends StatelessWidget {
       constraints: BoxConstraints(minHeight: height),
       alignment: Alignment.center,
       decoration: glBox(
-        onPressed == null ? color.withValues(alpha: 0.35) : color,
+        onPressed == null
+            ? (color ?? GLTheme.ink).withValues(alpha: 0.35)
+            : (color ?? GLTheme.ink),
         radius,
       ),
       child: DefaultTextStyle.merge(
-        style: const TextStyle(color: Colors.white),
+        style: TextStyle(color: GLTheme.onInk),
         child: IconTheme.merge(
-          data: const IconThemeData(color: Colors.white),
+          data: IconThemeData(color: GLTheme.onInk),
           child: child,
         ),
       ),
@@ -351,10 +372,7 @@ class GLPrimaryButton extends StatelessWidget {
     child: Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (icon != null) ...[
-          GLIcon(icon!, size: 22),
-          const SizedBox(width: 8),
-        ],
+        if (icon != null) ...[GLIcon(icon!, size: 22), SizedBox(width: 8)],
         Text(title, style: gl(17, w600)),
       ],
     ),
@@ -386,7 +404,7 @@ class GLAvatar extends StatelessWidget {
         height: size,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: glHex(user?.text('tint')),
+          color: glTint(user?.text('tint')),
           shape: BoxShape.circle,
         ),
         child: Text(
@@ -410,8 +428,8 @@ class GLChip extends StatelessWidget {
     super.key,
     required this.label,
     this.icon,
-    this.background = GLTheme.muted,
-    this.foreground = GLTheme.ink,
+    this.background,
+    this.foreground,
     this.outlined = false,
     this.height = 28,
     this.fontSize = 13,
@@ -419,8 +437,8 @@ class GLChip extends StatelessWidget {
   });
   final String label;
   final String? icon;
-  final Color background;
-  final Color foreground;
+  final Color? background;
+  final Color? foreground;
   final bool outlined;
   final double height;
   final double fontSize;
@@ -438,7 +456,7 @@ class GLChip extends StatelessWidget {
         color: background,
         shape: StadiumBorder(
           side: outlined
-              ? const BorderSide(color: GLTheme.ink, width: 1.5)
+              ? BorderSide(color: GLTheme.ink, width: 1.5)
               : BorderSide.none,
         ),
       ),
@@ -473,20 +491,17 @@ class GLCountBadge extends StatelessWidget {
     constraints: BoxConstraints(minWidth: size, minHeight: size),
     padding: EdgeInsets.symmetric(horizontal: size >= 30 ? 9 : 7),
     alignment: Alignment.center,
-    decoration: const ShapeDecoration(
-      color: GLTheme.ink,
-      shape: StadiumBorder(),
-    ),
+    decoration: ShapeDecoration(color: GLTheme.ink, shape: StadiumBorder()),
     child: Text(
       '$count',
-      style: gl(size >= 30 ? 14 : 12, w700, 0, Colors.white),
+      style: gl(size >= 30 ? 14 : 12, w700, 0, GLTheme.onInk),
     ),
   );
 }
 
 /// `TaskStatus` label / icon / tint, keyed by the raw status string.
 abstract final class GLStatus {
-  static const all = [
+  static final all = [
     'todo',
     'in_progress',
     'in_review',
@@ -535,22 +550,22 @@ class GLNotice extends StatelessWidget {
   const GLNotice({
     super.key,
     required this.text,
-    this.color = GLTheme.butter,
+    this.color,
     this.icon = 'info.circle',
   });
   final String text;
-  final Color color;
+  final Color? color;
   final String icon;
   @override
   Widget build(BuildContext context) => Container(
     width: double.infinity,
-    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
-    decoration: glBox(color, 18),
+    padding: EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+    decoration: glBox(color ?? GLTheme.butter, 18),
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         GLIcon(icon, size: 20),
-        const SizedBox(width: 10),
+        SizedBox(width: 10),
         Expanded(child: Text(text, style: gl(14, w400, 0, null, 3))),
       ],
     ),
@@ -564,28 +579,28 @@ class GLEmptyState extends StatelessWidget {
     required this.title,
     required this.message,
     required this.icon,
-    this.tint = GLTheme.mint,
+    this.tint,
   });
   final String title;
   final String message;
   final String icon;
-  final Color tint;
+  final Color? tint;
   @override
   Widget build(BuildContext context) => Container(
     width: double.infinity,
-    padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 22),
-    decoration: glBox(Colors.white, 28),
+    padding: EdgeInsets.symmetric(vertical: 28, horizontal: 22),
+    decoration: glBox(GLTheme.surface, 28),
     child: Column(
       children: [
         Container(
           width: 56,
           height: 56,
-          decoration: glBox(tint, 20),
+          decoration: glBox(tint ?? GLTheme.mint, 20),
           child: GLIcon(icon, size: 28),
         ),
-        const SizedBox(height: 10),
+        SizedBox(height: 10),
         Text(title, textAlign: TextAlign.center, style: gl(19, w700)),
-        const SizedBox(height: 10),
+        SizedBox(height: 10),
         Text(
           message,
           textAlign: TextAlign.center,
@@ -616,13 +631,13 @@ class GLSectionHeading extends StatelessWidget {
           onTap: onAction,
           child: Container(
             height: 44,
-            padding: const EdgeInsets.only(left: 12, right: 4),
+            padding: EdgeInsets.only(left: 12, right: 4),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(actionTitle!, style: gl(15, w600)),
-                const SizedBox(width: 2),
-                const GLIcon('chevron.right', size: 20),
+                SizedBox(width: 2),
+                GLIcon('chevron.right', size: 20),
               ],
             ),
           ),
@@ -633,16 +648,16 @@ class GLSectionHeading extends StatelessWidget {
 
 /// `GLFormat` — Indonesian short dates matching the Swift helpers.
 abstract final class GLFormat {
-  static const months = [
+  static final months = [
     'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', //
     'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des',
   ];
-  static const monthsLong = [
+  static final monthsLong = [
     'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', //
     'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
   ];
-  static const weekdays = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
-  static const weekdaysLong = [
+  static final weekdays = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
+  static final weekdaysLong = [
     'Senin',
     'Selasa',
     'Rabu',
@@ -734,12 +749,12 @@ class GLCircleButton extends StatelessWidget {
     required this.label,
     required this.onTap,
     this.iconSize = 22,
-    this.background = Colors.white,
+    this.background,
   });
   final String icon;
   final String label;
   final double iconSize;
-  final Color background;
+  final Color? background;
   final VoidCallback? onTap;
   @override
   Widget build(BuildContext context) => GLTap(
@@ -749,9 +764,9 @@ class GLCircleButton extends StatelessWidget {
       width: 44,
       height: 44,
       decoration: BoxDecoration(
-        color: background,
+        color: background ?? GLTheme.raised,
         shape: BoxShape.circle,
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
             color: Color(0x0F000000),
             blurRadius: 2,
@@ -779,7 +794,7 @@ class GLDetailHeader extends StatelessWidget {
         iconSize: 24,
         onTap: onBack ?? () => Navigator.of(context).maybePop(),
       ),
-      const SizedBox(width: 8),
+      SizedBox(width: 8),
       Expanded(
         child: Text(
           title,
@@ -789,7 +804,7 @@ class GLDetailHeader extends StatelessWidget {
           style: gl(17, w600),
         ),
       ),
-      const SizedBox(width: 8),
+      SizedBox(width: 8),
       SizedBox(width: 44, height: 44, child: Center(child: trailing)),
     ],
   );
@@ -816,11 +831,9 @@ class GLDetailScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Widget list = ListView(
-      physics: const AlwaysScrollableScrollPhysics(
-        parent: BouncingScrollPhysics(),
-      ),
+      physics: AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-      padding: const EdgeInsets.fromLTRB(20, 10, 20, 32),
+      padding: EdgeInsets.fromLTRB(20, 10, 20, 32),
       children: [
         GLDetailHeader(title, trailing: trailing),
         for (final child in children) ...[SizedBox(height: spacing), child],
@@ -856,16 +869,16 @@ Future<T?> showGLSheet<T>(
   isScrollControlled: true,
   useSafeArea: true,
   backgroundColor: GLTheme.background,
-  barrierColor: const Color(0x66000000),
-  shape: const RoundedRectangleBorder(
+  barrierColor: Color(0x66000000),
+  shape: RoundedRectangleBorder(
     borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
   ),
   builder: (context) => Padding(
     padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
     child: SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(20, 10, 20, 34),
+      padding: EdgeInsets.fromLTRB(20, 10, 20, 34),
       child: DefaultTextStyle.merge(
-        style: const TextStyle(color: GLTheme.ink),
+        style: TextStyle(color: GLTheme.ink),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -874,37 +887,37 @@ Future<T?> showGLSheet<T>(
               child: Container(
                 width: 38,
                 height: 5,
-                decoration: const ShapeDecoration(
-                  color: Color(0xFFC4C7C5),
+                decoration: ShapeDecoration(
+                  color: GLTheme.disabled,
                   shape: StadiumBorder(),
                 ),
               ),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             Row(
               children: [
                 Expanded(child: Text(title, style: gl(22, w700, -0.02))),
-                const SizedBox(width: 8),
+                SizedBox(width: 8),
                 GLTap(
                   label: 'Tutup',
                   onTap: () => Navigator.of(context).pop(),
                   child: Container(
                     width: 44,
                     height: 44,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFECEEEB),
+                    decoration: BoxDecoration(
+                      color: GLTheme.chip,
                       shape: BoxShape.circle,
                     ),
-                    child: const GLIcon('xmark', size: 22),
+                    child: GLIcon('xmark', size: 22),
                   ),
                 ),
               ],
             ),
             if (subtitle != null) ...[
-              const SizedBox(height: 8),
+              SizedBox(height: 8),
               Text(subtitle, style: gl(15, w400, 0, GLTheme.text3, 3)),
             ],
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             Builder(builder: builder),
           ],
         ),
@@ -938,7 +951,7 @@ class GLField extends StatelessWidget {
                 text: label,
                 children: [
                   if (required)
-                    const TextSpan(
+                    TextSpan(
                       text: ' *',
                       style: TextStyle(color: GLTheme.danger),
                     ),
@@ -951,7 +964,7 @@ class GLField extends StatelessWidget {
             Text(trailing!, style: gl(13, w400, 0, GLTheme.secondary)),
         ],
       ),
-      const SizedBox(height: 6),
+      SizedBox(height: 6),
       child,
     ],
   );
@@ -966,11 +979,11 @@ InputDecoration glInputDecoration({String? hint, double radius = 16}) {
       );
   return InputDecoration(
     hintText: hint,
-    hintStyle: gl(16, w400, 0, const Color(0xFFA0A4A8)),
+    hintStyle: gl(16, w400, 0, GLTheme.placeholder),
     isDense: true,
     filled: true,
-    fillColor: Colors.white,
-    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+    fillColor: GLTheme.surface,
+    contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 15),
     border: border(GLTheme.border),
     enabledBorder: border(GLTheme.border),
     focusedBorder: border(GLTheme.ink, 1.5),
@@ -1044,12 +1057,12 @@ class GLFormError extends StatelessWidget {
   Widget build(BuildContext context) => MergeSemantics(
     child: Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+      padding: EdgeInsets.symmetric(vertical: 12, horizontal: 14),
       decoration: glBox(GLTheme.coral, 16),
       child: Row(
         children: [
-          const GLIcon('exclamationmark.circle', size: 18),
-          const SizedBox(width: 8),
+          GLIcon('exclamationmark.circle', size: 18),
+          SizedBox(width: 8),
           Expanded(child: Text(text, style: gl(14, w500))),
         ],
       ),
@@ -1064,11 +1077,11 @@ class GLSubmitButton extends StatelessWidget {
     required this.title,
     required this.onPressed,
     this.busy = false,
-    this.background = GLTheme.ink,
+    this.background,
   });
   final String title;
   final bool busy;
-  final Color background;
+  final Color? background;
   final VoidCallback? onPressed;
   @override
   Widget build(BuildContext context) => Semantics(
@@ -1081,15 +1094,15 @@ class GLSubmitButton extends StatelessWidget {
         opacity: busy || onPressed == null ? 0.6 : 1,
         child: Container(
           height: 56,
-          decoration: glBox(background, 20),
+          decoration: glBox(background ?? GLTheme.ink, 20),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               if (busy) ...[
-                const CupertinoActivityIndicator(color: Colors.white),
-                const SizedBox(width: 8),
+                CupertinoActivityIndicator(color: GLTheme.onInk),
+                SizedBox(width: 8),
               ],
-              Text(title, style: gl(17, w600, 0, Colors.white)),
+              Text(title, style: gl(17, w600, 0, GLTheme.onInk)),
             ],
           ),
         ),
@@ -1131,10 +1144,7 @@ class GLOutlineButton extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            if (icon != null) ...[
-              GLIcon(icon!, size: 19),
-              const SizedBox(width: 6),
-            ],
+            if (icon != null) ...[GLIcon(icon!, size: 19), SizedBox(width: 6)],
             Flexible(
               child: Text(
                 title,
@@ -1164,46 +1174,46 @@ Future<bool> showGLConfirm(
       context: context,
       barrierDismissible: true,
       barrierLabel: 'Tutup',
-      barrierColor: const Color(0x66141618),
-      transitionDuration: const Duration(milliseconds: 150),
+      barrierColor: Color(0x66141618),
+      transitionDuration: Duration(milliseconds: 150),
       transitionBuilder: (_, animation, _, child) =>
           FadeTransition(opacity: animation, child: child),
       pageBuilder: (context, _, _) => Center(
         child: Padding(
-          padding: const EdgeInsets.all(28),
+          padding: EdgeInsets.all(28),
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 340),
+            constraints: BoxConstraints(maxWidth: 340),
             child: Material(
               type: MaterialType.transparency,
               child: Container(
-                padding: const EdgeInsets.all(22),
-                decoration: glBox(Colors.white, 28),
+                padding: EdgeInsets.all(22),
+                decoration: glBox(GLTheme.surface, 28),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(title, style: gl(19, w700, -0.01, GLTheme.ink)),
-                    const SizedBox(height: 12),
+                    SizedBox(height: 12),
                     Text(text, style: gl(15, w400, 0, GLTheme.text3, 4)),
-                    const SizedBox(height: 18),
+                    SizedBox(height: 18),
                     Row(
                       children: [
                         if (!info) ...[
                           Expanded(
                             child: _DialogButton(
                               title: 'Batal',
-                              color: const Color(0xFFECEEEB),
+                              color: GLTheme.chip,
                               foreground: GLTheme.ink,
                               onTap: () => Navigator.of(context).pop(false),
                             ),
                           ),
-                          const SizedBox(width: 10),
+                          SizedBox(width: 10),
                         ],
                         Expanded(
                           child: _DialogButton(
                             title: ok,
                             color: destructive ? GLTheme.danger : GLTheme.ink,
-                            foreground: Colors.white,
+                            foreground: GLTheme.onInk,
                             onTap: () => Navigator.of(context).pop(true),
                           ),
                         ),
@@ -1271,7 +1281,7 @@ void showGLToast(
   );
   _toast = entry;
   overlay.insert(entry);
-  _toastTimer = Timer(const Duration(milliseconds: 2400), () {
+  _toastTimer = Timer(Duration(milliseconds: 2400), () {
     if (_toast == entry) _toast = null;
     entry.remove();
   });
@@ -1289,15 +1299,15 @@ class GLToastView extends StatelessWidget {
   Widget build(BuildContext context) => Semantics(
     liveRegion: true,
     child: Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: EdgeInsets.symmetric(horizontal: 16),
       child: Material(
         type: MaterialType.transparency,
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+          padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
           decoration: ShapeDecoration(
             color: GLTheme.ink,
             shape: glShape(20),
-            shadows: const [
+            shadows: [
               BoxShadow(
                 color: Color(0x66000000),
                 blurRadius: 30,
@@ -1321,9 +1331,9 @@ class GLToastView extends StatelessWidget {
                   GLToastKind.ok => GLTheme.mint,
                 },
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               Flexible(
-                child: Text(text, style: gl(14, w500, 0, Colors.white, 2)),
+                child: Text(text, style: gl(14, w500, 0, GLTheme.onInk, 2)),
               ),
             ],
           ),
@@ -1346,7 +1356,7 @@ class GLAccessDenied extends StatelessWidget {
     backgroundColor: GLTheme.background,
     body: SafeArea(
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 10, 20, 32),
+        padding: EdgeInsets.fromLTRB(20, 10, 20, 32),
         children: [
           Align(
             alignment: Alignment.centerLeft,
@@ -1357,7 +1367,7 @@ class GLAccessDenied extends StatelessWidget {
               onTap: () => Navigator.of(context).maybePop(),
             ),
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: 20),
           GLEmptyState(
             title: 'Kamu tidak punya akses',
             message: text,
@@ -1382,10 +1392,10 @@ class GLProgressBar extends StatelessWidget {
       height: height,
       child: Stack(
         children: [
-          const Positioned.fill(child: ColoredBox(color: GLTheme.muted)),
+          Positioned.fill(child: ColoredBox(color: GLTheme.muted)),
           FractionallySizedBox(
             widthFactor: value.clamp(0, 1),
-            child: const ColoredBox(color: GLTheme.ink),
+            child: ColoredBox(color: GLTheme.ink),
           ),
         ],
       ),
@@ -1395,8 +1405,8 @@ class GLProgressBar extends StatelessWidget {
 
 /// 1pt divider line used between list rows.
 class GLHairline extends StatelessWidget {
-  const GLHairline({super.key, this.color = GLTheme.border});
-  final Color color;
+  const GLHairline({super.key, this.color});
+  final Color? color;
   @override
   Widget build(BuildContext context) => Container(height: 1, color: color);
 }

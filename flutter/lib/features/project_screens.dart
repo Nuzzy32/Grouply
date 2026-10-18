@@ -3,15 +3,15 @@ part of 'workspace_screens.dart';
 // 1:1 port of Grouply/Features/ProjectViews.swift.
 
 TextStyle _pjDigits(TextStyle style) =>
-    style.copyWith(fontFeatures: const [FontFeature.tabularFigures()]);
+    style.copyWith(fontFeatures: [FontFeature.tabularFigures()]);
 
 /// `TaskStatus.projectRing` — pulse ring segment and legend ring colour.
 Color _pjRing(String status) => switch (status) {
-  'todo' => const Color(0xFFE6C25E),
-  'in_progress' => const Color(0xFF86B8D6),
-  'in_review' => const Color(0xFFA893EE),
-  'needs_revision' => const Color(0xFFE08C94),
-  _ => const Color(0xFF62C484),
+  'todo' => Color(0xFFE6C25E),
+  'in_progress' => Color(0xFF86B8D6),
+  'in_review' => Color(0xFFA893EE),
+  'needs_revision' => Color(0xFFE08C94),
+  _ => Color(0xFF62C484),
 };
 
 /// `TaskStatus.projectOrder` (ring + legend).
@@ -59,7 +59,7 @@ Widget _pjBar(double value, Color track) => ClipRRect(
         Positioned.fill(child: ColoredBox(color: track)),
         FractionallySizedBox(
           widthFactor: value.clamp(0, 1).toDouble(),
-          child: const SizedBox.expand(child: ColoredBox(color: GLTheme.ink)),
+          child: SizedBox.expand(child: ColoredBox(color: GLTheme.ink)),
         ),
       ],
     ),
@@ -67,7 +67,7 @@ Widget _pjBar(double value, Color track) => ClipRRect(
 );
 
 /// Capsule with 1.5pt ink stroke used by banner/header buttons.
-const _pjOutline = ShapeDecoration(
+final _pjOutline = ShapeDecoration(
   shape: StadiumBorder(side: BorderSide(color: GLTheme.ink, width: 1.5)),
 );
 
@@ -80,17 +80,14 @@ class _ProjectStatusChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (label, bg, icon) = switch (status) {
-      'archived' => ('Diarsipkan', 0xFFECEEEB, 'archivebox'),
-      'completed' => ('Selesai', 0xFFC9F2D6, 'checkmark.circle'),
-      _ => ('Aktif', 0xFFD8EAF4, 'bolt'),
+      'archived' => ('Diarsipkan', GLTheme.chip, 'archivebox'),
+      'completed' => ('Selesai', GLTheme.mint, 'checkmark.circle'),
+      _ => ('Aktif', GLTheme.sky, 'bolt'),
     };
     return Container(
       height: 28,
-      padding: const EdgeInsets.only(left: 7, right: 10),
-      decoration: ShapeDecoration(
-        color: Color(bg),
-        shape: const StadiumBorder(),
-      ),
+      padding: EdgeInsets.only(left: 7, right: 10),
+      decoration: ShapeDecoration(color: bg, shape: StadiumBorder()),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         spacing: 4,
@@ -122,7 +119,7 @@ class _ProjectTaskRow extends StatelessWidget {
       spacing: 6,
       children: [
         GLAvatar(user: store.user(assignee), size: 28, fontSize: 11),
-        const GLIcon('arrow.right', size: 16, color: GLTheme.secondary),
+        GLIcon('arrow.right', size: 16, color: GLTheme.secondary),
         GLAvatar(user: store.user(reviewer), size: 28, fontSize: 11),
         Text(
           '${_pjDisplayName(store, assignee)} → ${_pjDisplayName(store, reviewer)}',
@@ -135,7 +132,7 @@ class _ProjectTaskRow extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       spacing: 4,
       children: [
-        const GLIcon('clock', size: 17, color: GLTheme.text3),
+        GLIcon('clock', size: 17, color: GLTheme.text3),
         Text(
           due == null ? '' : GLFormat.due(due, status, now),
           style: gl(13, w400, 0, GLTheme.text3),
@@ -144,7 +141,7 @@ class _ProjectTaskRow extends StatelessWidget {
     );
     return MergeSemantics(
       child: GLSurface(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           spacing: 10,
@@ -155,7 +152,7 @@ class _ProjectTaskRow extends StatelessWidget {
               children: [
                 GLStatusChip(status: status),
                 if (overdue)
-                  const GLChip(
+                  GLChip(
                     label: 'Terlambat',
                     icon: 'exclamationmark.circle',
                     background: GLTheme.coral,
@@ -201,7 +198,7 @@ class _ProjectState extends _WorkspaceState<ProjectScreen> {
       final project = store.project(widget.projectID);
       final group = store.group(project?.text('groupID') ?? '');
       if (project == null || !_member(store, group)) {
-        return const GLAccessDenied();
+        return GLAccessDenied();
       }
       return _content(project, group!);
     },
@@ -239,17 +236,17 @@ class _ProjectState extends _WorkspaceState<ProjectScreen> {
         _hero(p, group),
         _pulse(p, group, tasks, isCoord, stale),
         Padding(
-          padding: const EdgeInsets.only(top: 4),
+          padding: EdgeInsets.only(top: 4),
           child: Row(
             spacing: 8,
             children: [
               Expanded(child: Text('Tugas', style: gl(22, w700, -0.02))),
               GLTap(
-                key: const ValueKey('add-task'),
+                key: ValueKey('add-task'),
                 onTap: () => _openNewTask(p, group),
                 child: Container(
                   height: 44,
-                  padding: const EdgeInsets.only(left: 12, right: 16),
+                  padding: EdgeInsets.only(left: 12, right: 16),
                   decoration: _pjOutline,
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -292,7 +289,7 @@ class _ProjectState extends _WorkspaceState<ProjectScreen> {
               ),
             if (shown.isEmpty)
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: 24),
+                padding: EdgeInsets.symmetric(vertical: 24),
                 child: Text(
                   tasks.isNotEmpty
                       ? 'Tidak ada tugas dengan status ini.'
@@ -313,18 +310,18 @@ class _ProjectState extends _WorkspaceState<ProjectScreen> {
   /// Latest task events in this project; each row opens its task.
   List<Widget> _activity(JsonMap p) {
     final events = _pjActivity(store, p.text('id')).take(8).toList();
-    if (events.isEmpty) return const [];
+    if (events.isEmpty) return [];
     return [
       Padding(
-        padding: const EdgeInsets.only(top: 12),
+        padding: EdgeInsets.only(top: 12),
         child: Semantics(
           header: true,
           child: Text('Aktivitas terbaru', style: gl(22, w700, -0.02)),
         ),
       ),
       Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-        decoration: glBox(Colors.white, 20, border: GLTheme.border),
+        padding: EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+        decoration: glBox(GLTheme.surface, 20, border: GLTheme.border),
         child: Column(
           children: [
             for (final m in events)
@@ -332,11 +329,11 @@ class _ProjectState extends _WorkspaceState<ProjectScreen> {
                 onTap: () =>
                     open(TaskScreen(store: store, taskID: m.text('taskID'))),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  padding: EdgeInsets.symmetric(vertical: 10),
                   child: Row(
                     spacing: 10,
                     children: [
-                      const GLIcon('bolt', size: 16, color: GLTheme.text3),
+                      GLIcon('bolt', size: 16, color: GLTheme.text3),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -375,12 +372,12 @@ class _ProjectState extends _WorkspaceState<ProjectScreen> {
   // MARK: Banners & hero
 
   Widget _archivedBanner(JsonMap p, JsonMap group) => Container(
-    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
-    decoration: glBox(const Color(0xFFECEEEB), 18),
+    padding: EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+    decoration: glBox(GLTheme.chip, 18),
     child: Row(
       spacing: 10,
       children: [
-        const GLIcon('archivebox', size: 20),
+        GLIcon('archivebox', size: 20),
         Expanded(
           child: Text(
             'Proyek ini telah diarsipkan. Informasi dan riwayatnya tetap dapat dilihat.',
@@ -393,7 +390,7 @@ class _ProjectState extends _WorkspaceState<ProjectScreen> {
             onTap: () => _archive(p, group),
             child: Container(
               height: 44,
-              padding: const EdgeInsets.symmetric(horizontal: 14),
+              padding: EdgeInsets.symmetric(horizontal: 14),
               alignment: Alignment.center,
               decoration: _pjOutline,
               child: Text(
@@ -418,7 +415,7 @@ class _ProjectState extends _WorkspaceState<ProjectScreen> {
       onTap: () => _reopen(p, group),
       child: Container(
         height: 44,
-        padding: const EdgeInsets.only(left: 10, right: 14),
+        padding: EdgeInsets.only(left: 10, right: 14),
         decoration: _pjOutline,
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -432,7 +429,7 @@ class _ProjectState extends _WorkspaceState<ProjectScreen> {
     );
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+      padding: EdgeInsets.symmetric(vertical: 12, horizontal: 14),
       decoration: glBox(GLTheme.mint, 18),
       // ViewThatFits: icon + 160pt-min text + ~175pt button share a row only
       // when wide enough. ponytail: button width estimated, not measured.
@@ -441,7 +438,7 @@ class _ProjectState extends _WorkspaceState<ProjectScreen> {
             ? Row(
                 spacing: 10,
                 children: [
-                  const GLIcon('checkmark.circle', size: 20),
+                  GLIcon('checkmark.circle', size: 20),
                   Expanded(child: text),
                   button,
                 ],
@@ -453,7 +450,7 @@ class _ProjectState extends _WorkspaceState<ProjectScreen> {
                   Row(
                     spacing: 10,
                     children: [
-                      const GLIcon('checkmark.circle', size: 20),
+                      GLIcon('checkmark.circle', size: 20),
                       Expanded(child: text),
                     ],
                   ),
@@ -470,8 +467,8 @@ class _ProjectState extends _WorkspaceState<ProjectScreen> {
     final description = p.text('description');
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 20),
-      decoration: glBox(Colors.white, 32),
+      padding: EdgeInsets.symmetric(vertical: 22, horizontal: 20),
+      decoration: glBox(GLTheme.surface, 32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         spacing: 10,
@@ -485,7 +482,7 @@ class _ProjectState extends _WorkspaceState<ProjectScreen> {
                     GroupScreen(store: store, groupID: group.text('id')),
                   ),
                   child: ConstrainedBox(
-                    constraints: const BoxConstraints(minHeight: 32),
+                    constraints: BoxConstraints(minHeight: 32),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       spacing: 2,
@@ -496,17 +493,13 @@ class _ProjectState extends _WorkspaceState<ProjectScreen> {
                             style: gl(14, w600, 0, GLTheme.text2),
                           ),
                         ),
-                        const GLIcon(
-                          'chevron.right',
-                          size: 18,
-                          color: GLTheme.text2,
-                        ),
+                        GLIcon('chevron.right', size: 18, color: GLTheme.text2),
                       ],
                     ),
                   ),
                 ),
               ),
-              const Spacer(),
+              Spacer(),
               _ProjectStatusChip(p.text('status')),
             ],
           ),
@@ -514,7 +507,7 @@ class _ProjectState extends _WorkspaceState<ProjectScreen> {
           Row(
             spacing: 6,
             children: [
-              const GLIcon('calendar', size: 18, color: GLTheme.text3),
+              GLIcon('calendar', size: 18, color: GLTheme.text3),
               Flexible(
                 child: Text(
                   due == null
@@ -530,7 +523,7 @@ class _ProjectState extends _WorkspaceState<ProjectScreen> {
             style: gl(15, w400, 0, GLTheme.text3, 4),
           ),
           Padding(
-            padding: const EdgeInsets.only(top: 2),
+            padding: EdgeInsets.only(top: 2),
             child: SizedBox(
               height: 34,
               width: members.isEmpty ? 0 : 34.0 + (members.length - 1) * 26,
@@ -546,7 +539,7 @@ class _ProjectState extends _WorkspaceState<ProjectScreen> {
                             foregroundDecoration: BoxDecoration(
                               shape: BoxShape.circle,
                               border: Border.all(
-                                color: Colors.white,
+                                color: GLTheme.surface,
                                 width: 2.5,
                               ),
                             ),
@@ -588,15 +581,15 @@ class _ProjectState extends _WorkspaceState<ProjectScreen> {
     ];
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: glBox(Colors.white, 32),
+      padding: EdgeInsets.all(20),
+      decoration: glBox(GLTheme.surface, 32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         spacing: 16,
         children: [
           Text('Group Pulse', style: gl(20, w700, -0.02)),
           Container(
-            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+            padding: EdgeInsets.symmetric(vertical: 10, horizontal: 4),
             decoration: glBox(GLTheme.muted, 18),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -647,7 +640,7 @@ class _ProjectState extends _WorkspaceState<ProjectScreen> {
             )
           else
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
+              padding: EdgeInsets.symmetric(vertical: 8),
               child: SizedBox(
                 width: double.infinity,
                 child: Text(
@@ -660,7 +653,7 @@ class _ProjectState extends _WorkspaceState<ProjectScreen> {
           _members(group, tasks),
           if (isCoord && stale > 0)
             Container(
-              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+              padding: EdgeInsets.symmetric(vertical: 12, horizontal: 14),
               decoration: glBox(
                 GLTheme.lavender,
                 18,
@@ -670,7 +663,7 @@ class _ProjectState extends _WorkspaceState<ProjectScreen> {
               child: Row(
                 spacing: 10,
                 children: [
-                  const GLIcon('list.bullet.clipboard', size: 20),
+                  GLIcon('list.bullet.clipboard', size: 20),
                   Expanded(
                     child: Text(
                       '$stale tugas menunggu review lebih dari 48 jam',
@@ -740,7 +733,7 @@ class _ProjectState extends _WorkspaceState<ProjectScreen> {
         ),
         _bleed(
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
+            padding: EdgeInsets.symmetric(vertical: 4),
             child: Row(
               spacing: 6,
               children: [for (final id in ids) _memberButton(id, of(id))],
@@ -748,12 +741,12 @@ class _ProjectState extends _WorkspaceState<ProjectScreen> {
           ),
         ),
         AnimatedSwitcher(
-          duration: const Duration(milliseconds: 250),
+          duration: Duration(milliseconds: 250),
           transitionBuilder: (child, animation) => FadeTransition(
             opacity: animation,
             child: SlideTransition(
               position: Tween(
-                begin: const Offset(0, 0.04),
+                begin: Offset(0, 0.04),
                 end: Offset.zero,
               ).animate(animation),
               child: child,
@@ -764,7 +757,7 @@ class _ProjectState extends _WorkspaceState<ProjectScreen> {
                   key: ValueKey(member),
                   child: _memberPanel(member, of(member)),
                 )
-              : const SizedBox.shrink(),
+              : SizedBox.shrink(),
         ),
       ],
     );
@@ -779,12 +772,12 @@ class _ProjectState extends _WorkspaceState<ProjectScreen> {
         onTap: () => setState(() => selectedMember = selected ? null : id),
         child: AnimatedScale(
           scale: selected ? 1.06 : 1,
-          duration: const Duration(milliseconds: 250),
+          duration: Duration(milliseconds: 250),
           curve: Curves.easeOutBack,
           child: SizedBox(
             width: 62,
             child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
+              padding: EdgeInsets.symmetric(vertical: 4),
               child: Column(
                 spacing: 5,
                 children: [
@@ -795,7 +788,7 @@ class _ProjectState extends _WorkspaceState<ProjectScreen> {
                       clipBehavior: Clip.none,
                       children: [
                         if (selected) ...[
-                          const Positioned(
+                          Positioned(
                             left: -4.5,
                             top: -4.5,
                             right: -4.5,
@@ -807,14 +800,14 @@ class _ProjectState extends _WorkspaceState<ProjectScreen> {
                               ),
                             ),
                           ),
-                          const Positioned(
+                          Positioned(
                             left: -2.5,
                             top: -2.5,
                             right: -2.5,
                             bottom: -2.5,
                             child: DecoratedBox(
                               decoration: BoxDecoration(
-                                color: Colors.white,
+                                color: GLTheme.surface,
                                 shape: BoxShape.circle,
                               ),
                             ),
@@ -825,14 +818,14 @@ class _ProjectState extends _WorkspaceState<ProjectScreen> {
                           right: -4,
                           bottom: -4,
                           child: Container(
-                            constraints: const BoxConstraints(
+                            constraints: BoxConstraints(
                               minWidth: 24,
                               minHeight: 20,
                             ),
-                            padding: const EdgeInsets.symmetric(horizontal: 5),
+                            padding: EdgeInsets.symmetric(horizontal: 5),
                             alignment: Alignment.center,
-                            decoration: const ShapeDecoration(
-                              color: Colors.white,
+                            decoration: ShapeDecoration(
+                              color: GLTheme.surface,
                               shape: StadiumBorder(
                                 side: BorderSide(
                                   color: GLTheme.border,
@@ -874,7 +867,7 @@ class _ProjectState extends _WorkspaceState<ProjectScreen> {
     final now = DateTime.now();
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(14),
+      padding: EdgeInsets.all(14),
       decoration: glBox(GLTheme.muted, 22),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -894,7 +887,7 @@ class _ProjectState extends _WorkspaceState<ProjectScreen> {
                   Expanded(
                     child: _pjBar(
                       tasks.isEmpty ? 0 : done / tasks.length,
-                      Colors.white,
+                      GLTheme.surface,
                     ),
                   ),
                   Text(
@@ -910,12 +903,9 @@ class _ProjectState extends _WorkspaceState<ProjectScreen> {
               onTap: () =>
                   open(TaskScreen(store: store, taskID: task.text('id'))),
               child: Container(
-                constraints: const BoxConstraints(minHeight: 52),
-                padding: const EdgeInsets.symmetric(
-                  vertical: 10,
-                  horizontal: 12,
-                ),
-                decoration: glBox(Colors.white, 16),
+                constraints: BoxConstraints(minHeight: 52),
+                padding: EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                decoration: glBox(GLTheme.surface, 16),
                 child: Row(
                   spacing: 10,
                   children: [
@@ -940,10 +930,10 @@ class _ProjectState extends _WorkspaceState<ProjectScreen> {
                     ),
                     Container(
                       height: 26,
-                      padding: const EdgeInsets.only(left: 6, right: 9),
+                      padding: EdgeInsets.only(left: 6, right: 9),
                       decoration: ShapeDecoration(
                         color: GLStatus.tint(task.text('status')),
-                        shape: const StadiumBorder(),
+                        shape: StadiumBorder(),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -983,20 +973,20 @@ class _ProjectState extends _WorkspaceState<ProjectScreen> {
       child: GLTap(
         onTap: () => setState(() => filter = status),
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
+          duration: Duration(milliseconds: 200),
           curve: Curves.easeOut,
           height: 44,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: EdgeInsets.symmetric(horizontal: 16),
           alignment: Alignment.center,
           decoration: ShapeDecoration(
-            color: on ? GLTheme.ink : Colors.white,
-            shape: const StadiumBorder(
+            color: on ? GLTheme.ink : GLTheme.surface,
+            shape: StadiumBorder(
               side: BorderSide(color: GLTheme.ink, width: 1.5),
             ),
           ),
           child: Text(
             label,
-            style: gl(14, w600, 0, on ? Colors.white : GLTheme.ink),
+            style: gl(14, w600, 0, on ? GLTheme.onInk : GLTheme.ink),
           ),
         ),
       ),
@@ -1020,9 +1010,9 @@ class _ProjectState extends _WorkspaceState<ProjectScreen> {
     ) => GLTap(
       onTap: () => Navigator.of(ctx).pop(key),
       child: Container(
-        constraints: const BoxConstraints(minHeight: 62),
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        decoration: const BoxDecoration(
+        constraints: BoxConstraints(minHeight: 62),
+        padding: EdgeInsets.symmetric(vertical: 8),
+        decoration: BoxDecoration(
           border: Border(bottom: BorderSide(color: GLTheme.border)),
         ),
         child: Row(
@@ -1050,8 +1040,8 @@ class _ProjectState extends _WorkspaceState<ProjectScreen> {
         spacing: 16,
         children: [
           Container(
-            padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
-            decoration: glBox(Colors.white, 24),
+            padding: EdgeInsets.symmetric(vertical: 4, horizontal: 16),
+            decoration: glBox(GLTheme.surface, 24),
             child: Column(
               children: [
                 row(
@@ -1092,7 +1082,7 @@ class _ProjectState extends _WorkspaceState<ProjectScreen> {
             Row(
               spacing: 6,
               children: [
-                const GLIcon('lock', size: 16, color: GLTheme.text3),
+                GLIcon('lock', size: 16, color: GLTheme.text3),
                 Expanded(
                   child: Text(
                     'Hanya koordinator yang bisa mengubah proyek.',
@@ -1287,7 +1277,7 @@ class _PjRing extends StatelessWidget {
   Widget build(BuildContext context) {
     final n = tasks.length;
     final done = tasks.where((t) => t.text('status') == 'done').length;
-    const circumference = 2 * pi * 56;
+    final circumference = 2 * pi * 56;
     var acc = 0.0;
     final segments = <(Color, double, double)>[];
     for (final s in _pjOrder) {
@@ -1309,9 +1299,9 @@ class _PjRing extends StatelessWidget {
           height: 140,
           child: TweenAnimationBuilder<double>(
             tween: Tween(begin: 0, end: 1),
-            duration: const Duration(milliseconds: 900),
+            duration: Duration(milliseconds: 900),
             // 0.1s delay + timingCurve(0.2, 0.8, 0.2, 1) over 0.8s.
-            curve: const Interval(0.111, 1, curve: Cubic(0.2, 0.8, 0.2, 1)),
+            curve: Interval(0.111, 1, curve: Cubic(0.2, 0.8, 0.2, 1)),
             builder: (context, t, child) =>
                 CustomPaint(painter: _PjRingPainter(segments, t), child: child),
             child: Center(
@@ -1395,7 +1385,7 @@ class _PjPressState extends State<_PjPress> {
       onTapCancel: () => _set(false),
       child: AnimatedScale(
         scale: down ? 0.9 : 1,
-        duration: const Duration(milliseconds: 150),
+        duration: Duration(milliseconds: 150),
         curve: Curves.easeOut,
         child: widget.child,
       ),
@@ -1455,7 +1445,7 @@ class _ProjectEditor extends StatefulWidget {
 }
 
 class _ProjectEditorState extends State<_ProjectEditor> {
-  static const _placeholder = Color(0xFF80868B);
+  static Color get _placeholder => GLTheme.tertiary;
   late final title = TextEditingController(
     text: widget.project?.text('title') ?? '',
   );
@@ -1568,13 +1558,13 @@ class _ProjectEditorState extends State<_ProjectEditor> {
     child: GLTap(
       onTap: onTap,
       child: Container(
-        constraints: const BoxConstraints(minHeight: 44),
+        constraints: BoxConstraints(minHeight: 44),
         padding: fill
             ? null
-            : const EdgeInsets.symmetric(vertical: 8, horizontal: 14),
+            : EdgeInsets.symmetric(vertical: 8, horizontal: 14),
         alignment: fill ? Alignment.center : null,
         decoration: glBox(
-          on ? GLTheme.ink : Colors.white,
+          on ? GLTheme.ink : GLTheme.surface,
           16,
           border: GLTheme.ink,
           borderWidth: 1.5,
@@ -1583,7 +1573,7 @@ class _ProjectEditorState extends State<_ProjectEditor> {
           label,
           maxLines: fill ? 1 : null,
           overflow: fill ? TextOverflow.ellipsis : null,
-          style: gl(14, w600, 0, on ? Colors.white : GLTheme.ink),
+          style: gl(14, w600, 0, on ? GLTheme.onInk : GLTheme.ink),
         ),
       ),
     ),
@@ -1602,7 +1592,7 @@ class _ProjectEditorState extends State<_ProjectEditor> {
       glInputDecoration(hint: hint).copyWith(
         hintStyle: gl(16, w400, 0, _placeholder),
         contentPadding: multiline
-            ? const EdgeInsets.symmetric(horizontal: 16, vertical: 14)
+            ? EdgeInsets.symmetric(horizontal: 16, vertical: 14)
             : null,
       );
 
@@ -1649,7 +1639,7 @@ class _ProjectEditorState extends State<_ProjectEditor> {
             required: true,
             trailing: '${title.text.characters.length}/60',
             child: TextField(
-              key: const ValueKey('project-title'),
+              key: ValueKey('project-title'),
               controller: title,
               maxLength: 60,
               cursorColor: GLTheme.ink,
@@ -1683,7 +1673,7 @@ class _ProjectEditorState extends State<_ProjectEditor> {
             spacing: 8,
             children: [
               Text.rich(
-                const TextSpan(
+                TextSpan(
                   text: 'Deadline',
                   children: [
                     TextSpan(
@@ -1704,22 +1694,25 @@ class _ProjectEditorState extends State<_ProjectEditor> {
               ),
               Container(
                 height: 50,
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                decoration: glBox(Colors.white, 16, border: GLTheme.border),
+                padding: EdgeInsets.symmetric(horizontal: 14),
+                decoration: glBox(GLTheme.surface, 16, border: GLTheme.border),
                 child: Row(
                   spacing: 10,
                   children: [
-                    const GLIcon('calendar', size: 20),
+                    GLIcon('calendar', size: 20),
                     // Compact DatePicker look: grey capsule with the date.
                     GLTap(
                       label: 'Pilih tanggal deadline proyek',
                       onTap: busy ? null : _pickDate,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(
+                        padding: EdgeInsets.symmetric(
                           horizontal: 11,
                           vertical: 6,
                         ),
-                        decoration: glBox(const Color(0x1F767680), 8),
+                        decoration: glBox(
+                          GLTheme.disabled.withValues(alpha: 0.12),
+                          8,
+                        ),
                         child: Text(
                           '${d.day} ${GLFormat.months[d.month - 1]} ${d.year}',
                           style: gl(17),
@@ -1737,7 +1730,7 @@ class _ProjectEditorState extends State<_ProjectEditor> {
           ),
           if (error != null) GLFormError(error!),
           GLSubmitButton(
-            key: const ValueKey('project-save'),
+            key: ValueKey('project-save'),
             title: busy
                 ? 'Menyimpan…'
                 : (error?.contains('Gagal') ?? false)

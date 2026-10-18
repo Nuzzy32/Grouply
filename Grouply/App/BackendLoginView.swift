@@ -4,6 +4,7 @@ import SwiftUI
 struct BackendLoginView: View {
   @Environment(DemoStore.self) private var store
   @Environment(\.dismiss) private var dismiss
+  @Environment(\.colorScheme) private var colorScheme
   @State private var email = ""
   @State private var password = ""
   @State private var nonce: AppleSignInNonce?
@@ -13,7 +14,7 @@ struct BackendLoginView: View {
       Form {
         Section {
           Text("Kerja bareng, di akunmu sendiri.").font(.title2.bold())
-          Text("Data grup dan tugas disimpan di Supabase. Akun ini terpisah dari persona demo.")
+          Text("Data grup dan tugas disimpan di Supabase.")
             .font(.subheadline).foregroundStyle(GLTheme.secondary)
         }
         if store.backendConfigured {
@@ -46,7 +47,7 @@ struct BackendLoginView: View {
                 } catch { self.error = error.localizedDescription }
               }
             }
-            .signInWithAppleButtonStyle(.black).frame(height: 54)
+            .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black).frame(height: 54)
             Text(
               "Memerlukan capability Sign in with Apple dan provider Apple yang dikonfigurasi pada proyek Supabase."
             )
@@ -72,7 +73,7 @@ struct BackendLoginView: View {
               Text("Akun pengujian · Debug")
             } footer: {
               Text(
-                "Untuk uji dua akun lokal. Ini memakai Supabase Auth sungguhan, bukan pergantian persona. Jalankan scripts/backend_local.py untuk menyiapkan akun lokal."
+                "Untuk uji dua akun lokal dengan Supabase Auth. Jalankan scripts/backend_local.py untuk menyiapkan akun lokal."
               )
             }
           #endif

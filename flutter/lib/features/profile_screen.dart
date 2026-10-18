@@ -13,9 +13,7 @@ String _failureText(Object failure) => failure is GrouplyException
 
 void _checkIdentity(GrouplyStore store, String actor) {
   if (!store.authenticated || store.currentUserID != actor) {
-    throw const GrouplyException(
-      'Akun telah berubah. Ulangi dari profil aktif.',
-    );
+    throw GrouplyException('Akun telah berubah. Ulangi dari profil aktif.');
   }
 }
 
@@ -80,10 +78,8 @@ class _ProfileScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Widget list = ListView(
-      physics: const AlwaysScrollableScrollPhysics(
-        parent: BouncingScrollPhysics(),
-      ),
-      padding: const EdgeInsets.fromLTRB(20, 4, 20, 32),
+      physics: AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+      padding: EdgeInsets.fromLTRB(20, 4, 20, 32),
       children: [
         GLDetailHeader(title),
         for (final child in children) ...[SizedBox(height: spacing), child],
@@ -100,9 +96,9 @@ class _ProfileScaffold extends StatelessWidget {
 }
 
 Widget _ink(Widget child) => DefaultTextStyle.merge(
-  style: const TextStyle(color: GLTheme.ink),
+  style: TextStyle(color: GLTheme.ink),
   child: IconTheme.merge(
-    data: const IconThemeData(color: GLTheme.ink),
+    data: IconThemeData(color: GLTheme.ink),
     child: child,
   ),
 );
@@ -116,13 +112,13 @@ class _ProfileGroup extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     width: double.infinity,
     padding: EdgeInsets.symmetric(horizontal: 16, vertical: vertical),
-    decoration: glBox(Colors.white, 24),
+    decoration: glBox(GLTheme.surface, 24),
     child: Column(children: children),
   );
 }
 
 /// `.profileDivider()` — 1pt bottom rule drawn over the row.
-const _divider = BoxDecoration(
+final _divider = BoxDecoration(
   border: Border(bottom: BorderSide(color: GLTheme.border)),
 );
 
@@ -136,9 +132,9 @@ class _PillButton extends StatelessWidget {
     onTap: onTap,
     child: Container(
       height: 44,
-      padding: const EdgeInsets.symmetric(horizontal: 14),
+      padding: EdgeInsets.symmetric(horizontal: 14),
       alignment: Alignment.center,
-      decoration: const ShapeDecoration(
+      decoration: ShapeDecoration(
         shape: StadiumBorder(side: BorderSide(color: GLTheme.ink, width: 1.5)),
       ),
       child: Text(title, style: gl(14, w600)),
@@ -154,8 +150,9 @@ class _ProfileSwitch extends StatelessWidget {
   @override
   Widget build(BuildContext context) => CupertinoSwitch(
     value: on,
-    activeTrackColor: const Color(0xFF34C759),
-    inactiveTrackColor: const Color(0xFFD5D8DB),
+    activeTrackColor: Color(0xFF34C759),
+    thumbColor: Colors.white,
+    inactiveTrackColor: GLTheme.hairline,
     onChanged: (_) => onChanged(),
   );
 }
@@ -178,12 +175,12 @@ class _Dashed extends StatelessWidget {
 }
 
 class _DashPainter extends CustomPainter {
-  const _DashPainter(this.radius);
+  _DashPainter(this.radius);
   final double radius;
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = const Color(0xFF9AA0A6)
+      ..color = GLTheme.placeholder
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.5;
     final path = Path()
@@ -204,29 +201,6 @@ class _DashPainter extends CustomPainter {
   bool shouldRepaint(_DashPainter old) => old.radius != radius;
 }
 
-class _DashedNote extends StatelessWidget {
-  const _DashedNote(this.text);
-  final String text;
-  @override
-  Widget build(BuildContext context) => _Dashed(
-    radius: 14,
-    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-    child: Text(text, style: gl(13, w400, 0, GLTheme.secondary, 2.5)),
-  );
-}
-
-/// Capsule tag ("PROTOTIPE", "DEMO").
-Widget _tag(String text, double height, double em) => Container(
-  height: height,
-  padding: const EdgeInsets.symmetric(horizontal: 8),
-  alignment: Alignment.center,
-  decoration: const ShapeDecoration(
-    color: GLTheme.butter,
-    shape: StadiumBorder(),
-  ),
-  child: Text(text, style: gl(11, w700, em)),
-);
-
 /// Filled sheet button (`height:54px;border-radius:18px;font-size:16px`).
 class _FilledButton extends StatelessWidget {
   const _FilledButton({
@@ -235,13 +209,13 @@ class _FilledButton extends StatelessWidget {
     this.height = 54,
     this.radius = 18,
     this.fontSize = 16,
-    this.background = GLTheme.ink,
+    this.background,
     this.busy = false,
   });
   final String title;
   final VoidCallback onTap;
   final double height, radius, fontSize;
-  final Color background;
+  final Color? background;
   final bool busy;
   @override
   Widget build(BuildContext context) => GLTap(
@@ -251,8 +225,8 @@ class _FilledButton extends StatelessWidget {
       child: Container(
         height: height,
         alignment: Alignment.center,
-        decoration: glBox(background, radius),
-        child: Text(title, style: gl(fontSize, w600, 0, Colors.white)),
+        decoration: glBox(background ?? GLTheme.ink, radius),
+        child: Text(title, style: gl(fontSize, w600, 0, GLTheme.onInk)),
       ),
     ),
   );
@@ -277,7 +251,7 @@ Widget _column(
   ],
 );
 
-/// Prototype sheet without the title row (perm, personas, privacy draw their own).
+/// Prototype sheet without the title row (perm and privacy draw their own).
 Future<T?> _showBareSheet<T>(
   BuildContext context, {
   required WidgetBuilder builder,
@@ -288,8 +262,8 @@ Future<T?> _showBareSheet<T>(
   isScrollControlled: true,
   useSafeArea: true,
   backgroundColor: GLTheme.background,
-  barrierColor: const Color(0x66000000),
-  shape: const RoundedRectangleBorder(
+  barrierColor: Color(0x66000000),
+  shape: RoundedRectangleBorder(
     borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
   ),
   builder: (context) => SingleChildScrollView(
@@ -307,13 +281,13 @@ Future<T?> _showBareSheet<T>(
               child: Container(
                 width: 38,
                 height: 5,
-                decoration: const ShapeDecoration(
-                  color: Color(0xFFC4C7C5),
+                decoration: ShapeDecoration(
+                  color: GLTheme.disabled,
                   shape: StadiumBorder(),
                 ),
               ),
             ),
-            const SizedBox(height: 14),
+            SizedBox(height: 14),
             Builder(builder: builder),
           ],
         ),
@@ -381,27 +355,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     });
   }
 
-  Future<void> _resetDemo() async {
-    if (!await showGLConfirm(
-          context,
-          title: 'Reset data demo?',
-          text:
-              'Semua perubahan di prototipe (grup, proyek, tugas, pesan, laporan) kembali ke data awal. Tidak ada data server yang terpengaruh.',
-          ok: 'Reset',
-          destructive: true,
-        ) ||
-        !mounted) {
-      return;
-    }
-    final overlay = Navigator.of(context, rootNavigator: true).context;
-    await _run(() async {
-      await store.resetDemo();
-      if (overlay.mounted) showGLToast(overlay, 'Data demo direset');
-    });
-  }
-
   Widget _sectionLabel(String text) => Padding(
-    padding: const EdgeInsets.only(top: 4),
+    padding: EdgeInsets.only(top: 4),
     child: Semantics(
       header: true,
       child: Text(text.toUpperCase(), style: gl(14, w700, 0.04, GLTheme.text2)),
@@ -418,7 +373,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }) => GLTap(
     onTap: onTap,
     child: Container(
-      constraints: const BoxConstraints(minHeight: 60),
+      constraints: BoxConstraints(minHeight: 60),
       foregroundDecoration: divider ? _divider : null,
       child: Row(
         children: [
@@ -428,7 +383,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             decoration: glBox(tint, 13),
             child: GLIcon(icon, size: 20),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -438,8 +393,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ],
             ),
           ),
-          const SizedBox(width: 12),
-          const GLIcon('chevron.right', size: 22, color: GLTheme.secondary),
+          SizedBox(width: 12),
+          GLIcon('chevron.right', size: 22, color: GLTheme.secondary),
         ],
       ),
     ),
@@ -449,21 +404,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
     String icon,
     String title,
     VoidCallback? onTap, {
-    Color color = GLTheme.ink,
+    Color? color,
     bool divider = false,
     Key? key,
   }) => GLTap(
     key: key,
     onTap: onTap,
     child: Container(
-      constraints: const BoxConstraints(minHeight: 56),
+      constraints: BoxConstraints(minHeight: 56),
       foregroundDecoration: divider ? _divider : null,
       child: Row(
         children: [
           GLIcon(icon, size: 22, color: color),
-          const SizedBox(width: 12),
+          SizedBox(width: 12),
           Text(title, style: gl(16, w600, 0, color)),
-          const Spacer(),
+          Spacer(),
         ],
       ),
     ),
@@ -472,18 +427,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _profileCard() {
     final me = store.user(store.currentUserID);
     return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: glBox(Colors.white, 28),
+      padding: EdgeInsets.all(20),
+      decoration: glBox(GLTheme.surface, 28),
       child: Row(
         children: [
           GLAvatar(user: me, size: 64, fontSize: 20),
-          const SizedBox(width: 14),
+          SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(me?.text('name') ?? '', style: gl(20, w700)),
-                const SizedBox(height: 2),
+                SizedBox(height: 2),
                 Text(
                   me?.text('email') ?? '',
                   style: gl(14, w400, 0, GLTheme.secondary),
@@ -491,7 +446,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ],
             ),
           ),
-          const SizedBox(width: 14),
+          SizedBox(width: 14),
           _PillButton(
             title: 'Edit',
             onTap: _disabled ? null : () => _showEditName(context, store),
@@ -500,47 +455,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
   }
-
-  Widget _demoBox() => _Dashed(
-    radius: 24,
-    padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-    child: _column([
-      Row(
-        children: [
-          _tag('PROTOTIPE', 22, 0.04),
-          const SizedBox(width: 6),
-          Flexible(child: Text('Pengaturan demo', style: gl(13, w700, 0.04))),
-        ],
-      ),
-      Text(
-        'Hanya untuk pengujian. Tidak ada di aplikasi produksi.',
-        style: gl(13, w400, 0, GLTheme.text3, 2.5),
-      ),
-      Row(
-        children: [
-          Expanded(
-            child: GLOutlineButton(
-              title: 'Ganti persona',
-              height: 44,
-              radius: 14,
-              fontSize: 14,
-              onPressed: _disabled ? null : () => _showPersonas(context, store),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: GLOutlineButton(
-              title: 'Reset data demo',
-              height: 44,
-              radius: 14,
-              fontSize: 14,
-              onPressed: _disabled ? null : _resetDemo,
-            ),
-          ),
-        ],
-      ),
-    ], 10),
-  );
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
@@ -554,12 +468,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
           .length;
       return _ProfileScaffold(
         title: 'Profil',
-        onRefresh: store.demoMode ? null : () => _run(store.refresh),
+        onRefresh: () => _run(store.refresh),
         children: [
           if (store.error != null)
             GLNotice(text: store.error!, color: GLTheme.coral),
           if (!store.authenticated)
-            const GLNotice(
+            GLNotice(
               text: 'Sesi telah berakhir. Masuk kembali untuk membuka profil.',
             )
           else ...[
@@ -601,9 +515,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 _navRow(
                   'flag',
-                  const Color(0xFFECEEEB),
+                  GLTheme.chip,
                   'Pelaporan',
-                  '$reports laporan tersimpan ${store.demoMode ? 'lokal' : 'di server'}',
+                  '$reports laporan tersimpan di server',
                   () => _push(_AboutScreen(store: store)),
                 ),
               ],
@@ -622,11 +536,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   'Hapus akun',
                   _disabled ? null : () => _showDelete(context, store),
                   color: GLTheme.danger,
-                  key: const ValueKey('delete-account'),
+                  key: ValueKey('delete-account'),
                 ),
               ],
             ),
-            if (store.demoMode) _demoBox(),
           ],
         ],
       );
@@ -649,8 +562,8 @@ class _NotifScreen extends StatelessWidget {
       child: GLTap(
         onTap: toggle,
         child: Container(
-          constraints: const BoxConstraints(minHeight: 64),
-          padding: const EdgeInsets.symmetric(vertical: 10),
+          constraints: BoxConstraints(minHeight: 64),
+          padding: EdgeInsets.symmetric(vertical: 10),
           foregroundDecoration: _divider,
           child: Row(
             children: [
@@ -659,12 +572,12 @@ class _NotifScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(label, style: gl(16, w600)),
-                    const SizedBox(height: 2),
+                    SizedBox(height: 2),
                     Text(sub, style: gl(13, w400, 0, GLTheme.secondary, 1.5)),
                   ],
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               _ProfileSwitch(on: on, onChanged: toggle),
             ],
           ),
@@ -704,27 +617,24 @@ class _NotifScreen extends StatelessWidget {
             child: GLTap(
               onTap: tap,
               child: Container(
-                constraints: const BoxConstraints(minHeight: 68),
-                padding: const EdgeInsets.symmetric(
-                  vertical: 14,
-                  horizontal: 16,
-                ),
-                decoration: glBox(Colors.white, 24),
+                constraints: BoxConstraints(minHeight: 68),
+                padding: EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                decoration: glBox(GLTheme.surface, 24),
                 child: Row(
                   children: [
                     Container(
                       width: 40,
                       height: 40,
                       decoration: glBox(GLTheme.butter, 14),
-                      child: const GLIcon('bell.badge', size: 21),
+                      child: GLIcon('bell.badge', size: 21),
                     ),
-                    const SizedBox(width: 12),
+                    SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text('Izinkan notifikasi', style: gl(16, w600)),
-                          const SizedBox(height: 1),
+                          SizedBox(height: 1),
                           Text(
                             perm == 'on'
                                 ? 'GROUPLY boleh mengirim notifikasi'
@@ -736,7 +646,7 @@ class _NotifScreen extends StatelessWidget {
                         ],
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    SizedBox(width: 12),
                     _ProfileSwitch(on: perm == 'on', onChanged: tap),
                   ],
                 ),
@@ -744,13 +654,13 @@ class _NotifScreen extends StatelessWidget {
             ),
           ),
           // Flutter client has no push transport yet; the toggle is a local simulation.
-          const GLNotice(
+          GLNotice(
             text:
                 'Push notification belum tersedia di aplikasi ini. Izin dan pilihan di sini hanya simulasi lokal; belum ada notifikasi yang dikirim ke perangkat.',
           ),
           if (perm != 'on')
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
+              padding: EdgeInsets.symmetric(horizontal: 4),
               child: Text(
                 'Pilihan di bawah tersimpan dan berlaku setelah izin notifikasi aktif.',
                 style: gl(13, w400, 0, GLTheme.text3, 2.5),
@@ -830,15 +740,15 @@ class _BlockedScreenState extends State<_BlockedScreen> {
         if (store.blockedUserIDs.isEmpty)
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 22),
-            decoration: glBox(Colors.white, 28),
+            padding: EdgeInsets.symmetric(vertical: 28, horizontal: 22),
+            decoration: glBox(GLTheme.surface, 28),
             child: _column([
               Center(
                 child: Container(
                   width: 56,
                   height: 56,
                   decoration: glBox(GLTheme.mint, 20),
-                  child: const GLIcon('checkmark.shield', size: 28),
+                  child: GLIcon('checkmark.shield', size: 28),
                 ),
               ),
               Text(
@@ -859,20 +769,20 @@ class _BlockedScreenState extends State<_BlockedScreen> {
             children: [
               for (final id in store.blockedUserIDs)
                 Container(
-                  constraints: const BoxConstraints(minHeight: 64),
-                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  constraints: BoxConstraints(minHeight: 64),
+                  padding: EdgeInsets.symmetric(vertical: 10),
                   foregroundDecoration: _divider,
                   child: Row(
                     children: [
                       GLAvatar(user: store.user(id), size: 44, fontSize: 14),
-                      const SizedBox(width: 12),
+                      SizedBox(width: 12),
                       Expanded(
                         child: Text(
                           store.user(id)?.text('name') ?? 'Pengguna',
                           style: gl(16, w600),
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      SizedBox(width: 12),
                       _PillButton(
                         title: 'Buka blokir',
                         onTap: _busy ? null : () => _unblock(id),
@@ -894,7 +804,6 @@ class _AboutScreen extends StatelessWidget {
   final GrouplyStore store;
 
   String _status(JsonMap report) {
-    if (store.demoMode) return 'Tersimpan lokal';
     return switch (report.text('status')) {
       'dismissed' => 'Selesai ditinjau',
       'removed' => 'Pesan dihapus moderator',
@@ -906,7 +815,6 @@ class _AboutScreen extends StatelessWidget {
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: store,
     builder: (context, _) {
-      final cloud = !store.demoMode;
       final reports = store.reports
           .where((row) => row.text('reporterID') == store.currentUserID)
           .toList();
@@ -921,9 +829,9 @@ class _AboutScreen extends StatelessWidget {
                   width: 52,
                   height: 52,
                   decoration: glBox(GLTheme.mint, 18),
-                  child: const GLIcon('person.3', size: 26),
+                  child: GLIcon('person.3', size: 26),
                 ),
-                const SizedBox(width: 14),
+                SizedBox(width: 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -943,29 +851,24 @@ class _AboutScreen extends StatelessWidget {
             child: _column([
               Text('Pelaporan & moderasi', style: gl(16, w700)),
               Text(
-                cloud
-                    ? 'Tekan lama pesan untuk melaporkan atau memblokir pengirimnya. Laporan masuk antrean privat di server dan dapat ditinjau operator berwenang. Belum ada jaminan waktu respons.'
-                    : 'Tekan lama pesan untuk melaporkan atau memblokir pengirimnya. Dalam demo, laporan hanya disimpan di perangkat, bukan dikirim kepada moderator.',
+                'Tekan lama pesan untuk melaporkan atau memblokir pengirimnya. Laporan masuk antrean privat di server dan dapat ditinjau operator berwenang. Belum ada jaminan waktu respons.',
                 style: gl(14, w400, 0, GLTheme.text3, 5),
               ),
               for (final report in reports)
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 10,
-                    horizontal: 12,
-                  ),
+                  padding: EdgeInsets.symmetric(vertical: 10, horizontal: 12),
                   decoration: glBox(GLTheme.muted, 14),
                   child: Row(
                     children: [
-                      const GLIcon('flag', size: 18),
-                      const SizedBox(width: 8),
+                      GLIcon('flag', size: 18),
+                      SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           '${report.text('reason')} · Pesan dari ${_sender(report)}',
                           style: gl(14),
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      SizedBox(width: 8),
                       Text(
                         _status(report),
                         style: gl(12, w400, 0, GLTheme.secondary),
@@ -1080,7 +983,7 @@ void _showPerm(BuildContext context) => _showBareSheet(
   context,
   horizontal: 24,
   centered: true,
-  builder: (_) => const _PermSheet(),
+  builder: (_) => _PermSheet(),
 );
 
 class _PermSheet extends StatefulWidget {
@@ -1100,16 +1003,16 @@ class _PermSheetState extends State<_PermSheet> {
 
   @override
   Widget build(BuildContext context) => AnimatedSwitcher(
-    duration: const Duration(milliseconds: 200),
+    duration: Duration(milliseconds: 200),
     child: !_simulate
-        ? _column(key: const ValueKey(1), [
+        ? _column(key: ValueKey(1), [
             Padding(
-              padding: const EdgeInsets.only(top: 10),
+              padding: EdgeInsets.only(top: 10),
               child: Container(
                 width: 72,
                 height: 72,
                 decoration: glBox(GLTheme.lavender, 26),
-                child: const GLIcon('bell.badge', size: 36),
+                child: GLIcon('bell.badge', size: 36),
               ),
             ),
             Text(
@@ -1123,7 +1026,7 @@ class _PermSheetState extends State<_PermSheet> {
               style: gl(15, w400, 0, GLTheme.secondary, 4.5),
             ),
             Padding(
-              padding: const EdgeInsets.only(top: 6),
+              padding: EdgeInsets.only(top: 6),
               child: _FilledButton(
                 title: 'Lanjutkan',
                 height: 56,
@@ -1141,21 +1044,21 @@ class _PermSheetState extends State<_PermSheet> {
               ),
             ),
           ], 14)
-        : _column(key: const ValueKey(2), [
+        : _column(key: ValueKey(2), [
             Padding(
-              padding: const EdgeInsets.only(top: 6),
+              padding: EdgeInsets.only(top: 6),
               child: Container(
                 height: 28,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: const ShapeDecoration(
+                padding: EdgeInsets.symmetric(horizontal: 12),
+                decoration: ShapeDecoration(
                   color: GLTheme.butter,
                   shape: StadiumBorder(),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const GLIcon('flask', size: 16),
-                    const SizedBox(width: 5),
+                    GLIcon('flask', size: 16),
+                    SizedBox(width: 5),
                     Text('SIMULASI PROTOTIPE', style: gl(12, w700, 0.04)),
                   ],
                 ),
@@ -1163,7 +1066,7 @@ class _PermSheetState extends State<_PermSheet> {
             ),
             _Dashed(
               radius: 22,
-              padding: const EdgeInsets.all(18),
+              padding: EdgeInsets.all(18),
               child: _column(
                 [
                   Text(
@@ -1195,7 +1098,7 @@ class _PermSheetState extends State<_PermSheet> {
                     ),
                   ),
                 ),
-                const SizedBox(width: 10),
+                SizedBox(width: 10),
                 Expanded(
                   child: _FilledButton(
                     title: 'Diizinkan',
@@ -1212,112 +1115,6 @@ class _PermSheetState extends State<_PermSheet> {
 }
 
 Widget _keyed(Key key, Widget child) => KeyedSubtree(key: key, child: child);
-
-void _showPersonas(BuildContext context, GrouplyStore store) => _showBareSheet(
-  context,
-  builder: (sheet) => ListenableBuilder(
-    listenable: store,
-    builder: (sheet, _) => Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(
-          children: [
-            _tag('DEMO', 24, 0.06),
-            const SizedBox(width: 8),
-            Expanded(child: Text('Ganti persona', style: gl(22, w700, -0.02))),
-            GLTap(
-              label: 'Tutup',
-              onTap: () => Navigator.of(sheet).pop(),
-              child: Container(
-                width: 44,
-                height: 44,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFECEEEB),
-                  shape: BoxShape.circle,
-                ),
-                child: const GLIcon('xmark', size: 22),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8), // spacing 14, padding(.top, -6)
-        Text(
-          'Hanya untuk menguji sudut pandang tiap anggota. Semua persona memakai data yang sama.',
-          style: gl(14, w400, 0, GLTheme.text3, 2.5),
-        ),
-        const SizedBox(height: 14),
-        _column([
-          for (final persona in demoPersonas)
-            if (store.user(persona.id) case final user?
-                when user.text('email').isNotEmpty)
-              _keyed(
-                ValueKey('switch-persona-${persona.id}'),
-                _personaRow(sheet, store, persona.id, persona.role, user),
-              ),
-        ], 8),
-      ],
-    ),
-  ),
-);
-
-Widget _personaRow(
-  BuildContext sheet,
-  GrouplyStore store,
-  String id,
-  String role,
-  JsonMap user,
-) {
-  final on = store.currentUserID == id;
-  return Semantics(
-    selected: on,
-    child: GLTap(
-      onTap: () async {
-        if (on) return;
-        try {
-          await store.switchDemoUser(id);
-          if (!sheet.mounted) return;
-          showGLToast(
-            sheet,
-            'Demo: sekarang melihat sebagai ${user.text('name')}',
-            kind: GLToastKind.info,
-          );
-          Navigator.of(sheet).pop();
-        } catch (failure) {
-          if (sheet.mounted) {
-            showGLToast(sheet, _failureText(failure), kind: GLToastKind.err);
-          }
-        }
-      },
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 56),
-        padding: const EdgeInsets.only(top: 8, bottom: 8, left: 8, right: 14),
-        decoration: glBox(
-          Colors.white,
-          18,
-          border: on ? GLTheme.ink : GLTheme.border,
-          borderWidth: 1.5,
-        ),
-        child: Row(
-          children: [
-            GLAvatar(user: user, size: 40, fontSize: 13),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(user.text('name'), style: gl(16, w600)),
-                  Text(role, style: gl(13, w400, 0, GLTheme.secondary)),
-                ],
-              ),
-            ),
-            if (on) Text('Aktif', style: gl(13, w700)),
-          ],
-        ),
-      ),
-    ),
-  );
-}
 
 void _showDelete(BuildContext context, GrouplyStore store) => showGLSheet(
   context,
@@ -1340,7 +1137,6 @@ class _DeleteSheetState extends State<_DeleteSheet> {
   bool _busy = false;
 
   GrouplyStore get store => widget.store;
-  bool get _cloud => !store.demoMode;
 
   /// Prototype rule: groups I coordinate that still have other members.
   List<JsonMap> get _blockers => store.groups
@@ -1348,7 +1144,7 @@ class _DeleteSheetState extends State<_DeleteSheet> {
         (row) =>
             row.ids('memberIDs').contains(store.currentUserID) &&
             row.text('coordinatorID') == store.currentUserID &&
-            (!_cloud || row.ids('memberIDs').length > 1),
+            row.ids('memberIDs').length > 1,
       )
       .toList();
 
@@ -1369,7 +1165,7 @@ class _DeleteSheetState extends State<_DeleteSheet> {
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       GLIcon(icon, size: 20, color: GLTheme.ink),
-      const SizedBox(width: 10),
+      SizedBox(width: 10),
       Expanded(child: Text(text, style: gl(15, w400, 0, null, 4.5))),
     ],
   );
@@ -1378,19 +1174,12 @@ class _DeleteSheetState extends State<_DeleteSheet> {
     if (_text.text.trim().toUpperCase() != 'HAPUS') {
       return setState(() => _error = 'Ketik HAPUS untuk konfirmasi.');
     }
-    final cloud = _cloud;
     setState(() => _busy = true);
     try {
       _checkIdentity(store, _actor);
       await store.mutate('deleteAccount', {});
       if (!mounted) return;
-      showGLToast(
-        context,
-        cloud
-            ? 'Akun dihapus.'
-            : 'Simulasi: akun dihapus dari data demo lokal. Tidak ada data server yang dihapus.',
-        kind: GLToastKind.info,
-      );
+      showGLToast(context, 'Akun dihapus.', kind: GLToastKind.info);
       Navigator.of(context).pop();
     } catch (failure) {
       if (mounted) setState(() => _error = _failureText(failure));
@@ -1404,21 +1193,16 @@ class _DeleteSheetState extends State<_DeleteSheet> {
     final blockers = _blockers, active = _hasActiveAssignments;
     final clear = blockers.isEmpty && !active;
     return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 200),
+      duration: Duration(milliseconds: 200),
       child: _step == 1
-          ? _column(key: const ValueKey(1), [
+          ? _column(key: ValueKey(1), [
               Container(
-                padding: const EdgeInsets.symmetric(
-                  vertical: 16,
-                  horizontal: 18,
-                ),
-                decoration: glBox(Colors.white, 22),
+                padding: EdgeInsets.symmetric(vertical: 16, horizontal: 18),
+                decoration: glBox(GLTheme.surface, 22),
                 child: _column([
                   _line(
                     'trash',
-                    _cloud
-                        ? 'Akun login dan profil di server akan dihapus permanen.'
-                        : 'Ini simulasi penghapusan akun demo, bukan akun server.',
+                    'Akun login dan profil di server akan dihapus permanen.',
                   ),
                   _line(
                     'clock.arrow.circlepath',
@@ -1428,11 +1212,10 @@ class _DeleteSheetState extends State<_DeleteSheet> {
                     'arrow.left.arrow.right',
                     'Alihkan peran pelaksana/reviewer pada semua tugas yang belum selesai terlebih dahulu, termasuk di proyek arsip. Tidak ada pengalihan otomatis.',
                   ),
-                  if (_cloud)
-                    _line(
-                      'person.crop.circle.badge.minus',
-                      'Jika kamu satu-satunya anggota, grup kehilangan akses anggota dan undangannya dinonaktifkan. Riwayat kerja tetap disimpan tanpa identitas akunmu.',
-                    ),
+                  _line(
+                    'person.crop.circle.badge.minus',
+                    'Jika kamu satu-satunya anggota, grup kehilangan akses anggota dan undangannya dinonaktifkan. Riwayat kerja tetap disimpan tanpa identitas akunmu.',
+                  ),
                 ], 10),
               ),
               if (blockers.isNotEmpty)
@@ -1442,7 +1225,7 @@ class _DeleteSheetState extends State<_DeleteSheet> {
                   icon: 'person.badge.shield.checkmark',
                 ),
               if (active)
-                const GLNotice(
+                GLNotice(
                   text:
                       'Masih ada tugas yang belum selesai dengan kamu sebagai pelaksana atau reviewer. Minta koordinator membuka kembali proyek bila perlu, lalu alihkan tugasnya.',
                   icon: 'checklist',
@@ -1450,7 +1233,7 @@ class _DeleteSheetState extends State<_DeleteSheet> {
               if (_error != null) GLFormError(_error!),
               _FilledButton(
                 title: 'Lanjutkan',
-                background: clear ? GLTheme.ink : const Color(0xFFB4B8BC),
+                background: clear ? GLTheme.ink : GLTheme.faint,
                 onTap: () => setState(() {
                   if (blockers.isNotEmpty) {
                     _error =
@@ -1465,9 +1248,9 @@ class _DeleteSheetState extends State<_DeleteSheet> {
                 }),
               ),
             ], 12)
-          : _column(key: const ValueKey(2), [
+          : _column(key: ValueKey(2), [
               Text.rich(
-                const TextSpan(
+                TextSpan(
                   children: [
                     TextSpan(text: 'Ketik '),
                     TextSpan(
@@ -1490,7 +1273,7 @@ class _DeleteSheetState extends State<_DeleteSheet> {
                   cursorColor: GLTheme.ink,
                   style: gl(17, w600, 0.08, GLTheme.ink),
                   decoration: glInputDecoration().copyWith(
-                    contentPadding: const EdgeInsets.symmetric(
+                    contentPadding: EdgeInsets.symmetric(
                       horizontal: 16,
                       vertical: 15,
                     ),
@@ -1498,19 +1281,11 @@ class _DeleteSheetState extends State<_DeleteSheet> {
                   onSubmitted: (_) => _delete(),
                 ),
               ),
-              if (!_cloud)
-                const _DashedNote(
-                  'Simulasi: hanya data demo lokal yang berubah. Tidak ada data server yang dihapus. Pakai “Reset data demo” untuk mengembalikan.',
-                ),
               if (_error != null) GLFormError(_error!),
               _keyed(
-                const ValueKey('confirm-delete-account'),
+                ValueKey('confirm-delete-account'),
                 _FilledButton(
-                  title: _busy
-                      ? 'Menghapus…'
-                      : _cloud
-                      ? 'Hapus akun'
-                      : 'Hapus akun (simulasi)',
+                  title: _busy ? 'Menghapus…' : 'Hapus akun',
                   background: GLTheme.danger,
                   busy: _busy,
                   onTap: _delete,
@@ -1523,26 +1298,21 @@ class _DeleteSheetState extends State<_DeleteSheet> {
 
 /// Prototype `sheetPrivacy` (`ProfilePrivacySheet`); also opened from Welcome.
 /// [cloud] mirrors Swift `store.isCloudMode` (signed in to the server).
-Future<void> showPrivacySheet(
-  BuildContext context, {
-  bool cloud = false,
-}) => _showBareSheet(
+Future<void> showPrivacySheet(BuildContext context) => _showBareSheet(
   context,
   builder: (sheet) => _column([
     Text('Privasi & data', style: gl(22, w700, -0.02)),
     Container(
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 18),
-      decoration: glBox(Colors.white, 22),
+      padding: EdgeInsets.symmetric(vertical: 16, horizontal: 18),
+      decoration: glBox(GLTheme.surface, 22),
       child: DefaultTextStyle.merge(
         style: gl(15, w400, 0, GLTheme.ink, 4.5),
         child: _column([
-          const Text(
-            'GROUPLY memakai nama dan identitas login untuk akunmu. Persona demo terpisah dari akun server.',
-          ),
+          const Text('GROUPLY memakai nama dan identitas login untuk akunmu.'),
           const Text(
             'Proyek, tugas, dan pesan hanya terlihat oleh anggota grup terkait.',
           ),
-          if (cloud) ...const [
+          ...const [
             Text(
               'Laporan dan isi pesan yang dilaporkan dapat ditinjau operator berwenang. Blokir menyembunyikan pesan untukmu, bukan mengeluarkan anggota atau menghentikan tugas bersama.',
             ),
@@ -1551,10 +1321,8 @@ Future<void> showPrivacySheet(
             ),
           ],
           Text(
-            cloud
-                ? 'Data akun ini tersimpan di Supabase. Sesi login disimpan aman di Keychain.'
-                : 'Data demo disimpan di perangkat ini saja.',
-            style: const TextStyle(color: GLTheme.secondary),
+            'Data akun tersimpan di server Grouply (Supabase). Sesi login disimpan aman di perangkat.',
+            style: TextStyle(color: GLTheme.secondary),
           ),
         ], 10),
       ),

@@ -13,8 +13,8 @@ import '../core/store.dart';
 import '../ui/gl.dart';
 import 'workspace_screens.dart';
 
-const _chip = Color(0xFFECEEEB);
-const _dash = Color(0xFF9AA0A6);
+final _chip = GLTheme.chip;
+final _dash = GLTheme.placeholder;
 
 List<JsonMap> _thread(GrouplyStore store, String groupID) {
   final rows = store.messages
@@ -112,7 +112,7 @@ ShapeBorder _uneven(double tl, double tr, double bl, double br) =>
 
 /// `StrokeStyle(lineWidth: 1.5, dash: [4, 3])` along a shape.
 class _DashedBorder extends CustomPainter {
-  const _DashedBorder(this.shape);
+  _DashedBorder(this.shape);
   final ShapeBorder shape;
   @override
   void paint(Canvas canvas, Size size) {
@@ -220,7 +220,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
         body: RefreshIndicator.adaptive(
           onRefresh: _refresh,
           child: ListView(
-            physics: const AlwaysScrollableScrollPhysics(
+            physics: AlwaysScrollableScrollPhysics(
               parent: BouncingScrollPhysics(),
             ),
             keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
@@ -232,24 +232,21 @@ class _ChatsScreenState extends State<ChatsScreen> {
             ),
             children: [
               Text('Chat', style: gl(34, w700, -0.03)),
-              const SizedBox(height: 4),
+              SizedBox(height: 4),
               Text(
                 'Satu ruang obrolan untuk tiap grup',
                 style: gl(15, w400, 0, GLTheme.secondary),
               ),
               if (_error ?? store.error case final error?) ...[
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 GLFormError(error),
               ],
-              if (mine.isNotEmpty) ...[
-                const SizedBox(height: 16),
-                _searchField(),
-              ],
-              const SizedBox(height: 16),
+              if (mine.isNotEmpty) ...[SizedBox(height: 16), _searchField()],
+              SizedBox(height: 16),
               ClipPath(
                 clipper: ShapeBorderClipper(shape: glShape(28)),
                 child: Container(
-                  decoration: glBox(Colors.white, 28, shadow: true),
+                  decoration: glBox(GLTheme.surface, 28, shadow: true),
                   child: Column(
                     children: [
                       for (final group in groups) _row(group),
@@ -270,12 +267,12 @@ class _ChatsScreenState extends State<ChatsScreen> {
 
   Widget _searchField() => Container(
     height: 48,
-    padding: const EdgeInsets.only(left: 14, right: 4),
-    decoration: glBox(Colors.white, 16, border: GLTheme.border),
+    padding: EdgeInsets.only(left: 14, right: 4),
+    decoration: glBox(GLTheme.surface, 16, border: GLTheme.border),
     child: Row(
       children: [
-        const GLIcon('magnifyingglass', size: 20, color: GLTheme.secondary),
-        const SizedBox(width: 8),
+        GLIcon('magnifyingglass', size: 20, color: GLTheme.secondary),
+        SizedBox(width: 8),
         Expanded(
           child: Semantics(
             label: 'Cari nama grup',
@@ -287,14 +284,14 @@ class _ChatsScreenState extends State<ChatsScreen> {
               style: gl(16, w400, 0, GLTheme.ink),
               decoration: InputDecoration.collapsed(
                 hintText: 'Cari nama grup',
-                hintStyle: gl(16, w400, 0, const Color(0xFFA0A4A8)),
+                hintStyle: gl(16, w400, 0, GLTheme.placeholder),
               ),
               onChanged: (value) => setState(() => _query = value),
             ),
           ),
         ),
         if (_query.isNotEmpty) ...[
-          const SizedBox(width: 8),
+          SizedBox(width: 8),
           GLTap(
             label: 'Hapus pencarian',
             onTap: () => setState(() {
@@ -304,11 +301,11 @@ class _ChatsScreenState extends State<ChatsScreen> {
             child: Container(
               width: 40,
               height: 40,
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 color: GLTheme.muted,
                 shape: BoxShape.circle,
               ),
-              child: const GLIcon('xmark', size: 18, color: GLTheme.ink),
+              child: GLIcon('xmark', size: 18, color: GLTheme.ink),
             ),
           ),
         ],
@@ -337,8 +334,8 @@ class _ChatsScreenState extends State<ChatsScreen> {
       ),
       builder: (pressed) => Container(
         color: pressed ? GLTheme.muted : Colors.transparent,
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-        foregroundDecoration: const BoxDecoration(
+        padding: EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+        foregroundDecoration: BoxDecoration(
           border: Border(bottom: BorderSide(color: GLTheme.border)),
         ),
         child: Row(
@@ -346,14 +343,17 @@ class _ChatsScreenState extends State<ChatsScreen> {
             Container(
               width: 52,
               height: 52,
-              decoration: glBox(glHex(group.text('tint'), Colors.white), 20),
+              decoration: glBox(
+                glTint(group.text('tint'), GLTheme.surface),
+                20,
+              ),
               child: GLIcon(
                 group.text('icon').isEmpty ? 'person.3' : group.text('icon'),
                 size: 26,
                 color: GLTheme.ink,
               ),
             ),
-            const SizedBox(width: 14),
+            SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -371,7 +371,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
                         ),
                       ),
                       if (last != null) ...[
-                        const SizedBox(width: 8),
+                        SizedBox(width: 8),
                         Text(
                           GLFormat.chatStamp(_at(last), DateTime.now()),
                           style: gl(
@@ -384,7 +384,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
                       ],
                     ],
                   ),
-                  const SizedBox(height: 3),
+                  SizedBox(height: 3),
                   Row(
                     children: [
                       Expanded(
@@ -402,26 +402,24 @@ class _ChatsScreenState extends State<ChatsScreen> {
                         ),
                       ),
                       if (bold) ...[
-                        const SizedBox(width: 8),
+                        SizedBox(width: 8),
                         Semantics(
                           label: '$unread pesan belum dibaca',
                           child: ExcludeSemantics(
                             child: Container(
-                              constraints: const BoxConstraints(
+                              constraints: BoxConstraints(
                                 minWidth: 24,
                                 minHeight: 24,
                               ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 7,
-                              ),
+                              padding: EdgeInsets.symmetric(horizontal: 7),
                               alignment: Alignment.center,
-                              decoration: const ShapeDecoration(
+                              decoration: ShapeDecoration(
                                 color: GLTheme.ink,
                                 shape: StadiumBorder(),
                               ),
                               child: Text(
                                 '$unread',
-                                style: gl(12, w700, 0, Colors.white),
+                                style: gl(12, w700, 0, GLTheme.onInk),
                               ),
                             ),
                           ),
@@ -439,26 +437,26 @@ class _ChatsScreenState extends State<ChatsScreen> {
   }
 
   Widget _emptyChats() => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 22),
+    padding: EdgeInsets.symmetric(vertical: 30, horizontal: 22),
     child: Column(
       children: [
         Container(
           width: 56,
           height: 56,
           decoration: glBox(GLTheme.lavender, 20),
-          child: const GLIcon(
+          child: GLIcon(
             'bubble.left.and.bubble.right',
             size: 28,
             color: GLTheme.ink,
           ),
         ),
-        const SizedBox(height: 10),
+        SizedBox(height: 10),
         Text(
           'Belum ada chat',
           textAlign: TextAlign.center,
           style: gl(19, w700),
         ),
-        const SizedBox(height: 10),
+        SizedBox(height: 10),
         Text(
           'Chat grup dibuat otomatis saat kamu membuat atau bergabung ke grup.',
           textAlign: TextAlign.center,
@@ -470,17 +468,17 @@ class _ChatsScreenState extends State<ChatsScreen> {
 
   Widget _noMatch() => Container(
     width: double.infinity,
-    padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
+    padding: EdgeInsets.symmetric(vertical: 28, horizontal: 20),
     child: Column(
       children: [
-        const GLIcon('magnifyingglass', size: 30, color: GLTheme.secondary),
-        const SizedBox(height: 6),
+        GLIcon('magnifyingglass', size: 30, color: GLTheme.secondary),
+        SizedBox(height: 6),
         Text(
           'Tidak ada grup “$_query”',
           textAlign: TextAlign.center,
           style: gl(16, w600),
         ),
-        const SizedBox(height: 6),
+        SizedBox(height: 6),
         Text(
           'Coba kata kunci lain.',
           textAlign: TextAlign.center,
@@ -670,7 +668,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
             message.text('id') == clientID &&
             message.text('delivery') == 'failed',
       )) {
-        throw const GrouplyException(
+        throw GrouplyException(
           'Pesan gagal terkirim. Draf disimpan; coba kirim lagi.',
         );
       }
@@ -762,13 +760,12 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         await _showChatSheet<void>(
           context,
           (_) => _ModerationDialog(
-            cloud: !store.demoMode,
             onSubmit: (reason) async {
               final actor = store.currentUserID;
-              if (!_canAccess) throw const GrouplyException('Akses ditolak.');
+              if (!_canAccess) throw GrouplyException('Akses ditolak.');
               await store.mutate('reportMessage', {'id': id, 'reason': reason});
               if (actor != store.currentUserID) {
-                throw const GrouplyException('Sesi berubah.');
+                throw GrouplyException('Sesi berubah.');
               }
             },
           ),
@@ -804,18 +801,15 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   // MARK: Rows
 
   Widget _daySeparator(String label) => Padding(
-    padding: const EdgeInsets.only(top: 14, bottom: 6),
+    padding: EdgeInsets.only(top: 14, bottom: 6),
     child: Center(
       child: Semantics(
         header: true,
         child: Container(
           height: 26,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          padding: EdgeInsets.symmetric(horizontal: 12),
           alignment: Alignment.center,
-          decoration: const ShapeDecoration(
-            color: _chip,
-            shape: StadiumBorder(),
-          ),
+          decoration: ShapeDecoration(color: _chip, shape: StadiumBorder()),
           child: Text(label, style: gl(12, w600, 0, GLTheme.text2)),
         ),
       ),
@@ -853,19 +847,19 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   }
 
   Widget _systemRow(JsonMap m, double width) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 8),
+    padding: EdgeInsets.symmetric(vertical: 8),
     child: Center(
       child: ConstrainedBox(
         constraints: BoxConstraints(maxWidth: width * 0.92),
         child: MergeSemantics(
           child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+            padding: EdgeInsets.symmetric(vertical: 6, horizontal: 12),
             decoration: glBox(_chip, 14),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const GLIcon('bolt', size: 16, color: GLTheme.text3),
-                const SizedBox(width: 6),
+                GLIcon('bolt', size: 16, color: GLTheme.text3),
+                SizedBox(width: 6),
                 Flexible(
                   child: Text(
                     '${_displayName(widget.store, m.text('senderID'))} ${m.text('text')} · ${GLFormat.time(_at(m))}',
@@ -891,10 +885,10 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         store.project(task.text('projectID'))?.text('groupID') ==
             widget.groupID;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+      padding: EdgeInsets.symmetric(vertical: 10, horizontal: 6),
       child: Container(
-        padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
-        decoration: glBox(Colors.white, 20, border: GLTheme.border),
+        padding: EdgeInsets.fromLTRB(14, 12, 12, 12),
+        decoration: glBox(GLTheme.surface, 20, border: GLTheme.border),
         child: Row(
           children: [
             Container(
@@ -903,7 +897,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
               decoration: glBox(tint, 14),
               child: GLIcon(icon, size: 20, color: GLTheme.ink),
             ),
-            const SizedBox(width: 12),
+            SizedBox(width: 12),
             Expanded(
               child: MergeSemantics(
                 child: Column(
@@ -913,7 +907,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                       '${_displayName(store, m.text('senderID'))} ${m.text('text')} · ${GLFormat.activityStamp(_at(m), DateTime.now())}',
                       style: gl(13, w400, 0, GLTheme.text2),
                     ),
-                    const SizedBox(height: 1),
+                    SizedBox(height: 1),
                     Text(
                       task?.text('title') ?? 'Tugas tidak tersedia',
                       style: gl(15, w600, 0, null, 1),
@@ -922,7 +916,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                 ),
               ),
             ),
-            const SizedBox(width: 12),
+            SizedBox(width: 12),
             GLTap(
               onTap: !canOpen
                   ? null
@@ -939,9 +933,9 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                 opacity: canOpen ? 1 : 0.4,
                 child: Container(
                   height: 44,
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  padding: EdgeInsets.symmetric(horizontal: 14),
                   alignment: Alignment.center,
-                  decoration: const ShapeDecoration(
+                  decoration: ShapeDecoration(
                     shape: StadiumBorder(
                       side: BorderSide(color: GLTheme.ink, width: 1.5),
                     ),
@@ -974,10 +968,10 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               if (sameNext)
-                const SizedBox(width: 30, height: 1)
+                SizedBox(width: 30, height: 1)
               else
                 Padding(
-                  padding: const EdgeInsets.only(bottom: 22),
+                  padding: EdgeInsets.only(bottom: 22),
                   child: ExcludeSemantics(
                     child: GLAvatar(
                       user: store.user(m.text('senderID')),
@@ -986,7 +980,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                     ),
                   ),
                 ),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               Flexible(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -994,7 +988,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                   children: [
                     if (!samePrev) ...[
                       Padding(
-                        padding: const EdgeInsets.only(left: 4),
+                        padding: EdgeInsets.only(left: 4),
                         child: ExcludeSemantics(
                           excluding: !hidden,
                           child: Text(
@@ -1003,7 +997,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 3),
+                      SizedBox(height: 3),
                     ],
                     if (hidden)
                       _Press(
@@ -1014,20 +1008,20 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                           child: CustomPaint(
                             painter: _DashedBorder(shapeFixed),
                             child: Container(
-                              constraints: const BoxConstraints(minHeight: 44),
-                              padding: const EdgeInsets.symmetric(
+                              constraints: BoxConstraints(minHeight: 44),
+                              padding: EdgeInsets.symmetric(
                                 vertical: 8,
                                 horizontal: 12,
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  const GLIcon(
+                                  GLIcon(
                                     'eye.slash',
                                     size: 17,
                                     color: GLTheme.text3,
                                   ),
-                                  const SizedBox(width: 6),
+                                  SizedBox(width: 6),
                                   Flexible(
                                     child: Text(
                                       'Pesan dari pengguna yang kamu blokir · Tampilkan',
@@ -1043,15 +1037,15 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                     else
                       _bubble(
                         m,
-                        color: Colors.white,
-                        link: const Color(0xFF1F4F86),
+                        color: GLTheme.surface,
+                        link: GLTheme.link,
                         shape: shapeFixed,
                         shadow: true,
                       ),
                     if (!sameNext) ...[
-                      const SizedBox(height: 3),
+                      SizedBox(height: 3),
                       Padding(
-                        padding: const EdgeInsets.only(left: 4),
+                        padding: EdgeInsets.only(left: 4),
                         child: ExcludeSemantics(
                           excluding: !hidden,
                           child: Text(
@@ -1086,31 +1080,31 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
             children: [
               AnimatedOpacity(
                 opacity: delivery == 'sending' ? 0.6 : 1,
-                duration: const Duration(milliseconds: 200),
+                duration: Duration(milliseconds: 200),
                 curve: Curves.easeOut,
                 child: _bubble(
                   m,
                   color: GLTheme.lavender,
-                  link: const Color(0xFF1F3F76),
+                  link: GLTheme.link,
                   shape: shape,
                 ),
               ),
               if (delivery == 'failed') ...[
-                const SizedBox(height: 3),
+                SizedBox(height: 3),
                 GLTap(
                   onTap: _busy || _reading ? null : () => _send(m),
                   child: Container(
-                    constraints: const BoxConstraints(minHeight: 40),
-                    padding: const EdgeInsets.all(2),
+                    constraints: BoxConstraints(minHeight: 40),
+                    padding: EdgeInsets.all(2),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const GLIcon(
+                        GLIcon(
                           'exclamationmark.circle',
                           size: 16,
                           color: GLTheme.danger,
                         ),
-                        const SizedBox(width: 4),
+                        SizedBox(width: 4),
                         Text(
                           'Gagal terkirim · Coba lagi',
                           style: gl(13, w600, 0, GLTheme.danger),
@@ -1120,17 +1114,17 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                   ),
                 ),
               ] else if (delivery == 'sending') ...[
-                const SizedBox(height: 3),
+                SizedBox(height: 3),
                 ExcludeSemantics(
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const SizedBox(
+                      SizedBox(
                         width: 14,
                         height: 14,
                         child: CupertinoActivityIndicator(radius: 5),
                       ),
-                      const SizedBox(width: 4),
+                      SizedBox(width: 4),
                       Text(
                         'Mengirim…',
                         style: gl(12, w400, 0, GLTheme.secondary),
@@ -1139,7 +1133,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                   ),
                 ),
               ] else if (!sameNext) ...[
-                const SizedBox(height: 3),
+                SizedBox(height: 3),
                 ExcludeSemantics(
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -1148,12 +1142,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                         '${GLFormat.time(_at(m))} · Terkirim',
                         style: gl(12, w400, 0, GLTheme.secondary),
                       ),
-                      const SizedBox(width: 3),
-                      const GLIcon(
-                        'checkmark',
-                        size: 14,
-                        color: GLTheme.secondary,
-                      ),
+                      SizedBox(width: 3),
+                      GLIcon('checkmark', size: 14, color: GLTheme.secondary),
                     ],
                   ),
                 ),
@@ -1186,18 +1176,18 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           ? 'Kamu, $time, $delivery'
           : 'Dari ${_displayName(store, m.text('senderID'))}, $time',
       customSemanticsActions: {
-        const CustomSemanticsAction(label: 'Opsi pesan'): open,
+        CustomSemanticsAction(label: 'Opsi pesan'): open,
       },
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onLongPress: open,
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+          padding: EdgeInsets.symmetric(vertical: 8, horizontal: 12),
           decoration: ShapeDecoration(
             color: color,
             shape: shape,
             shadows: shadow
-                ? const [
+                ? [
                     BoxShadow(
                       color: Color(0x0F000000),
                       blurRadius: 1.5,
@@ -1248,22 +1238,22 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   }
 
   Widget _empty() => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 16),
+    padding: EdgeInsets.symmetric(vertical: 40, horizontal: 16),
     child: Column(
       children: [
         Container(
           width: 56,
           height: 56,
           decoration: glBox(GLTheme.lavender, 20),
-          child: const GLIcon('hand.wave', size: 28, color: GLTheme.ink),
+          child: GLIcon('hand.wave', size: 28, color: GLTheme.ink),
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         Text(
           'Belum ada pesan',
           textAlign: TextAlign.center,
           style: gl(17, w600),
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         Text(
           'Sapa kelompokmu dan mulai koordinasi di sini.',
           textAlign: TextAlign.center,
@@ -1283,24 +1273,24 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     ),
     decoration: BoxDecoration(
       color: GLTheme.background.withValues(alpha: 0.94),
-      border: const Border(bottom: BorderSide(color: GLTheme.border)),
+      border: Border(bottom: BorderSide(color: GLTheme.border)),
     ),
     child: Row(
       children: [
         GLTap(
           label: 'Kembali',
           onTap: () => Navigator.of(context).maybePop(),
-          child: const SizedBox(
+          child: SizedBox(
             width: 44,
             height: 44,
             child: GLIcon('chevron.backward', size: 26, color: GLTheme.ink),
           ),
         ),
-        const SizedBox(width: 10),
+        SizedBox(width: 10),
         Container(
           width: 42,
           height: 42,
-          decoration: glBox(glHex(group?.text('tint'), Colors.white), 16),
+          decoration: glBox(glTint(group?.text('tint'), GLTheme.surface), 16),
           child: GLIcon(
             (group?.text('icon') ?? '').isEmpty
                 ? 'person.3'
@@ -1309,7 +1299,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
             color: GLTheme.ink,
           ),
         ),
-        const SizedBox(width: 10),
+        SizedBox(width: 10),
         Expanded(
           child: MergeSemantics(
             child: Column(
@@ -1329,7 +1319,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
             ),
           ),
         ),
-        const SizedBox(width: 10),
+        SizedBox(width: 10),
         GLCircleButton(
           icon: 'person.2',
           label: 'Buka detail grup',
@@ -1352,23 +1342,23 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     final store = widget.store;
     final retrying = _clientID != null;
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: GLTheme.background,
         border: Border(top: BorderSide(color: GLTheme.border)),
       ),
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           child: Row(
             children: [
               Expanded(
                 child: Container(
                   height: 44,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: EdgeInsets.symmetric(horizontal: 16),
                   alignment: Alignment.centerLeft,
-                  decoration: const ShapeDecoration(
-                    color: Colors.white,
+                  decoration: ShapeDecoration(
+                    color: GLTheme.surface,
                     shape: StadiumBorder(
                       side: BorderSide(color: GLTheme.border),
                     ),
@@ -1383,12 +1373,12 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                     style: gl(16, w400, 0, GLTheme.ink),
                     decoration: InputDecoration.collapsed(
                       hintText: 'Tulis pesan…',
-                      hintStyle: gl(16, w400, 0, const Color(0xFFA0A4A8)),
+                      hintStyle: gl(16, w400, 0, GLTheme.placeholder),
                     ).copyWith(counterText: ''),
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               ValueListenableBuilder(
                 valueListenable: _draft,
                 builder: (_, value, _) {
@@ -1403,23 +1393,21 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                       onTap: _busy || store.loading ? null : () => _send(),
                       builder: (pressed) => AnimatedScale(
                         scale: pressed ? 0.9 : 1,
-                        duration: const Duration(milliseconds: 120),
+                        duration: Duration(milliseconds: 120),
                         curve: Curves.easeOut,
                         child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 150),
+                          duration: Duration(milliseconds: 150),
                           curve: Curves.easeOut,
                           width: 44,
                           height: 44,
                           decoration: BoxDecoration(
-                            color: hasText
-                                ? GLTheme.ink
-                                : const Color(0xFFB4B8BC),
+                            color: hasText ? GLTheme.ink : GLTheme.faint,
                             shape: BoxShape.circle,
                           ),
-                          child: const GLIcon(
+                          child: GLIcon(
                             'arrow.up',
                             size: 22,
-                            color: Colors.white,
+                            color: GLTheme.onInk,
                           ),
                         ),
                       ),
@@ -1437,7 +1425,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     final store = widget.store;
-    if (!_canAccess) return const GLAccessDenied();
+    if (!_canAccess) return GLAccessDenied();
     _scheduleRead();
     final group = store.group(widget.groupID);
     final messages = _thread(store, widget.groupID);
@@ -1452,33 +1440,6 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                 final width = constraints.maxWidth - 32;
                 // Forward-ordered thread entries; the list is reversed so it anchors at the bottom.
                 final entries = <Widget Function()>[
-                  if (store.demoMode && store.simulateSendFailure)
-                    () => Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 10,
-                          horizontal: 14,
-                        ),
-                        decoration: glBox(GLTheme.butter, 16),
-                        child: Row(
-                          children: [
-                            const GLIcon(
-                              'icloud.slash',
-                              size: 18,
-                              color: GLTheme.ink,
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                'Kamu sedang offline. Pesan akan gagal terkirim.',
-                                style: gl(14, w500),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
                   for (var i = 0; i < messages.length; i++) ...[
                     if (i == 0 ||
                         _day(_at(messages[i - 1])) != _day(_at(messages[i])))
@@ -1502,10 +1463,10 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                     child: ListView.builder(
                       key: _viewport,
                       reverse: true,
-                      physics: const AlwaysScrollableScrollPhysics(
+                      physics: AlwaysScrollableScrollPhysics(
                         parent: BouncingScrollPhysics(),
                       ),
-                      padding: const EdgeInsets.fromLTRB(16, 6, 16, 8),
+                      padding: EdgeInsets.fromLTRB(16, 6, 16, 8),
                       keyboardDismissBehavior:
                           ScrollViewKeyboardDismissBehavior.onDrag,
                       itemCount: entries.length,
@@ -1519,7 +1480,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           ),
           if (_error ?? store.error case final error?)
             Padding(
-              padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+              padding: EdgeInsets.fromLTRB(12, 0, 12, 8),
               child: GLFormError(error),
             ),
           if (_readError != null)
@@ -1532,7 +1493,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                 _scheduleRead();
               },
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
                 child: Text(
                   '$_readError · Coba lagi',
                   style: gl(13, w400, 0, GLTheme.secondary),
@@ -1555,8 +1516,8 @@ Future<T?> _showChatSheet<T>(BuildContext context, WidgetBuilder builder) =>
       isScrollControlled: true,
       useSafeArea: true,
       backgroundColor: GLTheme.background,
-      barrierColor: const Color(0x66000000),
-      shape: const RoundedRectangleBorder(
+      barrierColor: Color(0x66000000),
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
       ),
       builder: (context) => Padding(
@@ -1564,9 +1525,9 @@ Future<T?> _showChatSheet<T>(BuildContext context, WidgetBuilder builder) =>
           bottom: MediaQuery.viewInsetsOf(context).bottom,
         ),
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 10, 20, 34),
+          padding: EdgeInsets.fromLTRB(20, 10, 20, 34),
           child: DefaultTextStyle.merge(
-            style: const TextStyle(color: GLTheme.ink),
+            style: TextStyle(color: GLTheme.ink),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1575,13 +1536,13 @@ Future<T?> _showChatSheet<T>(BuildContext context, WidgetBuilder builder) =>
                   child: Container(
                     width: 38,
                     height: 5,
-                    decoration: const ShapeDecoration(
-                      color: Color(0xFFC4C7C5),
+                    decoration: ShapeDecoration(
+                      color: GLTheme.disabled,
                       shape: StadiumBorder(),
                     ),
                   ),
                 ),
-                const SizedBox(height: 14),
+                SizedBox(height: 14),
                 Builder(builder: builder),
               ],
             ),
@@ -1608,14 +1569,14 @@ class _MessageSheet extends StatelessWidget {
         GLTap(
           onTap: () => Navigator.of(context).pop(value),
           child: Container(
-            constraints: const BoxConstraints(minHeight: 56),
-            decoration: const BoxDecoration(
+            constraints: BoxConstraints(minHeight: 56),
+            decoration: BoxDecoration(
               border: Border(bottom: BorderSide(color: GLTheme.border)),
             ),
             child: Row(
               children: [
                 GLIcon(icon, size: 22, color: color),
-                const SizedBox(width: 12),
+                SizedBox(width: 12),
                 Expanded(child: Text(label, style: gl(16, w600, 0, color))),
               ],
             ),
@@ -1626,8 +1587,8 @@ class _MessageSheet extends StatelessWidget {
       children: [
         MergeSemantics(
           child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-            decoration: glBox(Colors.white, 20),
+            padding: EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+            decoration: glBox(GLTheme.surface, 20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -1635,7 +1596,7 @@ class _MessageSheet extends StatelessWidget {
                   '${_displayName(store, who)} · ${_day(_at(m))}, ${GLFormat.time(_at(m))}',
                   style: gl(13, w600, 0, GLTheme.text2),
                 ),
-                const SizedBox(height: 4),
+                SizedBox(height: 4),
                 Text(
                   text.length > 140 ? '${text.substring(0, 140)}…' : text,
                   style: gl(15, w400, 0, null, 3),
@@ -1644,10 +1605,10 @@ class _MessageSheet extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 14),
+        SizedBox(height: 14),
         Container(
-          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
-          decoration: glBox(Colors.white, 24),
+          padding: EdgeInsets.symmetric(vertical: 4, horizontal: 16),
+          decoration: glBox(GLTheme.surface, 24),
           child: Column(
             children: [
               action('Salin teks', 'doc.on.doc', GLTheme.ink, 'copy'),
@@ -1671,7 +1632,7 @@ class _MessageSheet extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: 14),
+        SizedBox(height: 14),
         GLTap(
           onTap: () => Navigator.of(context).pop(),
           child: Container(
@@ -1688,8 +1649,7 @@ class _MessageSheet extends StatelessWidget {
 
 /// `ChatReportSheet` — reason radio list, optional details, done state.
 class _ModerationDialog extends StatefulWidget {
-  const _ModerationDialog({required this.cloud, required this.onSubmit});
-  final bool cloud;
+  const _ModerationDialog({required this.onSubmit});
   final Future<void> Function(String reason) onSubmit;
 
   @override
@@ -1697,7 +1657,7 @@ class _ModerationDialog extends StatefulWidget {
 }
 
 class _ModerationDialogState extends State<_ModerationDialog> {
-  static const _reasons = [
+  static final _reasons = [
     'Pelecehan',
     'Spam',
     'Konten tidak pantas',
@@ -1745,31 +1705,28 @@ class _ModerationDialogState extends State<_ModerationDialog> {
       Row(
         children: [
           Expanded(child: Text('Laporkan pesan', style: gl(22, w700, -0.02))),
-          const SizedBox(width: 8),
+          SizedBox(width: 8),
           GLTap(
             label: 'Tutup',
             onTap: () => Navigator.of(context).pop(),
             child: Container(
               width: 44,
               height: 44,
-              decoration: const BoxDecoration(
-                color: _chip,
-                shape: BoxShape.circle,
-              ),
-              child: const GLIcon('xmark', size: 22, color: GLTheme.ink),
+              decoration: BoxDecoration(color: _chip, shape: BoxShape.circle),
+              child: GLIcon('xmark', size: 22, color: GLTheme.ink),
             ),
           ),
         ],
       ),
-      const SizedBox(height: 8),
+      SizedBox(height: 8),
       Text(
         'Pengirim tidak akan tahu siapa yang melapor.',
         style: gl(14, w400, 0, GLTheme.text3),
       ),
-      const SizedBox(height: 14),
+      SizedBox(height: 14),
       Container(
-        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
-        decoration: glBox(Colors.white, 24),
+        padding: EdgeInsets.symmetric(vertical: 4, horizontal: 16),
+        decoration: glBox(GLTheme.surface, 24),
         child: Column(
           children: [
             for (final r in _reasons)
@@ -1778,8 +1735,8 @@ class _ModerationDialogState extends State<_ModerationDialog> {
                 child: GLTap(
                   onTap: () => setState(() => _reason = r),
                   child: Container(
-                    constraints: const BoxConstraints(minHeight: 54),
-                    decoration: const BoxDecoration(
+                    constraints: BoxConstraints(minHeight: 54),
+                    decoration: BoxDecoration(
                       border: Border(bottom: BorderSide(color: GLTheme.border)),
                     ),
                     child: Row(
@@ -1789,7 +1746,7 @@ class _ModerationDialogState extends State<_ModerationDialog> {
                           size: 22,
                           color: GLTheme.ink,
                         ),
-                        const SizedBox(width: 12),
+                        SizedBox(width: 12),
                         Expanded(child: Text(r, style: gl(16, w500))),
                       ],
                     ),
@@ -1799,12 +1756,12 @@ class _ModerationDialogState extends State<_ModerationDialog> {
           ],
         ),
       ),
-      const SizedBox(height: 14),
+      SizedBox(height: 14),
       Text('Detail (opsional)', style: gl(14, w600)),
-      const SizedBox(height: 6),
+      SizedBox(height: 6),
       Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-        decoration: glBox(Colors.white, 16, border: GLTheme.border),
+        padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        decoration: glBox(GLTheme.surface, 16, border: GLTheme.border),
         child: TextField(
           controller: _details,
           minLines: 3,
@@ -1814,15 +1771,15 @@ class _ModerationDialogState extends State<_ModerationDialog> {
           style: gl(16, w400, 0, GLTheme.ink, 4),
           decoration: InputDecoration.collapsed(
             hintText: 'Ceritakan singkat apa yang terjadi',
-            hintStyle: gl(16, w400, 0, const Color(0xFFA0A4A8), 4),
+            hintStyle: gl(16, w400, 0, GLTheme.placeholder, 4),
           ).copyWith(counterText: ''),
         ),
       ),
       if (_error case final error?) ...[
-        const SizedBox(height: 14),
+        SizedBox(height: 14),
         GLFormError(error),
       ],
-      const SizedBox(height: 14),
+      SizedBox(height: 14),
       GLSubmitButton(
         title: _busy ? 'Menyimpan…' : 'Kirim laporan',
         busy: _busy,
@@ -1833,51 +1790,47 @@ class _ModerationDialogState extends State<_ModerationDialog> {
   );
 
   Widget _doneView() => Padding(
-    padding: const EdgeInsets.only(top: 8),
+    padding: EdgeInsets.only(top: 8),
     child: Column(
       children: [
         Container(
           width: 64,
           height: 64,
           decoration: glBox(GLTheme.mint, 24),
-          child: const GLIcon('checkmark.circle', size: 32, color: GLTheme.ink),
+          child: GLIcon('checkmark.circle', size: 32, color: GLTheme.ink),
         ),
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
         Text(
           'Laporan tersimpan',
           textAlign: TextAlign.center,
           style: gl(21, w700),
         ),
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
         Text(
-          widget.cloud
-              ? 'Laporan masuk antrean privat untuk ditinjau operator berwenang. Belum ada jaminan waktu respons.'
-              : 'Terima kasih sudah menjaga grup tetap nyaman. Ini simulasi pelaporan lokal.',
+          'Laporan masuk antrean privat untuk ditinjau operator berwenang. Belum ada jaminan waktu respons.',
           textAlign: TextAlign.center,
           style: gl(15, w400, 0, GLTheme.text3, 4),
         ),
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
         CustomPaint(
           painter: _DashedBorder(glShape(14)),
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+            padding: EdgeInsets.symmetric(vertical: 10, horizontal: 12),
             child: Text(
-              widget.cloud
-                  ? 'Laporan berhasil tersimpan di server.'
-                  : 'Simulasi: laporan hanya disimpan di prototipe ini dan tidak dikirim ke moderator sungguhan.',
+              'Laporan berhasil tersimpan di server.',
               textAlign: TextAlign.center,
               style: gl(13, w400, 0, GLTheme.secondary, 3),
             ),
           ),
         ),
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
         GLTap(
           onTap: () => Navigator.of(context).pop(),
           child: Container(
             height: 54,
             alignment: Alignment.center,
             decoration: glBox(GLTheme.ink, 18),
-            child: Text('Selesai', style: gl(16, w600, 0, Colors.white)),
+            child: Text('Selesai', style: gl(16, w600, 0, GLTheme.onInk)),
           ),
         ),
       ],
