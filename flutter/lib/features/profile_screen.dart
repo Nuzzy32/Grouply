@@ -13,9 +13,7 @@ String _failureText(Object failure) => failure is GrouplyException
 
 void _checkIdentity(GrouplyStore store, String actor) {
   if (!store.authenticated || store.currentUserID != actor) {
-    throw const GrouplyException(
-      'Akun telah berubah. Ulangi dari profil aktif.',
-    );
+    throw GrouplyException('Akun telah berubah. Ulangi dari profil aktif.');
   }
 }
 
@@ -67,7 +65,7 @@ class _LocalPrefs extends ChangeNotifier {
 
 /// `.glDetailScreen()` with the profile padding (20 horizontal, 4 top, 32 bottom).
 class _ProfileScaffold extends StatelessWidget {
-  const _ProfileScaffold({
+  _ProfileScaffold({
     required this.title,
     required this.children,
     this.spacing = 16,
@@ -80,10 +78,8 @@ class _ProfileScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Widget list = ListView(
-      physics: const AlwaysScrollableScrollPhysics(
-        parent: BouncingScrollPhysics(),
-      ),
-      padding: const EdgeInsets.fromLTRB(20, 4, 20, 32),
+      physics: AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+      padding: EdgeInsets.fromLTRB(20, 4, 20, 32),
       children: [
         GLDetailHeader(title),
         for (final child in children) ...[SizedBox(height: spacing), child],
@@ -100,35 +96,35 @@ class _ProfileScaffold extends StatelessWidget {
 }
 
 Widget _ink(Widget child) => DefaultTextStyle.merge(
-  style: const TextStyle(color: GLTheme.ink),
+  style: TextStyle(color: GLTheme.ink),
   child: IconTheme.merge(
-    data: const IconThemeData(color: GLTheme.ink),
+    data: IconThemeData(color: GLTheme.ink),
     child: child,
   ),
 );
 
 /// White grouped list (`border-radius:24px;padding:4px 16px`).
 class _ProfileGroup extends StatelessWidget {
-  const _ProfileGroup({required this.children, this.vertical = 4});
+  _ProfileGroup({required this.children, this.vertical = 4});
   final List<Widget> children;
   final double vertical;
   @override
   Widget build(BuildContext context) => Container(
     width: double.infinity,
     padding: EdgeInsets.symmetric(horizontal: 16, vertical: vertical),
-    decoration: glBox(Colors.white, 24),
+    decoration: glBox(GLTheme.surface, 24),
     child: Column(children: children),
   );
 }
 
 /// `.profileDivider()` — 1pt bottom rule drawn over the row.
-const _divider = BoxDecoration(
+final _divider = BoxDecoration(
   border: Border(bottom: BorderSide(color: GLTheme.border)),
 );
 
 /// 44pt capsule outline button ("Edit", "Buka blokir").
 class _PillButton extends StatelessWidget {
-  const _PillButton({required this.title, required this.onTap});
+  _PillButton({required this.title, required this.onTap});
   final String title;
   final VoidCallback? onTap;
   @override
@@ -136,9 +132,9 @@ class _PillButton extends StatelessWidget {
     onTap: onTap,
     child: Container(
       height: 44,
-      padding: const EdgeInsets.symmetric(horizontal: 14),
+      padding: EdgeInsets.symmetric(horizontal: 14),
       alignment: Alignment.center,
-      decoration: const ShapeDecoration(
+      decoration: ShapeDecoration(
         shape: StadiumBorder(side: BorderSide(color: GLTheme.ink, width: 1.5)),
       ),
       child: Text(title, style: gl(14, w600)),
@@ -148,25 +144,21 @@ class _PillButton extends StatelessWidget {
 
 /// iOS switch from the prototype's `sw()` (#34C759 / #D5D8DB).
 class _ProfileSwitch extends StatelessWidget {
-  const _ProfileSwitch({required this.on, required this.onChanged});
+  _ProfileSwitch({required this.on, required this.onChanged});
   final bool on;
   final VoidCallback onChanged;
   @override
   Widget build(BuildContext context) => CupertinoSwitch(
     value: on,
-    activeTrackColor: const Color(0xFF34C759),
-    inactiveTrackColor: const Color(0xFFD5D8DB),
+    activeTrackColor: Color(0xFF34C759),
+    inactiveTrackColor: GLTheme.hairline,
     onChanged: (_) => onChanged(),
   );
 }
 
 /// Dashed `#9AA0A6` 1.5pt rounded border (`StrokeStyle(dash: [5, 4])`).
 class _Dashed extends StatelessWidget {
-  const _Dashed({
-    required this.radius,
-    required this.padding,
-    required this.child,
-  });
+  _Dashed({required this.radius, required this.padding, required this.child});
   final double radius;
   final EdgeInsetsGeometry padding;
   final Widget child;
@@ -178,12 +170,12 @@ class _Dashed extends StatelessWidget {
 }
 
 class _DashPainter extends CustomPainter {
-  const _DashPainter(this.radius);
+  _DashPainter(this.radius);
   final double radius;
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = const Color(0xFF9AA0A6)
+      ..color = GLTheme.placeholder
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.5;
     final path = Path()
@@ -205,12 +197,12 @@ class _DashPainter extends CustomPainter {
 }
 
 class _DashedNote extends StatelessWidget {
-  const _DashedNote(this.text);
+  _DashedNote(this.text);
   final String text;
   @override
   Widget build(BuildContext context) => _Dashed(
     radius: 14,
-    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+    padding: EdgeInsets.symmetric(vertical: 10, horizontal: 12),
     child: Text(text, style: gl(13, w400, 0, GLTheme.secondary, 2.5)),
   );
 }
@@ -218,30 +210,27 @@ class _DashedNote extends StatelessWidget {
 /// Capsule tag ("PROTOTIPE", "DEMO").
 Widget _tag(String text, double height, double em) => Container(
   height: height,
-  padding: const EdgeInsets.symmetric(horizontal: 8),
+  padding: EdgeInsets.symmetric(horizontal: 8),
   alignment: Alignment.center,
-  decoration: const ShapeDecoration(
-    color: GLTheme.butter,
-    shape: StadiumBorder(),
-  ),
+  decoration: ShapeDecoration(color: GLTheme.butter, shape: StadiumBorder()),
   child: Text(text, style: gl(11, w700, em)),
 );
 
 /// Filled sheet button (`height:54px;border-radius:18px;font-size:16px`).
 class _FilledButton extends StatelessWidget {
-  const _FilledButton({
+  _FilledButton({
     required this.title,
     required this.onTap,
     this.height = 54,
     this.radius = 18,
     this.fontSize = 16,
-    this.background = GLTheme.ink,
+    this.background,
     this.busy = false,
   });
   final String title;
   final VoidCallback onTap;
   final double height, radius, fontSize;
-  final Color background;
+  final Color? background;
   final bool busy;
   @override
   Widget build(BuildContext context) => GLTap(
@@ -251,8 +240,8 @@ class _FilledButton extends StatelessWidget {
       child: Container(
         height: height,
         alignment: Alignment.center,
-        decoration: glBox(background, radius),
-        child: Text(title, style: gl(fontSize, w600, 0, Colors.white)),
+        decoration: glBox(background ?? GLTheme.ink, radius),
+        child: Text(title, style: gl(fontSize, w600, 0, GLTheme.onInk)),
       ),
     ),
   );
@@ -288,8 +277,8 @@ Future<T?> _showBareSheet<T>(
   isScrollControlled: true,
   useSafeArea: true,
   backgroundColor: GLTheme.background,
-  barrierColor: const Color(0x66000000),
-  shape: const RoundedRectangleBorder(
+  barrierColor: Color(0x66000000),
+  shape: RoundedRectangleBorder(
     borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
   ),
   builder: (context) => SingleChildScrollView(
@@ -307,13 +296,13 @@ Future<T?> _showBareSheet<T>(
               child: Container(
                 width: 38,
                 height: 5,
-                decoration: const ShapeDecoration(
-                  color: Color(0xFFC4C7C5),
+                decoration: ShapeDecoration(
+                  color: GLTheme.disabled,
                   shape: StadiumBorder(),
                 ),
               ),
             ),
-            const SizedBox(height: 14),
+            SizedBox(height: 14),
             Builder(builder: builder),
           ],
         ),
@@ -325,7 +314,7 @@ Future<T?> _showBareSheet<T>(
 // MARK: - Profil
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key, required this.store});
+  ProfileScreen({super.key, required this.store});
 
   final GrouplyStore store;
 
@@ -401,7 +390,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _sectionLabel(String text) => Padding(
-    padding: const EdgeInsets.only(top: 4),
+    padding: EdgeInsets.only(top: 4),
     child: Semantics(
       header: true,
       child: Text(text.toUpperCase(), style: gl(14, w700, 0.04, GLTheme.text2)),
@@ -418,7 +407,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }) => GLTap(
     onTap: onTap,
     child: Container(
-      constraints: const BoxConstraints(minHeight: 60),
+      constraints: BoxConstraints(minHeight: 60),
       foregroundDecoration: divider ? _divider : null,
       child: Row(
         children: [
@@ -428,7 +417,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             decoration: glBox(tint, 13),
             child: GLIcon(icon, size: 20),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -438,8 +427,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ],
             ),
           ),
-          const SizedBox(width: 12),
-          const GLIcon('chevron.right', size: 22, color: GLTheme.secondary),
+          SizedBox(width: 12),
+          GLIcon('chevron.right', size: 22, color: GLTheme.secondary),
         ],
       ),
     ),
@@ -449,21 +438,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
     String icon,
     String title,
     VoidCallback? onTap, {
-    Color color = GLTheme.ink,
+    Color? color,
     bool divider = false,
     Key? key,
   }) => GLTap(
     key: key,
     onTap: onTap,
     child: Container(
-      constraints: const BoxConstraints(minHeight: 56),
+      constraints: BoxConstraints(minHeight: 56),
       foregroundDecoration: divider ? _divider : null,
       child: Row(
         children: [
           GLIcon(icon, size: 22, color: color),
-          const SizedBox(width: 12),
+          SizedBox(width: 12),
           Text(title, style: gl(16, w600, 0, color)),
-          const Spacer(),
+          Spacer(),
         ],
       ),
     ),
@@ -472,18 +461,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _profileCard() {
     final me = store.user(store.currentUserID);
     return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: glBox(Colors.white, 28),
+      padding: EdgeInsets.all(20),
+      decoration: glBox(GLTheme.surface, 28),
       child: Row(
         children: [
           GLAvatar(user: me, size: 64, fontSize: 20),
-          const SizedBox(width: 14),
+          SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(me?.text('name') ?? '', style: gl(20, w700)),
-                const SizedBox(height: 2),
+                SizedBox(height: 2),
                 Text(
                   me?.text('email') ?? '',
                   style: gl(14, w400, 0, GLTheme.secondary),
@@ -491,7 +480,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ],
             ),
           ),
-          const SizedBox(width: 14),
+          SizedBox(width: 14),
           _PillButton(
             title: 'Edit',
             onTap: _disabled ? null : () => _showEditName(context, store),
@@ -503,12 +492,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _demoBox() => _Dashed(
     radius: 24,
-    padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+    padding: EdgeInsets.symmetric(vertical: 14, horizontal: 16),
     child: _column([
       Row(
         children: [
           _tag('PROTOTIPE', 22, 0.04),
-          const SizedBox(width: 6),
+          SizedBox(width: 6),
           Flexible(child: Text('Pengaturan demo', style: gl(13, w700, 0.04))),
         ],
       ),
@@ -527,7 +516,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               onPressed: _disabled ? null : () => _showPersonas(context, store),
             ),
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: 8),
           Expanded(
             child: GLOutlineButton(
               title: 'Reset data demo',
@@ -559,7 +548,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           if (store.error != null)
             GLNotice(text: store.error!, color: GLTheme.coral),
           if (!store.authenticated)
-            const GLNotice(
+            GLNotice(
               text: 'Sesi telah berakhir. Masuk kembali untuk membuka profil.',
             )
           else ...[
@@ -601,7 +590,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 _navRow(
                   'flag',
-                  const Color(0xFFECEEEB),
+                  GLTheme.chip,
                   'Pelaporan',
                   '$reports laporan tersimpan ${store.demoMode ? 'lokal' : 'di server'}',
                   () => _push(_AboutScreen(store: store)),
@@ -622,7 +611,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   'Hapus akun',
                   _disabled ? null : () => _showDelete(context, store),
                   color: GLTheme.danger,
-                  key: const ValueKey('delete-account'),
+                  key: ValueKey('delete-account'),
                 ),
               ],
             ),
@@ -637,7 +626,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 // MARK: - Notifikasi
 
 class _NotifScreen extends StatelessWidget {
-  const _NotifScreen({required this.store});
+  _NotifScreen({required this.store});
   final GrouplyStore store;
 
   Widget _row(String key, String label, String sub) {
@@ -649,8 +638,8 @@ class _NotifScreen extends StatelessWidget {
       child: GLTap(
         onTap: toggle,
         child: Container(
-          constraints: const BoxConstraints(minHeight: 64),
-          padding: const EdgeInsets.symmetric(vertical: 10),
+          constraints: BoxConstraints(minHeight: 64),
+          padding: EdgeInsets.symmetric(vertical: 10),
           foregroundDecoration: _divider,
           child: Row(
             children: [
@@ -659,12 +648,12 @@ class _NotifScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(label, style: gl(16, w600)),
-                    const SizedBox(height: 2),
+                    SizedBox(height: 2),
                     Text(sub, style: gl(13, w400, 0, GLTheme.secondary, 1.5)),
                   ],
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               _ProfileSwitch(on: on, onChanged: toggle),
             ],
           ),
@@ -704,27 +693,24 @@ class _NotifScreen extends StatelessWidget {
             child: GLTap(
               onTap: tap,
               child: Container(
-                constraints: const BoxConstraints(minHeight: 68),
-                padding: const EdgeInsets.symmetric(
-                  vertical: 14,
-                  horizontal: 16,
-                ),
-                decoration: glBox(Colors.white, 24),
+                constraints: BoxConstraints(minHeight: 68),
+                padding: EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                decoration: glBox(GLTheme.surface, 24),
                 child: Row(
                   children: [
                     Container(
                       width: 40,
                       height: 40,
                       decoration: glBox(GLTheme.butter, 14),
-                      child: const GLIcon('bell.badge', size: 21),
+                      child: GLIcon('bell.badge', size: 21),
                     ),
-                    const SizedBox(width: 12),
+                    SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text('Izinkan notifikasi', style: gl(16, w600)),
-                          const SizedBox(height: 1),
+                          SizedBox(height: 1),
                           Text(
                             perm == 'on'
                                 ? 'GROUPLY boleh mengirim notifikasi'
@@ -736,7 +722,7 @@ class _NotifScreen extends StatelessWidget {
                         ],
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    SizedBox(width: 12),
                     _ProfileSwitch(on: perm == 'on', onChanged: tap),
                   ],
                 ),
@@ -744,13 +730,13 @@ class _NotifScreen extends StatelessWidget {
             ),
           ),
           // Flutter client has no push transport yet; the toggle is a local simulation.
-          const GLNotice(
+          GLNotice(
             text:
                 'Push notification belum tersedia di aplikasi ini. Izin dan pilihan di sini hanya simulasi lokal; belum ada notifikasi yang dikirim ke perangkat.',
           ),
           if (perm != 'on')
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
+              padding: EdgeInsets.symmetric(horizontal: 4),
               child: Text(
                 'Pilihan di bawah tersimpan dan berlaku setelah izin notifikasi aktif.',
                 style: gl(13, w400, 0, GLTheme.text3, 2.5),
@@ -785,7 +771,7 @@ class _NotifScreen extends StatelessWidget {
 // MARK: - Pengguna diblokir
 
 class _BlockedScreen extends StatefulWidget {
-  const _BlockedScreen({required this.store});
+  _BlockedScreen({required this.store});
   final GrouplyStore store;
   @override
   State<_BlockedScreen> createState() => _BlockedScreenState();
@@ -830,15 +816,15 @@ class _BlockedScreenState extends State<_BlockedScreen> {
         if (store.blockedUserIDs.isEmpty)
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 22),
-            decoration: glBox(Colors.white, 28),
+            padding: EdgeInsets.symmetric(vertical: 28, horizontal: 22),
+            decoration: glBox(GLTheme.surface, 28),
             child: _column([
               Center(
                 child: Container(
                   width: 56,
                   height: 56,
                   decoration: glBox(GLTheme.mint, 20),
-                  child: const GLIcon('checkmark.shield', size: 28),
+                  child: GLIcon('checkmark.shield', size: 28),
                 ),
               ),
               Text(
@@ -859,20 +845,20 @@ class _BlockedScreenState extends State<_BlockedScreen> {
             children: [
               for (final id in store.blockedUserIDs)
                 Container(
-                  constraints: const BoxConstraints(minHeight: 64),
-                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  constraints: BoxConstraints(minHeight: 64),
+                  padding: EdgeInsets.symmetric(vertical: 10),
                   foregroundDecoration: _divider,
                   child: Row(
                     children: [
                       GLAvatar(user: store.user(id), size: 44, fontSize: 14),
-                      const SizedBox(width: 12),
+                      SizedBox(width: 12),
                       Expanded(
                         child: Text(
                           store.user(id)?.text('name') ?? 'Pengguna',
                           style: gl(16, w600),
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      SizedBox(width: 12),
                       _PillButton(
                         title: 'Buka blokir',
                         onTap: _busy ? null : () => _unblock(id),
@@ -890,7 +876,7 @@ class _BlockedScreenState extends State<_BlockedScreen> {
 // MARK: - Tentang
 
 class _AboutScreen extends StatelessWidget {
-  const _AboutScreen({required this.store});
+  _AboutScreen({required this.store});
   final GrouplyStore store;
 
   String _status(JsonMap report) {
@@ -921,9 +907,9 @@ class _AboutScreen extends StatelessWidget {
                   width: 52,
                   height: 52,
                   decoration: glBox(GLTheme.mint, 18),
-                  child: const GLIcon('person.3', size: 26),
+                  child: GLIcon('person.3', size: 26),
                 ),
-                const SizedBox(width: 14),
+                SizedBox(width: 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -950,22 +936,19 @@ class _AboutScreen extends StatelessWidget {
               ),
               for (final report in reports)
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 10,
-                    horizontal: 12,
-                  ),
+                  padding: EdgeInsets.symmetric(vertical: 10, horizontal: 12),
                   decoration: glBox(GLTheme.muted, 14),
                   child: Row(
                     children: [
-                      const GLIcon('flag', size: 18),
-                      const SizedBox(width: 8),
+                      GLIcon('flag', size: 18),
+                      SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           '${report.text('reason')} · Pesan dari ${_sender(report)}',
                           style: gl(14),
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      SizedBox(width: 8),
                       Text(
                         _status(report),
                         style: gl(12, w400, 0, GLTheme.secondary),
@@ -1009,7 +992,7 @@ void _showEditName(BuildContext context, GrouplyStore store) => showGLSheet(
 );
 
 class _EditNameSheet extends StatefulWidget {
-  const _EditNameSheet({required this.store});
+  _EditNameSheet({required this.store});
   final GrouplyStore store;
   @override
   State<_EditNameSheet> createState() => _EditNameSheetState();
@@ -1080,11 +1063,11 @@ void _showPerm(BuildContext context) => _showBareSheet(
   context,
   horizontal: 24,
   centered: true,
-  builder: (_) => const _PermSheet(),
+  builder: (_) => _PermSheet(),
 );
 
 class _PermSheet extends StatefulWidget {
-  const _PermSheet();
+  _PermSheet();
   @override
   State<_PermSheet> createState() => _PermSheetState();
 }
@@ -1100,16 +1083,16 @@ class _PermSheetState extends State<_PermSheet> {
 
   @override
   Widget build(BuildContext context) => AnimatedSwitcher(
-    duration: const Duration(milliseconds: 200),
+    duration: Duration(milliseconds: 200),
     child: !_simulate
-        ? _column(key: const ValueKey(1), [
+        ? _column(key: ValueKey(1), [
             Padding(
-              padding: const EdgeInsets.only(top: 10),
+              padding: EdgeInsets.only(top: 10),
               child: Container(
                 width: 72,
                 height: 72,
                 decoration: glBox(GLTheme.lavender, 26),
-                child: const GLIcon('bell.badge', size: 36),
+                child: GLIcon('bell.badge', size: 36),
               ),
             ),
             Text(
@@ -1123,7 +1106,7 @@ class _PermSheetState extends State<_PermSheet> {
               style: gl(15, w400, 0, GLTheme.secondary, 4.5),
             ),
             Padding(
-              padding: const EdgeInsets.only(top: 6),
+              padding: EdgeInsets.only(top: 6),
               child: _FilledButton(
                 title: 'Lanjutkan',
                 height: 56,
@@ -1141,21 +1124,21 @@ class _PermSheetState extends State<_PermSheet> {
               ),
             ),
           ], 14)
-        : _column(key: const ValueKey(2), [
+        : _column(key: ValueKey(2), [
             Padding(
-              padding: const EdgeInsets.only(top: 6),
+              padding: EdgeInsets.only(top: 6),
               child: Container(
                 height: 28,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: const ShapeDecoration(
+                padding: EdgeInsets.symmetric(horizontal: 12),
+                decoration: ShapeDecoration(
                   color: GLTheme.butter,
                   shape: StadiumBorder(),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const GLIcon('flask', size: 16),
-                    const SizedBox(width: 5),
+                    GLIcon('flask', size: 16),
+                    SizedBox(width: 5),
                     Text('SIMULASI PROTOTIPE', style: gl(12, w700, 0.04)),
                   ],
                 ),
@@ -1163,7 +1146,7 @@ class _PermSheetState extends State<_PermSheet> {
             ),
             _Dashed(
               radius: 22,
-              padding: const EdgeInsets.all(18),
+              padding: EdgeInsets.all(18),
               child: _column(
                 [
                   Text(
@@ -1195,7 +1178,7 @@ class _PermSheetState extends State<_PermSheet> {
                     ),
                   ),
                 ),
-                const SizedBox(width: 10),
+                SizedBox(width: 10),
                 Expanded(
                   child: _FilledButton(
                     title: 'Diizinkan',
@@ -1224,7 +1207,7 @@ void _showPersonas(BuildContext context, GrouplyStore store) => _showBareSheet(
         Row(
           children: [
             _tag('DEMO', 24, 0.06),
-            const SizedBox(width: 8),
+            SizedBox(width: 8),
             Expanded(child: Text('Ganti persona', style: gl(22, w700, -0.02))),
             GLTap(
               label: 'Tutup',
@@ -1232,21 +1215,21 @@ void _showPersonas(BuildContext context, GrouplyStore store) => _showBareSheet(
               child: Container(
                 width: 44,
                 height: 44,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFECEEEB),
+                decoration: BoxDecoration(
+                  color: GLTheme.chip,
                   shape: BoxShape.circle,
                 ),
-                child: const GLIcon('xmark', size: 22),
+                child: GLIcon('xmark', size: 22),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 8), // spacing 14, padding(.top, -6)
+        SizedBox(height: 8), // spacing 14, padding(.top, -6)
         Text(
           'Hanya untuk menguji sudut pandang tiap anggota. Semua persona memakai data yang sama.',
           style: gl(14, w400, 0, GLTheme.text3, 2.5),
         ),
-        const SizedBox(height: 14),
+        SizedBox(height: 14),
         _column([
           for (final persona in demoPersonas)
             if (store.user(persona.id) case final user?
@@ -1290,10 +1273,10 @@ Widget _personaRow(
         }
       },
       child: Container(
-        constraints: const BoxConstraints(minHeight: 56),
-        padding: const EdgeInsets.only(top: 8, bottom: 8, left: 8, right: 14),
+        constraints: BoxConstraints(minHeight: 56),
+        padding: EdgeInsets.only(top: 8, bottom: 8, left: 8, right: 14),
         decoration: glBox(
-          Colors.white,
+          GLTheme.surface,
           18,
           border: on ? GLTheme.ink : GLTheme.border,
           borderWidth: 1.5,
@@ -1301,7 +1284,7 @@ Widget _personaRow(
         child: Row(
           children: [
             GLAvatar(user: user, size: 40, fontSize: 13),
-            const SizedBox(width: 12),
+            SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1326,7 +1309,7 @@ void _showDelete(BuildContext context, GrouplyStore store) => showGLSheet(
 );
 
 class _DeleteSheet extends StatefulWidget {
-  const _DeleteSheet({required this.store});
+  _DeleteSheet({required this.store});
   final GrouplyStore store;
   @override
   State<_DeleteSheet> createState() => _DeleteSheetState();
@@ -1369,7 +1352,7 @@ class _DeleteSheetState extends State<_DeleteSheet> {
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       GLIcon(icon, size: 20, color: GLTheme.ink),
-      const SizedBox(width: 10),
+      SizedBox(width: 10),
       Expanded(child: Text(text, style: gl(15, w400, 0, null, 4.5))),
     ],
   );
@@ -1404,15 +1387,12 @@ class _DeleteSheetState extends State<_DeleteSheet> {
     final blockers = _blockers, active = _hasActiveAssignments;
     final clear = blockers.isEmpty && !active;
     return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 200),
+      duration: Duration(milliseconds: 200),
       child: _step == 1
-          ? _column(key: const ValueKey(1), [
+          ? _column(key: ValueKey(1), [
               Container(
-                padding: const EdgeInsets.symmetric(
-                  vertical: 16,
-                  horizontal: 18,
-                ),
-                decoration: glBox(Colors.white, 22),
+                padding: EdgeInsets.symmetric(vertical: 16, horizontal: 18),
+                decoration: glBox(GLTheme.surface, 22),
                 child: _column([
                   _line(
                     'trash',
@@ -1442,7 +1422,7 @@ class _DeleteSheetState extends State<_DeleteSheet> {
                   icon: 'person.badge.shield.checkmark',
                 ),
               if (active)
-                const GLNotice(
+                GLNotice(
                   text:
                       'Masih ada tugas yang belum selesai dengan kamu sebagai pelaksana atau reviewer. Minta koordinator membuka kembali proyek bila perlu, lalu alihkan tugasnya.',
                   icon: 'checklist',
@@ -1450,7 +1430,7 @@ class _DeleteSheetState extends State<_DeleteSheet> {
               if (_error != null) GLFormError(_error!),
               _FilledButton(
                 title: 'Lanjutkan',
-                background: clear ? GLTheme.ink : const Color(0xFFB4B8BC),
+                background: clear ? GLTheme.ink : GLTheme.faint,
                 onTap: () => setState(() {
                   if (blockers.isNotEmpty) {
                     _error =
@@ -1465,9 +1445,9 @@ class _DeleteSheetState extends State<_DeleteSheet> {
                 }),
               ),
             ], 12)
-          : _column(key: const ValueKey(2), [
+          : _column(key: ValueKey(2), [
               Text.rich(
-                const TextSpan(
+                TextSpan(
                   children: [
                     TextSpan(text: 'Ketik '),
                     TextSpan(
@@ -1490,7 +1470,7 @@ class _DeleteSheetState extends State<_DeleteSheet> {
                   cursorColor: GLTheme.ink,
                   style: gl(17, w600, 0.08, GLTheme.ink),
                   decoration: glInputDecoration().copyWith(
-                    contentPadding: const EdgeInsets.symmetric(
+                    contentPadding: EdgeInsets.symmetric(
                       horizontal: 16,
                       vertical: 15,
                     ),
@@ -1499,12 +1479,12 @@ class _DeleteSheetState extends State<_DeleteSheet> {
                 ),
               ),
               if (!_cloud)
-                const _DashedNote(
+                _DashedNote(
                   'Simulasi: hanya data demo lokal yang berubah. Tidak ada data server yang dihapus. Pakai “Reset data demo” untuk mengembalikan.',
                 ),
               if (_error != null) GLFormError(_error!),
               _keyed(
-                const ValueKey('confirm-delete-account'),
+                ValueKey('confirm-delete-account'),
                 _FilledButton(
                   title: _busy
                       ? 'Menghapus…'
@@ -1531,18 +1511,18 @@ Future<void> showPrivacySheet(
   builder: (sheet) => _column([
     Text('Privasi & data', style: gl(22, w700, -0.02)),
     Container(
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 18),
-      decoration: glBox(Colors.white, 22),
+      padding: EdgeInsets.symmetric(vertical: 16, horizontal: 18),
+      decoration: glBox(GLTheme.surface, 22),
       child: DefaultTextStyle.merge(
         style: gl(15, w400, 0, GLTheme.ink, 4.5),
         child: _column([
-          const Text(
+          Text(
             'GROUPLY memakai nama dan identitas login untuk akunmu. Persona demo terpisah dari akun server.',
           ),
-          const Text(
+          Text(
             'Proyek, tugas, dan pesan hanya terlihat oleh anggota grup terkait.',
           ),
-          if (cloud) ...const [
+          if (cloud) ...[
             Text(
               'Laporan dan isi pesan yang dilaporkan dapat ditinjau operator berwenang. Blokir menyembunyikan pesan untukmu, bukan mengeluarkan anggota atau menghentikan tugas bersama.',
             ),
@@ -1554,7 +1534,7 @@ Future<void> showPrivacySheet(
             cloud
                 ? 'Data akun ini tersimpan di Supabase. Sesi login disimpan aman di Keychain.'
                 : 'Data demo disimpan di perangkat ini saja.',
-            style: const TextStyle(color: GLTheme.secondary),
+            style: TextStyle(color: GLTheme.secondary),
           ),
         ], 10),
       ),

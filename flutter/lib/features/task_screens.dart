@@ -116,8 +116,8 @@ bool _taskSameDay(DateTime a, DateTime b) {
   return x.year == y.year && x.month == y.month && x.day == y.day;
 }
 
-const _taskTrack = Color(0xFFECEEEB);
-const _taskOutline = StadiumBorder(
+final _taskTrack = GLTheme.chip;
+final _taskOutline = StadiumBorder(
   side: BorderSide(color: GLTheme.ink, width: 1.5),
 );
 
@@ -126,7 +126,7 @@ Widget _taskRequiredLabel(String label, {bool required = true}) => Text.rich(
     text: label,
     children: [
       if (required)
-        const TextSpan(
+        TextSpan(
           text: ' *',
           style: TextStyle(color: GLTheme.danger),
         ),
@@ -157,11 +157,7 @@ Future<void> _taskLaunch(BuildContext context, String link) async {
 
 /// Task card used on Tugas Saya and Project Detail (prototype `vmTask`).
 class _TaskRow extends StatelessWidget {
-  const _TaskRow({
-    required this.store,
-    required this.task,
-    this.showProject = false,
-  });
+  _TaskRow({required this.store, required this.task, this.showProject = false});
   final GrouplyStore store;
   final JsonMap task;
   final bool showProject;
@@ -181,7 +177,7 @@ class _TaskRow extends StatelessWidget {
           size: 28,
           fontSize: 11,
         ),
-        const GLIcon('arrow.right', size: 16, color: GLTheme.secondary),
+        GLIcon('arrow.right', size: 16, color: GLTheme.secondary),
         GLAvatar(
           user: store.user(task.text('reviewerID')),
           size: 28,
@@ -205,7 +201,7 @@ class _TaskRow extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           spacing: 4,
           children: [
-            const GLIcon('clock', size: 17, color: GLTheme.text3),
+            GLIcon('clock', size: 17, color: GLTheme.text3),
             Text(
               GLFormat.due(due, status, now),
               style: gl(13, w400, 0, GLTheme.text3),
@@ -217,7 +213,7 @@ class _TaskRow extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             spacing: 4,
             children: [
-              const GLIcon('bubble.left', size: 17, color: GLTheme.text3),
+              GLIcon('bubble.left', size: 17, color: GLTheme.text3),
               Text(
                 '${_taskCommentCount(store, task)}',
                 style: gl(13, w400, 0, GLTheme.text3),
@@ -229,8 +225,8 @@ class _TaskRow extends StatelessWidget {
     return MergeSemantics(
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(16),
-        decoration: glBox(Colors.white, 24, shadow: true),
+        padding: EdgeInsets.all(16),
+        decoration: glBox(GLTheme.surface, 24, shadow: true),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           spacing: 10,
@@ -241,7 +237,7 @@ class _TaskRow extends StatelessWidget {
               children: [
                 GLStatusChip(status: status),
                 if (GLFormat.isOverdue(due, status, now))
-                  const GLChip(
+                  GLChip(
                     label: 'Terlambat',
                     icon: 'exclamationmark.circle',
                     background: GLTheme.coral,
@@ -301,12 +297,12 @@ class _MyTasksState extends _WorkspaceState<MyTasksScreen> {
         behavior: HitTestBehavior.opaque,
         onTap: () => setState(() => filter = key),
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
+          duration: Duration(milliseconds: 200),
           curve: Curves.easeOut,
           height: 44,
-          padding: const EdgeInsets.only(left: 16, right: 7),
+          padding: EdgeInsets.only(left: 16, right: 7),
           decoration: ShapeDecoration(
-            color: on ? GLTheme.ink : Colors.white,
+            color: on ? GLTheme.ink : GLTheme.surface,
             shape: _taskOutline,
           ),
           child: Row(
@@ -315,14 +311,14 @@ class _MyTasksState extends _WorkspaceState<MyTasksScreen> {
             children: [
               Text(
                 label,
-                style: gl(15, w600, 0, on ? Colors.white : GLTheme.ink),
+                style: gl(15, w600, 0, on ? GLTheme.onInk : GLTheme.ink),
               ),
               Container(
-                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                padding: const EdgeInsets.symmetric(horizontal: 8),
+                constraints: BoxConstraints(minWidth: 28, minHeight: 28),
+                padding: EdgeInsets.symmetric(horizontal: 8),
                 decoration: ShapeDecoration(
                   color: on ? GLTheme.mint : GLTheme.muted,
-                  shape: const StadiumBorder(),
+                  shape: StadiumBorder(),
                 ),
                 child: Center(
                   widthFactor: 1,
@@ -418,7 +414,7 @@ class _MyTasksState extends _WorkspaceState<MyTasksScreen> {
               }
             },
             child: ListView(
-              physics: const AlwaysScrollableScrollPhysics(
+              physics: AlwaysScrollableScrollPhysics(
                 parent: BouncingScrollPhysics(),
               ),
               padding: EdgeInsets.only(
@@ -427,7 +423,7 @@ class _MyTasksState extends _WorkspaceState<MyTasksScreen> {
               ),
               children: [
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  padding: EdgeInsets.symmetric(horizontal: 20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     spacing: 4,
@@ -445,10 +441,10 @@ class _MyTasksState extends _WorkspaceState<MyTasksScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 18),
+                SizedBox(height: 18),
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  padding: EdgeInsets.symmetric(horizontal: 20),
                   child: Row(
                     spacing: 8,
                     children: [
@@ -459,11 +455,11 @@ class _MyTasksState extends _WorkspaceState<MyTasksScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 18),
+                SizedBox(height: 18),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  padding: EdgeInsets.symmetric(horizontal: 20),
                   child: none
-                      ? const GLEmptyState(
+                      ? GLEmptyState(
                           title: 'Belum ada tugas',
                           message:
                               'Belum ada tugas yang ditugaskan ke kamu atau menunggu review kamu. Saat koordinator membagi tugas, semuanya muncul di sini.',
@@ -518,7 +514,7 @@ class _MyTasksState extends _WorkspaceState<MyTasksScreen> {
                                     ),
                                   if (items.isEmpty)
                                     Padding(
-                                      padding: const EdgeInsets.symmetric(
+                                      padding: EdgeInsets.symmetric(
                                         vertical: 22,
                                       ),
                                       child: Text(
@@ -578,7 +574,7 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
       final project = store.project(task?.text('projectID') ?? '');
       final group = store.group(project?.text('groupID') ?? '');
       if (task == null || project == null || !_member(store, group)) {
-        return const GLAccessDenied();
+        return GLAccessDenied();
       }
       return _content(task, project, group!);
     },
@@ -589,11 +585,11 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
     final bottomInset = MediaQuery.paddingOf(context).bottom;
     final body = switch (tab) {
       0 => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
+        padding: EdgeInsets.symmetric(horizontal: 20),
         child: _overview(task, project, group),
       ),
       1 => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
+        padding: EdgeInsets.symmetric(horizontal: 20),
         child: _submissionsTab(task),
       ),
       _ => _discussion(task, project),
@@ -610,14 +606,12 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
         }
       },
       child: CustomScrollView(
-        physics: const AlwaysScrollableScrollPhysics(
-          parent: BouncingScrollPhysics(),
-        ),
+        physics: AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
         keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
         slivers: [
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+              padding: EdgeInsets.fromLTRB(20, 4, 20, 0),
               child: GLDetailHeader(
                 'Tugas',
                 trailing: GLCircleButton(
@@ -631,13 +625,13 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
           ),
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(22, 16, 22, 14),
+              padding: EdgeInsets.fromLTRB(22, 16, 22, 14),
               child: _heading(task, project),
             ),
           ),
           PinnedHeaderSliver(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
+              padding: EdgeInsets.symmetric(horizontal: 20),
               child: _tabs(task),
             ),
           ),
@@ -652,13 +646,13 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
     );
     final Widget footer;
     if (tab != 2) {
-      footer = const SizedBox.shrink();
+      footer = SizedBox.shrink();
     } else if (readOnly) {
       footer = MergeSemantics(
         child: Container(
           width: double.infinity,
           padding: EdgeInsets.fromLTRB(16, 12, 16, 8 + bottomInset),
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             color: GLTheme.background,
             border: Border(top: BorderSide(color: GLTheme.border)),
           ),
@@ -666,7 +660,7 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             spacing: 8,
             children: [
-              const GLIcon('lock', size: 18, color: GLTheme.text3),
+              GLIcon('lock', size: 18, color: GLTheme.text3),
               Flexible(
                 child: Text(
                   project.text('status') == 'archived'
@@ -759,7 +753,7 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
           onTap: () =>
               open(ProjectScreen(store: store, projectID: project.text('id'))),
           child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 36),
+            constraints: BoxConstraints(minHeight: 36),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               spacing: 2,
@@ -770,7 +764,7 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
                     style: gl(14, w400, 0, GLTheme.text3),
                   ),
                 ),
-                const GLIcon('chevron.right', size: 18, color: GLTheme.text3),
+                GLIcon('chevron.right', size: 18, color: GLTheme.text3),
               ],
             ),
           ),
@@ -781,13 +775,13 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
 
   Widget _headerChip(String label, String icon, Color bg, bool outlined) =>
       AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
+        duration: Duration(milliseconds: 300),
         curve: Curves.easeOut,
         height: 30,
-        padding: const EdgeInsets.only(left: 9, right: 12),
+        padding: EdgeInsets.only(left: 9, right: 12),
         decoration: ShapeDecoration(
           color: bg,
-          shape: outlined ? _taskOutline : const StadiumBorder(),
+          shape: outlined ? _taskOutline : StadiumBorder(),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -806,7 +800,7 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
       (2, 'Diskusi', _taskCommentCount(store, task)),
     ];
     return Container(
-      padding: const EdgeInsets.all(4),
+      padding: EdgeInsets.all(4),
       decoration: glBox(_taskTrack, 18),
       child: Row(
         spacing: 2,
@@ -822,15 +816,17 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
                     behavior: HitTestBehavior.opaque,
                     onTap: () => setState(() => tab = key),
                     child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 180),
+                      duration: Duration(milliseconds: 180),
                       curve: Curves.easeOut,
                       height: 44,
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      padding: EdgeInsets.symmetric(horizontal: 4),
                       decoration: ShapeDecoration(
-                        color: tab == key ? Colors.white : Colors.transparent,
+                        color: tab == key
+                            ? GLTheme.surface
+                            : Colors.transparent,
                         shape: glShape(14),
                         shadows: tab == key
-                            ? const [
+                            ? [
                                 BoxShadow(
                                   color: Color(0x14000000),
                                   blurRadius: 3,
@@ -855,15 +851,13 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
                           ),
                           if (count > 0 && key != 0)
                             Container(
-                              constraints: const BoxConstraints(
+                              constraints: BoxConstraints(
                                 minWidth: 20,
                                 minHeight: 20,
                               ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                              ),
+                              padding: EdgeInsets.symmetric(horizontal: 6),
 
-                              decoration: const ShapeDecoration(
+                              decoration: ShapeDecoration(
                                 color: GLTheme.lavender,
                                 shape: StadiumBorder(),
                               ),
@@ -912,7 +906,7 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
             feedbackText.isNotEmpty)
           MergeSemantics(
             child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 18),
+              padding: EdgeInsets.symmetric(vertical: 16, horizontal: 18),
               decoration: glBox(GLTheme.coral, 24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -921,7 +915,7 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
                   Row(
                     spacing: 6,
                     children: [
-                      const GLIcon('arrow.uturn.backward', size: 18),
+                      GLIcon('arrow.uturn.backward', size: 18),
                       Flexible(
                         child: Text(
                           '${_taskName(store, last.text('reviewerID').isEmpty ? task.text('reviewerID') : last.text('reviewerID'))} meminta revisi',
@@ -936,12 +930,12 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
             ),
           ),
         Container(
-          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 18),
-          decoration: glBox(Colors.white, 24),
+          padding: EdgeInsets.symmetric(vertical: 4, horizontal: 18),
+          decoration: glBox(GLTheme.surface, 24),
           child: Column(
             children: [
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: 12),
+                padding: EdgeInsets.symmetric(vertical: 12),
                 child: Row(
                   spacing: 12,
                   children: [
@@ -960,10 +954,8 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
                         onTap: () => _openReassign(task, project, group),
                         child: Container(
                           height: 44,
-                          padding: const EdgeInsets.only(left: 10, right: 12),
-                          decoration: const ShapeDecoration(
-                            shape: _taskOutline,
-                          ),
+                          padding: EdgeInsets.only(left: 10, right: 12),
+                          decoration: ShapeDecoration(shape: _taskOutline),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             spacing: 4,
@@ -980,9 +972,9 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
                   ],
                 ),
               ),
-              const GLHairline(),
+              GLHairline(),
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: 12),
+                padding: EdgeInsets.symmetric(vertical: 12),
                 child: Row(
                   spacing: 12,
                   children: [
@@ -998,20 +990,20 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
                   ],
                 ),
               ),
-              const GLHairline(),
+              GLHairline(),
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: 12),
+                padding: EdgeInsets.symmetric(vertical: 12),
                 child: Row(
                   spacing: 12,
                   children: [
                     Container(
                       width: 40,
                       height: 40,
-                      decoration: const BoxDecoration(
+                      decoration: BoxDecoration(
                         color: GLTheme.muted,
                         shape: BoxShape.circle,
                       ),
-                      child: const GLIcon('clock', size: 20),
+                      child: GLIcon('clock', size: 20),
                     ),
                     infoText(
                       'Deadline',
@@ -1024,8 +1016,8 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
           ),
         ),
         Container(
-          padding: const EdgeInsets.all(18),
-          decoration: glBox(Colors.white, 24),
+          padding: EdgeInsets.all(18),
+          decoration: glBox(GLTheme.surface, 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             spacing: 8,
@@ -1044,7 +1036,7 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
           onTap: () => setState(() => tab = 2),
           child: MergeSemantics(
             child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 18),
+              padding: EdgeInsets.symmetric(vertical: 16, horizontal: 18),
               decoration: glBox(GLTheme.lavender, 24),
               child: Row(
                 spacing: 14,
@@ -1058,10 +1050,7 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
                       border: GLTheme.ink,
                       borderWidth: 1.5,
                     ),
-                    child: const GLIcon(
-                      'bubble.left.and.bubble.right',
-                      size: 22,
-                    ),
+                    child: GLIcon('bubble.left.and.bubble.right', size: 22),
                   ),
                   Expanded(
                     child: Column(
@@ -1076,7 +1065,7 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
                       ],
                     ),
                   ),
-                  const GLIcon('chevron.right', size: 22),
+                  GLIcon('chevron.right', size: 22),
                 ],
               ),
             ),
@@ -1098,8 +1087,8 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
           _submissionCard(sub, task, subs.length),
         if (subs.isEmpty)
           Container(
-            padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
-            decoration: glBox(Colors.white, 24),
+            padding: EdgeInsets.symmetric(vertical: 28, horizontal: 20),
+            decoration: glBox(GLTheme.surface, 24),
             child: Column(
               spacing: 8,
               children: [
@@ -1107,7 +1096,7 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
                   width: 52,
                   height: 52,
                   decoration: glBox(GLTheme.butter, 18),
-                  child: const GLIcon('archivebox', size: 26),
+                  child: GLIcon('archivebox', size: 26),
                 ),
                 Text(
                   'Belum ada hasil kerja',
@@ -1139,12 +1128,12 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
         : (pending ? 'Menunggu review' : 'Terkirim', 'eye', GLTheme.lavender);
     final mine = task.text('assigneeID') == store.currentUserID;
     final feedbackText = sub.text('feedback');
-    const divider = BoxDecoration(
+    final divider = BoxDecoration(
       border: Border(top: BorderSide(color: GLTheme.border)),
     );
     return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: glBox(Colors.white, 24),
+      padding: EdgeInsets.all(18),
+      decoration: glBox(GLTheme.surface, 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         spacing: 12,
@@ -1179,7 +1168,7 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
             _TaskLinkRow(url: link, external: true),
           if (feedbackText.isNotEmpty)
             Container(
-              padding: const EdgeInsets.only(top: 12),
+              padding: EdgeInsets.only(top: 12),
               decoration: divider,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1195,7 +1184,7 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
             ),
           if (pending && task.text('reviewerID') != store.currentUserID)
             Container(
-              padding: const EdgeInsets.only(top: 12),
+              padding: EdgeInsets.only(top: 12),
               decoration: divider,
               child: LayoutBuilder(
                 builder: (context, box) {
@@ -1244,15 +1233,15 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
       );
     },
     child: CustomPaint(
-      painter: const _TaskDashedBorder(radius: 22),
+      painter: _TaskDashedBorder(radius: 22),
       child: Container(
         height: 44,
-        padding: const EdgeInsets.only(left: 10, right: 14),
+        padding: EdgeInsets.only(left: 10, right: 14),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           spacing: 4,
           children: [
-            const GLIcon('lock', size: 18, color: GLTheme.text2),
+            GLIcon('lock', size: 18, color: GLTheme.text2),
             Text('Setujui', style: gl(14, w600, 0, GLTheme.text2)),
           ],
         ),
@@ -1268,7 +1257,7 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
     var failed = false;
     try {
       if (store.demoMode) {
-        await Future<void>.delayed(const Duration(milliseconds: 900));
+        await Future<void>.delayed(Duration(milliseconds: 900));
       } else {
         await store.refresh();
       }
@@ -1291,7 +1280,7 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
       Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
+        padding: EdgeInsets.symmetric(horizontal: 20),
         child: Row(
           spacing: 8,
           children: [
@@ -1306,9 +1295,9 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
               onTap: _refreshComments,
               child: Container(
                 height: 44,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: const ShapeDecoration(
-                  color: Colors.white,
+                padding: EdgeInsets.symmetric(horizontal: 12),
+                decoration: ShapeDecoration(
+                  color: GLTheme.surface,
                   shape: StadiumBorder(),
                   shadows: [
                     BoxShadow(
@@ -1325,9 +1314,9 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
                     AnimatedRotation(
                       turns: refreshing ? 1 : 0,
                       duration: refreshing
-                          ? const Duration(seconds: 1)
+                          ? Duration(seconds: 1)
                           : Duration.zero,
-                      child: const GLIcon('arrow.clockwise', size: 18),
+                      child: GLIcon('arrow.clockwise', size: 18),
                     ),
                     Text(
                       refreshing ? 'Memuat…' : 'Muat ulang',
@@ -1368,7 +1357,7 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
         a.text('senderID') == b.text('senderID') &&
         _day(at(a)) == _day(at(b));
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 6, 16, 8),
+      padding: EdgeInsets.fromLTRB(16, 6, 16, 8),
       child: LayoutBuilder(
         builder: (context, box) {
           final width = box.maxWidth;
@@ -1378,15 +1367,15 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
               for (var i = 0; i < list.length; i++) ...[
                 if (i == 0 || _day(at(list[i - 1])) != _day(at(list[i])))
                   Padding(
-                    padding: const EdgeInsets.only(top: 14, bottom: 6),
+                    padding: EdgeInsets.only(top: 14, bottom: 6),
                     child: Center(
                       child: Semantics(
                         header: true,
                         child: Container(
                           height: 26,
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          padding: EdgeInsets.symmetric(horizontal: 12),
                           alignment: Alignment.center,
-                          decoration: const ShapeDecoration(
+                          decoration: ShapeDecoration(
                             color: _taskTrack,
                             shape: StadiumBorder(),
                           ),
@@ -1423,10 +1412,7 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
               ],
               if (list.isEmpty)
                 Padding(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 40,
-                    horizontal: 16,
-                  ),
+                  padding: EdgeInsets.symmetric(vertical: 40, horizontal: 16),
                   child: Column(
                     spacing: 8,
                     children: [
@@ -1434,7 +1420,7 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
                         width: 56,
                         height: 56,
                         decoration: glBox(GLTheme.lavender, 20),
-                        child: const GLIcon('hand.wave', size: 28),
+                        child: GLIcon('hand.wave', size: 28),
                       ),
                       Text('Mulai diskusi', style: gl(17, w600)),
                       Text(
@@ -1455,19 +1441,19 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
   Widget _systemRow(JsonMap m, double width) {
     final at = m.date('createdAt') ?? DateTime(1970);
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: EdgeInsets.symmetric(vertical: 8),
       child: Center(
         child: ConstrainedBox(
           constraints: BoxConstraints(maxWidth: width * 0.92),
           child: MergeSemantics(
             child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+              padding: EdgeInsets.symmetric(vertical: 6, horizontal: 12),
               decoration: glBox(_taskTrack, 14),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 spacing: 6,
                 children: [
-                  const GLIcon('bolt', size: 16, color: GLTheme.text3),
+                  GLIcon('bolt', size: 16, color: GLTheme.text3),
                   Flexible(
                     child: Text(
                       '${_taskName(store, m.text('senderID'))} ${m.text('text')} · ${GLFormat.time(at)}',
@@ -1551,7 +1537,7 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
       child: GestureDetector(
         onLongPress: () => _messageOptions(m, groupID, taskID),
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+          padding: EdgeInsets.symmetric(vertical: 8, horizontal: 12),
           decoration: ShapeDecoration(
             color: color,
             shape: shape,
@@ -1592,10 +1578,10 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
             spacing: 8,
             children: [
               if (sameNext)
-                const SizedBox(width: 30, height: 1)
+                SizedBox(width: 30, height: 1)
               else
                 Padding(
-                  padding: const EdgeInsets.only(bottom: 22),
+                  padding: EdgeInsets.only(bottom: 22),
                   child: ExcludeSemantics(
                     child: GLAvatar(
                       user: store.user(sender),
@@ -1611,7 +1597,7 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
                   children: [
                     if (!samePrev)
                       Padding(
-                        padding: const EdgeInsets.only(left: 4),
+                        padding: EdgeInsets.only(left: 4),
                         child: Text(
                           _taskName(store, sender),
                           style: gl(13, w600, 0, GLTheme.text2),
@@ -1621,10 +1607,10 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
                       GLTap(
                         onTap: () => setState(() => revealed.add(m.text('id'))),
                         child: CustomPaint(
-                          painter: const _TaskDashedBorder(radius: 18),
+                          painter: _TaskDashedBorder(radius: 18),
                           child: Container(
-                            constraints: const BoxConstraints(minHeight: 44),
-                            padding: const EdgeInsets.symmetric(
+                            constraints: BoxConstraints(minHeight: 44),
+                            padding: EdgeInsets.symmetric(
                               vertical: 8,
                               horizontal: 12,
                             ),
@@ -1632,7 +1618,7 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
                               mainAxisSize: MainAxisSize.min,
                               spacing: 6,
                               children: [
-                                const GLIcon(
+                                GLIcon(
                                   'eye.slash',
                                   size: 17,
                                   color: GLTheme.text3,
@@ -1651,12 +1637,12 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
                     else
                       _bubble(
                         m,
-                        color: Colors.white,
-                        link: const Color(0xFF1F4F86),
+                        color: GLTheme.surface,
+                        link: GLTheme.link,
                         shape: shape,
                         groupID: groupID,
                         taskID: taskID,
-                        shadows: const [
+                        shadows: [
                           BoxShadow(
                             color: Color(0x0F000000),
                             blurRadius: 1.5,
@@ -1666,7 +1652,7 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
                       ),
                     if (!sameNext)
                       Padding(
-                        padding: const EdgeInsets.only(left: 4),
+                        padding: EdgeInsets.only(left: 4),
                         child: Text(
                           GLFormat.time(at),
                           style: gl(12, w400, 0, GLTheme.secondary),
@@ -1705,11 +1691,11 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
             children: [
               AnimatedOpacity(
                 opacity: delivery == 'sending' ? 0.6 : 1,
-                duration: const Duration(milliseconds: 200),
+                duration: Duration(milliseconds: 200),
                 child: _bubble(
                   m,
                   color: GLTheme.lavender,
-                  link: const Color(0xFF1F3F76),
+                  link: GLTheme.link,
                   shape: shape,
                   groupID: groupID,
                   taskID: taskID,
@@ -1719,13 +1705,13 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
                 GLTap(
                   onTap: () => _retry(m, groupID, taskID),
                   child: Container(
-                    constraints: const BoxConstraints(minHeight: 40),
-                    padding: const EdgeInsets.all(2),
+                    constraints: BoxConstraints(minHeight: 40),
+                    padding: EdgeInsets.all(2),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       spacing: 4,
                       children: [
-                        const GLIcon(
+                        GLIcon(
                           'exclamationmark.circle',
                           size: 16,
                           color: GLTheme.danger,
@@ -1744,7 +1730,7 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
                     mainAxisSize: MainAxisSize.min,
                     spacing: 4,
                     children: [
-                      const SizedBox(
+                      SizedBox(
                         width: 14,
                         height: 14,
                         child: CircularProgressIndicator.adaptive(
@@ -1768,11 +1754,7 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
                         '${GLFormat.time(at)} · Terkirim',
                         style: gl(12, w400, 0, GLTheme.secondary),
                       ),
-                      const GLIcon(
-                        'checkmark',
-                        size: 14,
-                        color: GLTheme.secondary,
-                      ),
+                      GLIcon('checkmark', size: 14, color: GLTheme.secondary),
                     ],
                   ),
                 ),
@@ -1834,7 +1816,7 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
       child = DecoratedBox(
         decoration: ShapeDecoration(
           shape: glShape(20),
-          shadows: const [
+          shadows: [
             BoxShadow(
               color: Color(0x38000000),
               blurRadius: 24,
@@ -1853,9 +1835,9 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
       final (text, icon) = _infoLine(task, project);
       child = MergeSemantics(
         child: Container(
-          constraints: const BoxConstraints(minHeight: 54),
-          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-          decoration: glBox(Colors.white, 20, border: GLTheme.border),
+          constraints: BoxConstraints(minHeight: 54),
+          padding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+          decoration: glBox(GLTheme.surface, 20, border: GLTheme.border),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             spacing: 8,
@@ -1880,7 +1862,7 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [GLTheme.background.withValues(alpha: 0), GLTheme.background],
-          stops: const [0, 0.28],
+          stops: [0, 0.28],
         ),
       ),
       child: child,
@@ -2027,7 +2009,7 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
             ),
         ],
         footer: coord && status == 'done' && active && deleted
-            ? const GLNotice(
+            ? GLNotice(
                 text:
                     'Pelaksana atau reviewer telah menghapus akun. Buat tugas pengganti; riwayat ini tetap disimpan.',
                 icon: 'person.crop.circle.badge.minus',
@@ -2203,12 +2185,12 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
 
 /// Dashed 1.5pt #9AA0A6 rounded outline (`StrokeStyle(dash: [4, 3])`).
 class _TaskDashedBorder extends CustomPainter {
-  const _TaskDashedBorder({required this.radius});
+  _TaskDashedBorder({required this.radius});
   final double radius;
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = const Color(0xFF9AA0A6)
+      ..color = GLTheme.placeholder
       ..strokeWidth = 1.5
       ..style = PaintingStyle.stroke;
     final r = radius.clamp(0, size.height / 2).toDouble();
@@ -2232,19 +2214,19 @@ class _TaskDashedBorder extends CustomPainter {
 
 /// Link pill used in submission cards and the review sheet.
 class _TaskLinkRow extends StatelessWidget {
-  const _TaskLinkRow({required this.url, this.external = false});
+  _TaskLinkRow({required this.url, this.external = false});
   final String url;
   final bool external;
   @override
   Widget build(BuildContext context) {
     final label = Container(
-      constraints: const BoxConstraints(minHeight: 44),
-      padding: const EdgeInsets.symmetric(horizontal: 12),
+      constraints: BoxConstraints(minHeight: 44),
+      padding: EdgeInsets.symmetric(horizontal: 12),
       decoration: glBox(GLTheme.muted, 14),
       child: Row(
         spacing: 8,
         children: [
-          const GLIcon('link', size: 18),
+          GLIcon('link', size: 18),
           Expanded(
             child: Text(
               url.replaceAll('https://', ''),
@@ -2254,11 +2236,7 @@ class _TaskLinkRow extends StatelessWidget {
             ),
           ),
           if (external)
-            const GLIcon(
-              'arrow.up.right.square',
-              size: 17,
-              color: GLTheme.secondary,
-            ),
+            GLIcon('arrow.up.right.square', size: 17, color: GLTheme.secondary),
         ],
       ),
     );
@@ -2275,7 +2253,7 @@ class _TaskLinkRow extends StatelessWidget {
 
 /// Multiline input box (`TaskTextArea`): white, 1pt border.
 class _TaskTextArea extends StatelessWidget {
-  const _TaskTextArea({
+  _TaskTextArea({
     super.key,
     required this.controller,
     required this.placeholder,
@@ -2318,13 +2296,13 @@ class _TaskTextArea extends StatelessWidget {
 
 /// Sheet list card with icon rows (`TaskActionsSheet` / message options).
 class _TaskOptionList extends StatelessWidget {
-  const _TaskOptionList({required this.rows, this.footer});
+  _TaskOptionList({required this.rows, this.footer});
   final List<(String, String, String, String)> rows; // key, label, sub, icon
   final Widget? footer;
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
-    decoration: glBox(Colors.white, 24),
+    padding: EdgeInsets.symmetric(vertical: 4, horizontal: 16),
+    decoration: glBox(GLTheme.surface, 24),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -2333,9 +2311,9 @@ class _TaskOptionList extends StatelessWidget {
             onTap: () => Navigator.of(context).pop(key),
             child: MergeSemantics(
               child: Container(
-                constraints: const BoxConstraints(minHeight: 62),
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                decoration: const BoxDecoration(
+                constraints: BoxConstraints(minHeight: 62),
+                padding: EdgeInsets.symmetric(vertical: 8),
+                decoration: BoxDecoration(
                   border: Border(bottom: BorderSide(color: GLTheme.border)),
                 ),
                 child: Row(
@@ -2357,10 +2335,7 @@ class _TaskOptionList extends StatelessWidget {
             ),
           ),
         if (footer != null)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: footer,
-          ),
+          Padding(padding: EdgeInsets.symmetric(vertical: 8), child: footer),
       ],
     ),
   );
@@ -2368,7 +2343,7 @@ class _TaskOptionList extends StatelessWidget {
 
 /// Reassign sheet body (prototype `sheetReassign`): member rows + footnote.
 class _TaskReassignList extends StatelessWidget {
-  const _TaskReassignList({
+  _TaskReassignList({
     required this.store,
     required this.rows,
     required this.note,
@@ -2382,8 +2357,8 @@ class _TaskReassignList extends StatelessWidget {
     spacing: 16,
     children: [
       Container(
-        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 14),
-        decoration: glBox(Colors.white, 24),
+        padding: EdgeInsets.symmetric(vertical: 4, horizontal: 14),
+        decoration: glBox(GLTheme.surface, 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -2394,9 +2369,9 @@ class _TaskReassignList extends StatelessWidget {
                   onTap: () => Navigator.of(context).pop(id),
                   child: MergeSemantics(
                     child: Container(
-                      constraints: const BoxConstraints(minHeight: 60),
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      decoration: const BoxDecoration(
+                      constraints: BoxConstraints(minHeight: 60),
+                      padding: EdgeInsets.symmetric(vertical: 8),
+                      decoration: BoxDecoration(
                         border: Border(
                           bottom: BorderSide(color: GLTheme.border),
                         ),
@@ -2421,7 +2396,7 @@ class _TaskReassignList extends StatelessWidget {
                               ],
                             ),
                           ),
-                          if (current) const GLIcon('checkmark', size: 22),
+                          if (current) GLIcon('checkmark', size: 22),
                         ],
                       ),
                     ),
@@ -2438,7 +2413,7 @@ class _TaskReassignList extends StatelessWidget {
 
 /// Member pick chip (prototype `ntAssignees` / `ntReviewers`).
 class _TaskMemberChip extends StatelessWidget {
-  const _TaskMemberChip({
+  _TaskMemberChip({
     required this.store,
     required this.id,
     required this.on,
@@ -2459,12 +2434,12 @@ class _TaskMemberChip extends StatelessWidget {
       child: Opacity(
         opacity: dimmed ? 0.4 : 1,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
+          duration: Duration(milliseconds: 150),
           curve: Curves.easeOut,
           height: 44,
-          padding: const EdgeInsets.only(left: 5, right: 14),
+          padding: EdgeInsets.only(left: 5, right: 14),
           decoration: ShapeDecoration(
-            color: on ? GLTheme.ink : Colors.white,
+            color: on ? GLTheme.ink : GLTheme.surface,
             shape: _taskOutline,
           ),
           child: Row(
@@ -2474,7 +2449,7 @@ class _TaskMemberChip extends StatelessWidget {
               GLAvatar(user: store.user(id), size: 32, fontSize: 11),
               Text(
                 _taskName(store, id),
-                style: gl(14, w600, 0, on ? Colors.white : GLTheme.ink),
+                style: gl(14, w600, 0, on ? GLTheme.onInk : GLTheme.ink),
               ),
             ],
           ),
@@ -2505,7 +2480,7 @@ Future<JsonMap?> _showTaskSheet(
 );
 
 class _TaskEditorSheet extends StatefulWidget {
-  const _TaskEditorSheet({
+  _TaskEditorSheet({
     required this.store,
     required this.project,
     required this.group,
@@ -2524,7 +2499,7 @@ class _TaskEditorSheetState extends State<_TaskEditorSheet> {
     text: widget.task?.text('description'),
   );
   late DateTime dueAt = widget.task == null
-      ? _taskEndOfDay(DateTime.now().add(const Duration(days: 3)))
+      ? _taskEndOfDay(DateTime.now().add(Duration(days: 3)))
       : _taskDue(widget.task!).toLocal();
   late String? assigneeID = widget.task?.text('assigneeID');
   late String? reviewerID = widget.task?.text('reviewerID');
@@ -2597,12 +2572,12 @@ class _TaskEditorSheetState extends State<_TaskEditorSheet> {
 
   Widget _projectCard(String heading, String sub) => MergeSemantics(
     child: Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
-      decoration: glBox(Colors.white, 18, border: GLTheme.border),
+      padding: EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+      decoration: glBox(GLTheme.surface, 18, border: GLTheme.border),
       child: Row(
         spacing: 10,
         children: [
-          const GLIcon('folder', size: 20),
+          GLIcon('folder', size: 20),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -2627,7 +2602,7 @@ class _TaskEditorSheetState extends State<_TaskEditorSheet> {
       context,
       title: 'Pilih tanggal deadline',
       builder: (context) => Container(
-        decoration: glBox(Colors.white, 24),
+        decoration: glBox(GLTheme.surface, 24),
         child: CalendarDatePicker(
           initialDate: initial,
           firstDate: first,
@@ -2674,7 +2649,7 @@ class _TaskEditorSheetState extends State<_TaskEditorSheet> {
                           height: 44,
                           alignment: Alignment.center,
                           decoration: glBox(
-                            on ? GLTheme.ink : Colors.white,
+                            on ? GLTheme.ink : GLTheme.surface,
                             16,
                             border: GLTheme.ink,
                             borderWidth: 1.5,
@@ -2688,7 +2663,7 @@ class _TaskEditorSheetState extends State<_TaskEditorSheet> {
                                 14,
                                 w600,
                                 0,
-                                on ? Colors.white : GLTheme.ink,
+                                on ? GLTheme.onInk : GLTheme.ink,
                               ),
                             ),
                           ),
@@ -2708,19 +2683,19 @@ class _TaskEditorSheetState extends State<_TaskEditorSheet> {
             onTap: _pickDate,
             child: Container(
               height: 50,
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              decoration: glBox(Colors.white, 16, border: GLTheme.border),
+              padding: EdgeInsets.symmetric(horizontal: 14),
+              decoration: glBox(GLTheme.surface, 16, border: GLTheme.border),
               child: Row(
                 spacing: 10,
                 children: [
-                  const GLIcon('calendar', size: 20),
+                  GLIcon('calendar', size: 20),
                   // Compact DatePicker pill.
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 11,
-                      vertical: 6,
+                    padding: EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+                    decoration: glBox(
+                      GLTheme.disabled.withValues(alpha: 0.12),
+                      8,
                     ),
-                    decoration: glBox(const Color(0x1F767680), 8),
                     child: Text(
                       '${dueAt.day} ${GLFormat.months[dueAt.month - 1]} ${dueAt.year}',
                       style: gl(16, w400),
@@ -2744,13 +2719,13 @@ class _TaskEditorSheetState extends State<_TaskEditorSheet> {
               ),
             ))
           Container(
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+            padding: EdgeInsets.symmetric(vertical: 12, horizontal: 14),
             decoration: glBox(GLTheme.butter, 16),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               spacing: 8,
               children: [
-                const GLIcon('exclamationmark.triangle', size: 18),
+                GLIcon('exclamationmark.triangle', size: 18),
                 Expanded(
                   child: Text(
                     'Deadline tugas melewati deadline proyek (${GLFormat.date(projectDue)}). Tetap bisa disimpan, pastikan ini disengaja.',
@@ -2880,7 +2855,7 @@ class _TaskEditorSheetState extends State<_TaskEditorSheet> {
               crossAxisAlignment: CrossAxisAlignment.start,
               spacing: 6,
               children: [
-                const GLIcon(
+                GLIcon(
                   'clock.arrow.circlepath',
                   size: 17,
                   color: GLTheme.text3,
@@ -2906,7 +2881,7 @@ class _TaskEditorSheetState extends State<_TaskEditorSheet> {
           children: [
             _counted('Judul', '${title.text.length}/120', required: true),
             GLTextField(
-              key: const Key('task-title'),
+              key: Key('task-title'),
               controller: title,
               hint: editing ? null : 'Contoh: Buat use case diagram',
               maxLength: 120,
@@ -2944,7 +2919,7 @@ class _TaskEditorSheetState extends State<_TaskEditorSheet> {
           _deadline(),
           reviewerPicker,
         ],
-        if (error != null) GLFormError(error!, key: const Key('form-error')),
+        if (error != null) GLFormError(error!, key: Key('form-error')),
         if (!editing)
           GLSubmitButton(
             title: busy
@@ -2990,7 +2965,7 @@ class _TaskEditorSheetState extends State<_TaskEditorSheet> {
                               : retry
                               ? 'Coba lagi'
                               : 'Simpan perubahan',
-                          style: gl(16, w600, 0, Colors.white),
+                          style: gl(16, w600, 0, GLTheme.onInk),
                         ),
                       ),
                     ),
@@ -3007,7 +2982,7 @@ class _TaskEditorSheetState extends State<_TaskEditorSheet> {
 // MARK: - Submit sheet (prototype `sheetSubmit`)
 
 class _TaskSubmissionSheet extends StatefulWidget {
-  const _TaskSubmissionSheet({required this.store, required this.task});
+  _TaskSubmissionSheet({required this.store, required this.task});
   final GrouplyStore store;
   final JsonMap task;
   @override
@@ -3093,7 +3068,7 @@ class _TaskSubmissionSheetState extends State<_TaskSubmissionSheet> {
         'Apa yang kamu kerjakan?',
         required: true,
         child: _TaskTextArea(
-          key: const Key('submission-note'),
+          key: Key('submission-note'),
           controller: note,
           placeholder:
               'Contoh: Tabel sudah 3NF, alasan dekomposisi ada di halaman 2.',
@@ -3120,12 +3095,12 @@ class _TaskSubmissionSheetState extends State<_TaskSubmissionSheet> {
           for (final c in links)
             Container(
               height: 48,
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              decoration: glBox(Colors.white, 16, border: GLTheme.border),
+              padding: EdgeInsets.symmetric(horizontal: 14),
+              decoration: glBox(GLTheme.surface, 16, border: GLTheme.border),
               child: Row(
                 spacing: 8,
                 children: [
-                  const GLIcon('link', size: 18, color: GLTheme.secondary),
+                  GLIcon('link', size: 18, color: GLTheme.secondary),
                   Expanded(
                     child: Semantics(
                       label: 'Link hasil kerja',
@@ -3146,7 +3121,7 @@ class _TaskSubmissionSheetState extends State<_TaskSubmissionSheet> {
                           border: InputBorder.none,
                           counterText: '',
                           hintText: 'https://docs.google.com/…',
-                          hintStyle: gl(16, w400, 0, const Color(0xFFA0A4A8)),
+                          hintStyle: gl(16, w400, 0, GLTheme.placeholder),
                         ),
                       ),
                     ),
@@ -3165,7 +3140,7 @@ class _TaskSubmissionSheetState extends State<_TaskSubmissionSheet> {
                     mainAxisSize: MainAxisSize.min,
                     spacing: 4,
                     children: [
-                      const GLIcon('plus', size: 20),
+                      GLIcon('plus', size: 20),
                       Text('Tambah link', style: gl(15, w600)),
                     ],
                   ),
@@ -3176,7 +3151,7 @@ class _TaskSubmissionSheetState extends State<_TaskSubmissionSheet> {
       ),
       if (error != null) GLFormError(error!),
       GLSubmitButton(
-        key: const Key('submit-work'),
+        key: Key('submit-work'),
         title: busy
             ? 'Mengirim…'
             : (error?.contains('Gagal') ?? false)
@@ -3192,7 +3167,7 @@ class _TaskSubmissionSheetState extends State<_TaskSubmissionSheet> {
 // MARK: - Review sheet (prototype `sheetReview`)
 
 class _TaskReviewSheet extends StatefulWidget {
-  const _TaskReviewSheet({required this.store, required this.task});
+  _TaskReviewSheet({required this.store, required this.task});
   final GrouplyStore store;
   final JsonMap task;
   @override
@@ -3296,8 +3271,8 @@ class _TaskReviewSheetState extends State<_TaskReviewSheet> {
       children: [
         if (sub != null)
           Container(
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 18),
-            decoration: glBox(Colors.white, 24),
+            padding: EdgeInsets.symmetric(vertical: 16, horizontal: 18),
+            decoration: glBox(GLTheme.surface, 24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               spacing: 10,
@@ -3323,7 +3298,7 @@ class _TaskReviewSheetState extends State<_TaskReviewSheet> {
             children: [
               _taskRequiredLabel('Apa yang perlu diubah?'),
               _TaskTextArea(
-                key: const Key('review-feedback'),
+                key: Key('review-feedback'),
                 controller: feedbackText,
                 placeholder:
                     'Spesifik dan ramah, misal: pisahkan Fine jadi entity sendiri.',
@@ -3354,7 +3329,7 @@ class _TaskReviewSheetState extends State<_TaskReviewSheet> {
                       onTap: () => _decide(false),
                       decoration: glBox(GLTheme.ink, 20),
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        padding: EdgeInsets.symmetric(horizontal: 8),
                         child: FittedBox(
                           fit: BoxFit.scaleDown,
                           child: Text(
@@ -3362,7 +3337,7 @@ class _TaskReviewSheetState extends State<_TaskReviewSheet> {
                                 ? 'Mengirim…'
                                 : 'Kirim ke ${_taskUserName(store, task.text('assigneeID'), 'Pelaksana')}',
                             maxLines: 1,
-                            style: gl(16, w600, 0, Colors.white),
+                            style: gl(16, w600, 0, GLTheme.onInk),
                           ),
                         ),
                       ),
@@ -3378,7 +3353,7 @@ class _TaskReviewSheetState extends State<_TaskReviewSheet> {
             spacing: 10,
             children: [
               _button(
-                key: const Key('approve-work'),
+                key: Key('approve-work'),
                 dim: busy,
                 onTap: () => _decide(true),
                 decoration: glBox(GLTheme.ink, 20),
@@ -3387,24 +3362,24 @@ class _TaskReviewSheetState extends State<_TaskReviewSheet> {
                   spacing: 8,
                   children: [
                     if (pending == true)
-                      const SizedBox(
+                      SizedBox(
                         width: 22,
                         height: 22,
                         child: Center(
                           child: CircularProgressIndicator.adaptive(
-                            valueColor: AlwaysStoppedAnimation(Colors.white),
+                            valueColor: AlwaysStoppedAnimation(GLTheme.onInk),
                           ),
                         ),
                       )
                     else
-                      const GLIcon(
+                      GLIcon(
                         'checkmark.circle',
                         size: 22,
-                        color: Colors.white,
+                        color: GLTheme.onInk,
                       ),
                     Text(
                       pending == true ? 'Menyimpan…' : 'Setujui',
-                      style: gl(17, w600, 0, Colors.white),
+                      style: gl(17, w600, 0, GLTheme.onInk),
                     ),
                   ],
                 ),
@@ -3415,7 +3390,7 @@ class _TaskReviewSheetState extends State<_TaskReviewSheet> {
                   error = null;
                 }),
                 decoration: glBox(
-                  Colors.white,
+                  GLTheme.surface,
                   20,
                   border: GLTheme.ink,
                   borderWidth: 1.5,
@@ -3424,7 +3399,7 @@ class _TaskReviewSheetState extends State<_TaskReviewSheet> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   spacing: 8,
                   children: [
-                    const GLIcon('arrow.uturn.backward', size: 22),
+                    GLIcon('arrow.uturn.backward', size: 22),
                     Text('Minta revisi', style: gl(17, w600)),
                   ],
                 ),
@@ -3439,7 +3414,7 @@ class _TaskReviewSheetState extends State<_TaskReviewSheet> {
 // MARK: - Task discussion composer (`ChatComposer` with taskID)
 
 class _TaskComposer extends StatefulWidget {
-  const _TaskComposer({
+  _TaskComposer({
     required this.store,
     required this.groupID,
     required this.taskID,
@@ -3501,7 +3476,7 @@ class _TaskComposerState extends State<_TaskComposer> {
         12,
         8 + MediaQuery.paddingOf(context).bottom,
       ),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: GLTheme.background,
         border: Border(top: BorderSide(color: GLTheme.border)),
       ),
@@ -3511,10 +3486,10 @@ class _TaskComposerState extends State<_TaskComposer> {
           Expanded(
             child: Container(
               height: 44,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: EdgeInsets.symmetric(horizontal: 16),
               alignment: Alignment.centerLeft,
-              decoration: const ShapeDecoration(
-                color: Colors.white,
+              decoration: ShapeDecoration(
+                color: GLTheme.surface,
                 shape: StadiumBorder(side: BorderSide(color: GLTheme.border)),
               ),
               child: TextField(
@@ -3530,7 +3505,7 @@ class _TaskComposerState extends State<_TaskComposer> {
                   border: InputBorder.none,
                   counterText: '',
                   hintText: 'Komentari tugas ini…',
-                  hintStyle: gl(16, w400, 0, const Color(0xFFA0A4A8)),
+                  hintStyle: gl(16, w400, 0, GLTheme.placeholder),
                 ),
               ),
             ),
@@ -3539,14 +3514,14 @@ class _TaskComposerState extends State<_TaskComposer> {
             label: 'Kirim pesan',
             onTap: _send,
             child: AnimatedContainer(
-              duration: const Duration(milliseconds: 150),
+              duration: Duration(milliseconds: 150),
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: hasText ? GLTheme.ink : const Color(0xFFB4B8BC),
+                color: hasText ? GLTheme.ink : GLTheme.faint,
                 shape: BoxShape.circle,
               ),
-              child: const GLIcon('arrow.up', size: 22, color: Colors.white),
+              child: GLIcon('arrow.up', size: 22, color: GLTheme.onInk),
             ),
           ),
         ],

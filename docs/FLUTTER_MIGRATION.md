@@ -50,6 +50,7 @@ Port awal memakai desain Material buatan sendiri (Beranda "Fokus hari ini", `Nav
 
 - `flutter/lib/ui/gl.dart` mencerminkan `Grouply/Core/DesignSystem.swift`: token warna, `gl()` (ukuran/berat/tracking, tinggi baris SF ~1.19, SF Pro Display mulai 19pt plus tabel tracking Apple), ikon SF Symbol → Cupertino Icons, sudut continuous (`RoundedSuperellipseBorder`), kartu, chip, sheet, dialog konfirmasi, toast, header detail.
 - Tema: transisi push/swipe-back iOS, scroll bounce, tanpa ripple Material, locale `id_ID`, di Android dan iOS.
+- Tema terang/gelap Flutter mengikuti pengaturan kecerahan sistem.
 - Layar: Welcome + persona demo, sheet login email, tab bar kapsul mengambang, Beranda, Grup (detail/anggota/pengaturan/undangan/gabung), Proyek (Group Pulse, filter, editor), Tugas Saya dan detail tugas (Ringkasan/Hasil kerja/Diskusi, kirim hasil, review, alihkan, editor), Chat (daftar, percakapan, moderasi), Profil (notifikasi, diblokir, tentang/privasi, hapus akun, panel demo). Kontrak action/payload store tidak berubah.
 - Seed demo = `Grouply/Core/DemoSeed.swift` (Alex u1 … Laras u7). Key penyimpanan demo naik ke `grouply.demo.v2`, sehingga data demo lama port awal tidak dipakai lagi.
 - Perbedaan yang tersisa: beberapa glyph Cupertino tidak identik dengan SF Symbol (mis. database, grid, kunci); Flutter belum punya Sign in with Apple dan date picker iOS (diganti kalender dalam sheet). Android memakai Roboto karena SF tidak boleh dibundel; tata letak dan ukuran tetap sama.

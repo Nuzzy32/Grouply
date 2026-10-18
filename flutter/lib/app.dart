@@ -24,7 +24,7 @@ String? taskIDFromLink(Uri uri) {
 }
 
 class GrouplyApp extends StatefulWidget {
-  const GrouplyApp({super.key, required this.store, this.enableLinks = true});
+  GrouplyApp({super.key, required this.store, this.enableLinks = true});
   final GrouplyStore store;
   final bool enableLinks;
 
@@ -122,36 +122,41 @@ class _GrouplyAppState extends State<GrouplyApp> {
   }
 
   @override
-  Widget build(BuildContext context) => MaterialApp(
-    title: 'Grouply',
-    debugShowCheckedModeBanner: false,
-    theme: GLTheme.data,
-    scrollBehavior: const CupertinoScrollBehavior(),
-    locale: const Locale('id', 'ID'),
-    supportedLocales: const [Locale('id', 'ID')],
-    localizationsDelegates: GlobalMaterialLocalizations.delegates,
-    navigatorKey: _navigator,
-    scaffoldMessengerKey: _messenger,
-    home: AnimatedBuilder(
-      animation: widget.store,
-      builder: (_, _) {
-        if (widget.store.loading && !widget.store.authenticated) {
-          return const _Restoring();
-        }
-        return widget.store.authenticated
-            ? _Shell(
-                key: ValueKey(widget.store.currentUserID),
-                store: widget.store,
-              )
-            : _Welcome(store: widget.store);
-      },
-    ),
-  );
+  Widget build(BuildContext context) {
+    GLTheme.dark =
+        MediaQueryData.fromView(View.of(context)).platformBrightness ==
+        Brightness.dark;
+    return MaterialApp(
+      title: 'Grouply',
+      debugShowCheckedModeBanner: false,
+      theme: GLTheme.data,
+      scrollBehavior: CupertinoScrollBehavior(),
+      locale: Locale('id', 'ID'),
+      supportedLocales: [Locale('id', 'ID')],
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
+      navigatorKey: _navigator,
+      scaffoldMessengerKey: _messenger,
+      home: AnimatedBuilder(
+        animation: widget.store,
+        builder: (_, _) {
+          if (widget.store.loading && !widget.store.authenticated) {
+            return _Restoring();
+          }
+          return widget.store.authenticated
+              ? _Shell(
+                  key: ValueKey(widget.store.currentUserID),
+                  store: widget.store,
+                )
+              : _Welcome(store: widget.store);
+        },
+      ),
+    );
+  }
 }
 
 /// Swift `profilePersonas` with the seed's names/tints, shown before a demo
 /// snapshot is loaded.
-const _personas = [
+final _personas = [
   (id: 'u1', name: 'Alex', tint: '#DED2FF', role: 'Koordinator'),
   (id: 'u2', name: 'Raka', tint: '#C9F2D6', role: 'Pelaksana'),
   (id: 'u3', name: 'Nadia', tint: '#F9E9BE', role: 'Reviewer'),
@@ -163,7 +168,7 @@ const _personas = [
 
 /// Swift `WelcomeView.restoring`.
 class _Restoring extends StatelessWidget {
-  const _Restoring();
+  _Restoring();
   @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: GLTheme.background,
@@ -175,16 +180,16 @@ class _Restoring extends StatelessWidget {
             width: 72,
             height: 72,
             decoration: glBox(GLTheme.mint, 26),
-            child: const GLIcon('person.3', size: 36),
+            child: GLIcon('person.3', size: 36),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           Text('GROUPLY', style: gl(15, w800, 0.12)),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const CupertinoActivityIndicator(radius: 8),
-              const SizedBox(width: 8),
+              CupertinoActivityIndicator(radius: 8),
+              SizedBox(width: 8),
               Text(
                 'Memulihkan sesi…',
                 style: gl(14, w400, 0, GLTheme.secondary),
@@ -199,7 +204,7 @@ class _Restoring extends StatelessWidget {
 
 /// Swift `WelcomeView.welcome`.
 class _Welcome extends StatefulWidget {
-  const _Welcome({required this.store});
+  _Welcome({required this.store});
   final GrouplyStore store;
   @override
   State<_Welcome> createState() => _WelcomeState();
@@ -248,65 +253,65 @@ class _WelcomeState extends State<_Welcome> {
                   width: 40,
                   height: 40,
                   decoration: glBox(GLTheme.mint, 14),
-                  child: const GLIcon('person.3', size: 22),
+                  child: GLIcon('person.3', size: 22),
                 ),
-                const SizedBox(width: 10),
+                SizedBox(width: 10),
                 Text('GROUPLY', style: gl(15, w800, 0.12)),
               ],
             ),
-            const SizedBox(height: 18),
-            const _PreviewCards(),
-            const SizedBox(height: 18),
+            SizedBox(height: 18),
+            _PreviewCards(),
+            SizedBox(height: 18),
             Text(
               'Kerja kelompok yang beneran jalan.',
               style: gl(30, w700, -0.03),
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: 8),
             Text(
               'Bagi tugas, kirim hasil, review bareng, dan pantau progres grup dalam satu tempat.',
               style: gl(15, w400, 0, GLTheme.secondary, 4.5),
             ),
-            const SizedBox(height: 18),
+            SizedBox(height: 18),
             GLTap.card(
               onTap: _busy ? null : () => showLoginSheet(context, widget.store),
               child: Container(
                 height: 56,
                 alignment: Alignment.center,
-                decoration: glBox(Colors.black, 18),
+                decoration: glBox(GLTheme.ink, 18),
                 child: Text(
                   'Masuk dengan Akun',
-                  style: gl(17, w600, 0, Colors.white),
+                  style: gl(17, w600, 0, GLTheme.onInk),
                 ),
               ),
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: 8),
             Text(
               'Akun Supabase terpisah dari persona demo di bawah.',
               textAlign: TextAlign.center,
               style: gl(12, w400, 0, GLTheme.secondary),
             ),
-            const SizedBox(height: 18),
+            SizedBox(height: 18),
             Row(
               children: [
                 Container(
                   height: 22,
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  padding: EdgeInsets.symmetric(horizontal: 8),
                   alignment: Alignment.center,
-                  decoration: const ShapeDecoration(
+                  decoration: ShapeDecoration(
                     color: GLTheme.butter,
                     shape: StadiumBorder(),
                   ),
                   child: Text('DEMO', style: gl(11, w700, 0.06)),
                 ),
-                const SizedBox(width: 6),
+                SizedBox(width: 6),
                 Text('Masuk cepat sebagai', style: gl(13, w600)),
                 if (_busy) ...[
-                  const SizedBox(width: 8),
-                  const CupertinoActivityIndicator(radius: 7),
+                  SizedBox(width: 8),
+                  CupertinoActivityIndicator(radius: 7),
                 ],
               ],
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: 8),
             LayoutBuilder(
               builder: (context, constraints) {
                 final width = (constraints.maxWidth - 8) / 2;
@@ -330,16 +335,13 @@ class _WelcomeState extends State<_Welcome> {
                 );
               },
             ),
-            if (error != null) ...[
-              const SizedBox(height: 18),
-              GLFormError(error),
-            ],
-            const SizedBox(height: 18),
+            if (error != null) ...[SizedBox(height: 18), GLFormError(error)],
+            SizedBox(height: 18),
             Center(
               child: GLTap(
                 onTap: () => showPrivacySheet(context),
                 child: Container(
-                  constraints: const BoxConstraints(minHeight: 44),
+                  constraints: BoxConstraints(minHeight: 44),
                   alignment: Alignment.center,
                   child: Text(
                     'Privasi & data',
@@ -359,7 +361,7 @@ class _WelcomeState extends State<_Welcome> {
 }
 
 class _PersonaButton extends StatelessWidget {
-  const _PersonaButton({
+  _PersonaButton({
     required this.name,
     required this.tint,
     required this.role,
@@ -374,13 +376,13 @@ class _PersonaButton extends StatelessWidget {
     onTap: onTap,
     label: 'Masuk demo sebagai $name, $role',
     child: Container(
-      constraints: const BoxConstraints(minHeight: 48),
-      padding: const EdgeInsets.fromLTRB(6, 6, 10, 6),
-      decoration: glBox(Colors.white, 16, border: GLTheme.border),
+      constraints: BoxConstraints(minHeight: 48),
+      padding: EdgeInsets.fromLTRB(6, 6, 10, 6),
+      decoration: glBox(GLTheme.surface, 16, border: GLTheme.border),
       child: Row(
         children: [
           GLAvatar(user: {'name': name, 'tint': tint}, size: 32, fontSize: 11),
-          const SizedBox(width: 8),
+          SizedBox(width: 8),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -408,8 +410,8 @@ class _PersonaButton extends StatelessWidget {
 
 /// Three tilted preview cards (Swift `previewCards`, 220pt tall).
 class _PreviewCards extends StatelessWidget {
-  const _PreviewCards();
-  static const _deg = 3.141592653589793 / 180;
+  _PreviewCards();
+  static final _deg = 3.141592653589793 / 180;
   @override
   Widget build(BuildContext context) => ExcludeSemantics(
     child: SizedBox(
@@ -427,14 +429,11 @@ class _PreviewCards extends StatelessWidget {
                 child: Transform.rotate(
                   angle: -3 * _deg,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 14,
-                      horizontal: 16,
-                    ),
+                    padding: EdgeInsets.symmetric(vertical: 14, horizontal: 16),
                     decoration: ShapeDecoration(
                       color: GLTheme.butter,
                       shape: glShape(24),
-                      shadows: const [
+                      shadows: [
                         BoxShadow(
                           color: Color(0x1F000000),
                           blurRadius: 24,
@@ -446,12 +445,12 @@ class _PreviewCards extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text('Perlu perhatian', style: gl(14, w700)),
-                        const SizedBox(height: 6),
+                        SizedBox(height: 6),
                         Text(
                           'Revisi diminta oleh Nadia',
                           style: gl(13, w400, 0, GLTheme.text2),
                         ),
-                        const SizedBox(height: 6),
+                        SizedBox(height: 6),
                         Text('Tulis script DDL SQL', style: gl(15, w600)),
                       ],
                     ),
@@ -465,14 +464,11 @@ class _PreviewCards extends StatelessWidget {
                 child: Transform.rotate(
                   angle: 2.5 * _deg,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 14,
-                      horizontal: 16,
-                    ),
+                    padding: EdgeInsets.symmetric(vertical: 14, horizontal: 16),
                     decoration: ShapeDecoration(
-                      color: Colors.white,
+                      color: GLTheme.surface,
                       shape: glShape(24),
-                      shadows: const [
+                      shadows: [
                         BoxShadow(
                           color: Color(0x24000000),
                           blurRadius: 28,
@@ -483,7 +479,7 @@ class _PreviewCards extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const GLChip(
+                        GLChip(
                           label: 'Menunggu review',
                           icon: 'eye',
                           background: GLTheme.lavender,
@@ -491,7 +487,7 @@ class _PreviewCards extends StatelessWidget {
                           fontSize: 12,
                           iconSize: 15,
                         ),
-                        const SizedBox(height: 8),
+                        SizedBox(height: 8),
                         Text('Draft diagram ERD', style: gl(15, w600)),
                       ],
                     ),
@@ -506,11 +502,11 @@ class _PreviewCards extends StatelessWidget {
                   child: Transform.rotate(
                     angle: -1.5 * _deg,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(
+                      padding: EdgeInsets.symmetric(
                         vertical: 10,
                         horizontal: 14,
                       ),
-                      decoration: const BoxDecoration(
+                      decoration: BoxDecoration(
                         color: GLTheme.lavender,
                         borderRadius: BorderRadius.only(
                           topLeft: Radius.circular(18),
@@ -539,15 +535,15 @@ Future<void> showLoginSheet(BuildContext context, GrouplyStore store) =>
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      backgroundColor: const Color(0xFFF2F2F7),
-      shape: const RoundedRectangleBorder(
+      backgroundColor: GLTheme.background,
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
       ),
       builder: (_) => _LoginSheet(store: store),
     );
 
 class _LoginSheet extends StatefulWidget {
-  const _LoginSheet({required this.store});
+  _LoginSheet({required this.store});
   final GrouplyStore store;
   @override
   State<_LoginSheet> createState() => _LoginSheetState();
@@ -709,31 +705,31 @@ class _LoginSheetState extends State<_LoginSheet> {
 
   Widget _section(List<Widget> rows, {String? header, String? footer}) =>
       Padding(
-        padding: const EdgeInsets.only(bottom: 22),
+        padding: EdgeInsets.only(bottom: 22),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             if (header != null)
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 7),
+                padding: EdgeInsets.fromLTRB(16, 0, 16, 7),
                 child: Text(
                   header.toUpperCase(),
-                  style: gl(13, w400, 0, const Color(0xFF6D6D72)),
+                  style: gl(13, w400, 0, GLTheme.secondary),
                 ),
               ),
             Container(
-              decoration: glBox(Colors.white, 10),
+              decoration: glBox(GLTheme.surface, 10),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   for (var i = 0; i < rows.length; i++) ...[
                     if (i > 0)
-                      const Padding(
+                      Padding(
                         padding: EdgeInsets.only(left: 16),
-                        child: GLHairline(color: Color(0xFFE5E5EA)),
+                        child: GLHairline(color: GLTheme.hairline),
                       ),
                     Padding(
-                      padding: const EdgeInsets.symmetric(
+                      padding: EdgeInsets.symmetric(
                         horizontal: 16,
                         vertical: 11,
                       ),
@@ -745,17 +741,14 @@ class _LoginSheetState extends State<_LoginSheet> {
             ),
             if (footer != null)
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 7, 16, 0),
-                child: Text(
-                  footer,
-                  style: gl(13, w400, 0, const Color(0xFF6D6D72)),
-                ),
+                padding: EdgeInsets.fromLTRB(16, 7, 16, 0),
+                child: Text(footer, style: gl(13, w400, 0, GLTheme.secondary)),
               ),
           ],
         ),
       );
 
-  InputDecoration get _plain => const InputDecoration(
+  InputDecoration get _plain => InputDecoration(
     border: InputBorder.none,
     isDense: true,
     contentPadding: EdgeInsets.symmetric(vertical: 2),
@@ -789,7 +782,7 @@ class _LoginSheetState extends State<_LoginSheet> {
                       _recovering
                           ? 'Masuk'
                           : (_registering ? 'Masuk' : 'Daftar'),
-                      style: gl(17, w400, 0, const Color(0xFF007AFF)),
+                      style: gl(17, w400, 0, GLTheme.link),
                     ),
                   ),
                 ),
@@ -797,10 +790,7 @@ class _LoginSheetState extends State<_LoginSheet> {
                   left: 16,
                   child: GLTap(
                     onTap: _busy ? null : () => Navigator.of(context).pop(),
-                    child: Text(
-                      'Batal',
-                      style: gl(17, w400, 0, const Color(0xFF007AFF)),
-                    ),
+                    child: Text('Batal', style: gl(17, w400, 0, GLTheme.link)),
                   ),
                 ),
               ],
@@ -809,7 +799,7 @@ class _LoginSheetState extends State<_LoginSheet> {
           Flexible(
             child: ListView(
               shrinkWrap: true,
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+              padding: EdgeInsets.fromLTRB(16, 8, 16, 32),
               children: [
                 _section([
                   Column(
@@ -831,7 +821,7 @@ class _LoginSheetState extends State<_LoginSheet> {
                     [
                       if (_registering)
                         TextField(
-                          key: const Key('backend-name'),
+                          key: Key('backend-name'),
                           controller: _name,
                           enabled: !_busy,
                           textInputAction: TextInputAction.next,
@@ -839,19 +829,19 @@ class _LoginSheetState extends State<_LoginSheet> {
                           decoration: _plain.copyWith(hintText: 'Nama lengkap'),
                         ),
                       TextField(
-                        key: const Key('backend-email'),
+                        key: Key('backend-email'),
                         controller: _email,
                         enabled: !_busy,
                         keyboardType: TextInputType.emailAddress,
                         autocorrect: false,
-                        autofillHints: const [AutofillHints.username],
+                        autofillHints: [AutofillHints.username],
                         textInputAction: TextInputAction.next,
                         style: gl(17),
                         decoration: _plain.copyWith(hintText: 'Email akun'),
                       ),
                       if (_recovering && _recoverySent)
                         TextField(
-                          key: const Key('backend-recovery-code'),
+                          key: Key('backend-recovery-code'),
                           controller: _recoveryCode,
                           enabled: !_busy,
                           keyboardType: TextInputType.number,
@@ -861,11 +851,11 @@ class _LoginSheetState extends State<_LoginSheet> {
                         ),
                       if (!_recovering || _recoverySent)
                         TextField(
-                          key: const Key('backend-password'),
+                          key: Key('backend-password'),
                           controller: _password,
                           enabled: !_busy,
                           obscureText: true,
-                          autofillHints: const [AutofillHints.password],
+                          autofillHints: [AutofillHints.password],
                           style: gl(17),
                           decoration: _plain.copyWith(
                             hintText: _recovering
@@ -882,15 +872,15 @@ class _LoginSheetState extends State<_LoginSheet> {
                               ? null
                               : () => _switchMode(recovering: true),
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            padding: EdgeInsets.symmetric(vertical: 8),
                             child: Text(
                               'Lupa kata sandi?',
-                              style: gl(15, w500, 0, const Color(0xFF007AFF)),
+                              style: gl(15, w500, 0, GLTheme.link),
                             ),
                           ),
                         ),
                       _busy
-                          ? const SizedBox(
+                          ? SizedBox(
                               height: 58,
                               child: Center(
                                 child: CupertinoActivityIndicator(),
@@ -930,7 +920,7 @@ class _LoginSheetState extends State<_LoginSheet> {
                   )
                 else
                   _section([
-                    const GLNotice(
+                    GLNotice(
                       text:
                           'Konfigurasi server belum tersedia. Ikuti flutter/README.md, lalu build ulang aplikasinya.',
                     ),
@@ -939,16 +929,16 @@ class _LoginSheetState extends State<_LoginSheet> {
                   _section([
                     Text(
                       _error!,
-                      key: const Key('backend-login-error'),
-                      style: gl(17, w400, 0, const Color(0xFFFF3B30)),
+                      key: Key('backend-login-error'),
+                      style: gl(17, w400, 0, GLTheme.danger),
                     ),
                   ]),
                 if (_info != null)
                   _section([
                     Text(
                       _info!,
-                      key: const Key('backend-login-info'),
-                      style: gl(17, w400, 0, const Color(0xFF007AFF)),
+                      key: Key('backend-login-info'),
+                      style: gl(17, w400, 0, GLTheme.link),
                     ),
                   ]),
               ],
@@ -963,7 +953,7 @@ class _LoginSheetState extends State<_LoginSheet> {
 /// Root shell: tab content plus the Swift floating ink tab bar
 /// (left/right 12, bottom 22, height 68, capsule, 56pt buttons).
 class _Shell extends StatefulWidget {
-  const _Shell({super.key, required this.store});
+  _Shell({super.key, required this.store});
   final GrouplyStore store;
   @override
   State<_Shell> createState() => _ShellState();
@@ -1020,7 +1010,7 @@ class _ShellState extends State<_Shell> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Flexible(child: Text(error, style: gl(13))),
-                      const SizedBox(width: 8),
+                      SizedBox(width: 8),
                       GLTap(
                         onTap: () => setState(() => _dismissedError = error),
                         child: Text('Tutup', style: gl(13, w600)),
@@ -1061,18 +1051,14 @@ class _ShellState extends State<_Shell> {
 }
 
 class _TabBar extends StatelessWidget {
-  const _TabBar({
-    required this.index,
-    required this.unread,
-    required this.onSelect,
-  });
+  _TabBar({required this.index, required this.unread, required this.onSelect});
   final int index;
   final int unread;
   final ValueChanged<int> onSelect;
 
   Widget _button(int i, String label, String icon, {int badge = 0}) {
     final active = index == i;
-    final color = active ? GLTheme.ink : Colors.white.withValues(alpha: 0.78);
+    final color = active ? GLTheme.ink : GLTheme.onInk.withValues(alpha: 0.78);
     return Expanded(
       child: Semantics(
         selected: active,
@@ -1086,8 +1072,8 @@ class _TabBar extends StatelessWidget {
             child: Container(
               height: 56,
               decoration: ShapeDecoration(
-                color: active ? Colors.white : Colors.transparent,
-                shape: const StadiumBorder(),
+                color: active ? GLTheme.surface : Colors.transparent,
+                shape: StadiumBorder(),
               ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -1106,13 +1092,13 @@ class _TabBar extends StatelessWidget {
                           right: -8,
                           top: -2,
                           child: Container(
-                            constraints: const BoxConstraints(
+                            constraints: BoxConstraints(
                               minWidth: 18,
                               minHeight: 18,
                             ),
-                            padding: const EdgeInsets.symmetric(horizontal: 5),
+                            padding: EdgeInsets.symmetric(horizontal: 5),
                             alignment: Alignment.center,
-                            decoration: const ShapeDecoration(
+                            decoration: ShapeDecoration(
                               color: GLTheme.mint,
                               shape: StadiumBorder(
                                 side: BorderSide(color: GLTheme.ink, width: 2),
@@ -1127,7 +1113,7 @@ class _TabBar extends StatelessWidget {
                         ),
                     ],
                   ),
-                  const SizedBox(height: 1),
+                  SizedBox(height: 1),
                   FittedBox(
                     fit: BoxFit.scaleDown,
                     child: Text(
@@ -1149,8 +1135,8 @@ class _TabBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     height: 68,
-    padding: const EdgeInsets.symmetric(horizontal: 6),
-    decoration: const ShapeDecoration(
+    padding: EdgeInsets.symmetric(horizontal: 6),
+    decoration: ShapeDecoration(
       color: GLTheme.ink,
       shape: StadiumBorder(),
       shadows: [
@@ -1164,11 +1150,11 @@ class _TabBar extends StatelessWidget {
     child: Row(
       children: [
         _button(0, 'Beranda', 'house'),
-        const SizedBox(width: 2),
+        SizedBox(width: 2),
         _button(1, 'Grup', 'person.2'),
-        const SizedBox(width: 2),
+        SizedBox(width: 2),
         _button(2, 'Chat', 'bubble.left', badge: unread),
-        const SizedBox(width: 2),
+        SizedBox(width: 2),
         _button(3, 'Tugas Saya', 'checkmark.circle'),
       ],
     ),
@@ -1195,7 +1181,7 @@ class _TabBar extends StatelessWidget {
 
 /// Swift `HomeView` (Beranda).
 class _Home extends StatelessWidget {
-  const _Home({required this.store, required this.openTab});
+  _Home({required this.store, required this.openTab});
   final GrouplyStore store;
   final ValueChanged<int> openTab;
 
@@ -1261,7 +1247,7 @@ class _Home extends StatelessWidget {
         )
         .toList();
     final skip = attention.map((item) => item.task.text('id')).toSet();
-    final end = now.add(const Duration(days: 7));
+    final end = now.add(Duration(days: 7));
     final deadlines =
         mineOpen
             .where(
@@ -1305,7 +1291,7 @@ class _Home extends StatelessWidget {
                   GLFormat.longDate(now),
                   style: gl(15, w400, 0, GLTheme.secondary),
                 ),
-                const SizedBox(height: 2),
+                SizedBox(height: 2),
                 Text(
                   'Halo, ${user?.text('name') ?? 'teman'}',
                   style: gl(30, w700, -0.03),
@@ -1313,9 +1299,9 @@ class _Home extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: 12),
           GLTap(
-            key: const Key('open-profile'),
+            key: Key('open-profile'),
             label: 'Profil dan pengaturan',
             onTap: () => _push(context, ProfileScreen(store: store)),
             child: GLAvatar(user: user, size: 48, fontSize: 15),
@@ -1333,7 +1319,7 @@ class _Home extends StatelessWidget {
             size: 13,
             color: GLTheme.secondary,
           ),
-          const SizedBox(width: 6),
+          SizedBox(width: 6),
           Flexible(
             child: Text(
               store.demoMode
@@ -1359,7 +1345,7 @@ class _Home extends StatelessWidget {
               actionTitle: 'Semua tugas',
               onAction: () => openTab(3),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             _deadlineList(context, deadlines, now),
           ],
         ),
@@ -1372,9 +1358,9 @@ class _Home extends StatelessWidget {
               onAction: () => openTab(1),
             ),
             if (activeProjects.isEmpty) ...[
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
               GLSurface(
-                padding: const EdgeInsets.all(18),
+                padding: EdgeInsets.all(18),
                 child: Text(
                   'Belum ada proyek aktif. Buka grup untuk membuat atau melihat proyek.',
                   style: gl(15, w400, 0, GLTheme.secondary, 4),
@@ -1382,7 +1368,7 @@ class _Home extends StatelessWidget {
               ),
             ],
             for (final project in activeProjects) ...[
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
               GLTap.card(
                 onTap: () => _push(
                   context,
@@ -1398,13 +1384,10 @@ class _Home extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text('Aktivitas terbaru', style: gl(21, w700, -0.02)),
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 4,
-                ),
-                decoration: glBox(Colors.white, 24),
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                decoration: glBox(GLTheme.surface, 24),
                 child: Column(
                   children: [
                     for (final message in activity.take(3))
@@ -1424,7 +1407,7 @@ class _Home extends StatelessWidget {
         child: RefreshIndicator.adaptive(
           onRefresh: store.refresh,
           child: ListView(
-            physics: const AlwaysScrollableScrollPhysics(
+            physics: AlwaysScrollableScrollPhysics(
               parent: BouncingScrollPhysics(),
             ),
             padding: EdgeInsets.fromLTRB(
@@ -1435,7 +1418,7 @@ class _Home extends StatelessWidget {
             ),
             children: [
               for (var i = 0; i < children.length; i++) ...[
-                if (i > 0) const SizedBox(height: 22),
+                if (i > 0) SizedBox(height: 22),
                 children[i],
               ],
             ],
@@ -1446,7 +1429,7 @@ class _Home extends StatelessWidget {
   }
 
   Widget _cardHeader(String title, int count) => Padding(
-    padding: const EdgeInsets.only(bottom: 4),
+    padding: EdgeInsets.only(bottom: 4),
     child: Row(
       children: [
         Expanded(child: Text(title, style: gl(19, w700, -0.02))),
@@ -1463,8 +1446,8 @@ class _Home extends StatelessWidget {
   }) => GLTap(
     onTap: onTap,
     child: Container(
-      constraints: const BoxConstraints(minHeight: 60),
-      padding: const EdgeInsets.symmetric(vertical: 12),
+      constraints: BoxConstraints(minHeight: 60),
+      padding: EdgeInsets.symmetric(vertical: 12),
       decoration: BoxDecoration(
         border: Border(
           top: BorderSide(color: GLTheme.ink.withValues(alpha: 0.1)),
@@ -1473,7 +1456,7 @@ class _Home extends StatelessWidget {
       child: Row(
         children: [
           leading,
-          const SizedBox(width: 12),
+          SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1490,7 +1473,7 @@ class _Home extends StatelessWidget {
     BuildContext context,
     List<({JsonMap task, String icon, String reason})> attention,
   ) => Container(
-    padding: const EdgeInsets.fromLTRB(18, 18, 18, 8),
+    padding: EdgeInsets.fromLTRB(18, 18, 18, 8),
     decoration: glBox(GLTheme.butter, 28),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1498,15 +1481,11 @@ class _Home extends StatelessWidget {
         _cardHeader('Perlu perhatian', attention.length),
         if (attention.isEmpty)
           Padding(
-            padding: const EdgeInsets.only(top: 12, bottom: 14),
+            padding: EdgeInsets.only(top: 12, bottom: 14),
             child: Row(
               children: [
-                const GLIcon(
-                  'checkmark.circle',
-                  size: 20,
-                  color: GLTheme.text2,
-                ),
-                const SizedBox(width: 8),
+                GLIcon('checkmark.circle', size: 20, color: GLTheme.text2),
+                SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     'Semua aman, tidak ada yang mendesak.',
@@ -1527,14 +1506,14 @@ class _Home extends StatelessWidget {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.7),
+                color: GLTheme.onInk.withValues(alpha: 0.7),
                 shape: BoxShape.circle,
               ),
               child: GLIcon(item.icon, size: 20),
             ),
             lines: [
               Text(item.reason, style: gl(13, w600, 0, GLTheme.text2)),
-              const SizedBox(height: 2),
+              SizedBox(height: 2),
               Text(item.task.text('title'), style: gl(16, w600)),
             ],
           ),
@@ -1547,7 +1526,7 @@ class _Home extends StatelessWidget {
     List<JsonMap> reviews,
     DateTime now,
   ) => Container(
-    padding: const EdgeInsets.fromLTRB(18, 18, 18, 8),
+    padding: EdgeInsets.fromLTRB(18, 18, 18, 8),
     decoration: glBox(GLTheme.lavender, 28),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1576,7 +1555,7 @@ class _Home extends StatelessWidget {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.7),
+                      color: GLTheme.onInk.withValues(alpha: 0.7),
                       width: 2,
                       strokeAlign: BorderSide.strokeAlignCenter,
                     ),
@@ -1585,7 +1564,7 @@ class _Home extends StatelessWidget {
                 ),
                 lines: [
                   Text(task.text('title'), style: gl(16, w600)),
-                  const SizedBox(height: 3),
+                  SizedBox(height: 3),
                   // flex-wrap: the stale chip drops to its own line when it doesn't fit.
                   Wrap(
                     spacing: 6,
@@ -1600,7 +1579,7 @@ class _Home extends StatelessWidget {
                         GLChip(
                           label: 'Menunggu $hours jam',
                           icon: 'list.bullet.clipboard',
-                          background: Colors.white,
+                          background: GLTheme.surface,
                           outlined: true,
                           height: 24,
                           fontSize: 12,
@@ -1621,13 +1600,13 @@ class _Home extends StatelessWidget {
     List<JsonMap> deadlines,
     DateTime now,
   ) => GLSurface(
-    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (deadlines.isEmpty)
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16),
+            padding: EdgeInsets.symmetric(vertical: 16),
             child: Text(
               'Tidak ada deadline 7 hari ke depan.',
               style: gl(15, w400, 0, GLTheme.secondary),
@@ -1640,8 +1619,8 @@ class _Home extends StatelessWidget {
               TaskScreen(store: store, taskID: task.text('id')),
             ),
             child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              decoration: const BoxDecoration(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
                 border: Border(bottom: BorderSide(color: GLTheme.border)),
               ),
               child: Row(
@@ -1664,13 +1643,13 @@ class _Home extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const SizedBox(width: 14),
+                  SizedBox(width: 14),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(task.text('title'), style: gl(16, w600)),
-                        const SizedBox(height: 3),
+                        SizedBox(height: 3),
                         Text(
                           '${GLFormat.due(_due(task), task.text('status'), now)} · ${GLStatus.label(task.text('status'))}',
                           style: gl(13, w400, 0, GLTheme.secondary),
@@ -1678,11 +1657,7 @@ class _Home extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const GLIcon(
-                    'chevron.right',
-                    size: 22,
-                    color: GLTheme.secondary,
-                  ),
+                  GLIcon('chevron.right', size: 22, color: GLTheme.secondary),
                 ],
               ),
             ),
@@ -1707,9 +1682,9 @@ class _Home extends StatelessWidget {
               TaskScreen(store: store, taskID: target.text('id')),
             ),
       child: Container(
-        constraints: const BoxConstraints(minHeight: 60),
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: const BoxDecoration(
+        constraints: BoxConstraints(minHeight: 60),
+        padding: EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
           border: Border(bottom: BorderSide(color: GLTheme.border)),
         ),
         child: Row(
@@ -1720,7 +1695,7 @@ class _Home extends StatelessWidget {
               decoration: glBox(style.tint, 14),
               child: GLIcon(style.icon, size: 19),
             ),
-            const SizedBox(width: 12),
+            SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1729,7 +1704,7 @@ class _Home extends StatelessWidget {
                     '$actor ${message.text('text')} · $stamp',
                     style: gl(13, w400, 0, GLTheme.text2),
                   ),
-                  const SizedBox(height: 1),
+                  SizedBox(height: 1),
                   Text(
                     target?.text('title') ?? 'Tugas tidak tersedia',
                     style: gl(15, w600),
@@ -1745,8 +1720,8 @@ class _Home extends StatelessWidget {
 
   Widget _emptyGroups() => Container(
     width: double.infinity,
-    padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 22),
-    decoration: glBox(Colors.white, 32),
+    padding: EdgeInsets.symmetric(vertical: 28, horizontal: 22),
+    decoration: glBox(GLTheme.surface, 32),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1754,16 +1729,16 @@ class _Home extends StatelessWidget {
           width: 56,
           height: 56,
           decoration: glBox(GLTheme.mint, 20),
-          child: const GLIcon('person.badge.plus', size: 28),
+          child: GLIcon('person.badge.plus', size: 28),
         ),
-        const SizedBox(height: 14),
+        SizedBox(height: 14),
         Text('Mulai dari grupmu', style: gl(22, w700, -0.02)),
-        const SizedBox(height: 14),
+        SizedBox(height: 14),
         Text(
           'Kamu belum tergabung di grup mana pun. Buat grup lalu bagikan kode undangan, atau gabung dengan kode dari temanmu.',
           style: gl(15, w400, 0, GLTheme.secondary, 4),
         ),
-        const SizedBox(height: 20),
+        SizedBox(height: 20),
         Row(
           children: [
             Expanded(
@@ -1774,7 +1749,7 @@ class _Home extends StatelessWidget {
                 child: Text('Buat grup', style: gl(15, w600)),
               ),
             ),
-            const SizedBox(width: 10),
+            SizedBox(width: 10),
             Expanded(
               child: GLOutlineButton(
                 title: 'Gabung dengan kode',
@@ -1792,7 +1767,7 @@ class _Home extends StatelessWidget {
 
 /// Swift `HomeProjectCard`.
 class _HomeProjectCard extends StatelessWidget {
-  const _HomeProjectCard({required this.store, required this.project});
+  _HomeProjectCard({required this.store, required this.project});
   final GrouplyStore store;
   final JsonMap project;
   @override
@@ -1805,15 +1780,15 @@ class _HomeProjectCard extends StatelessWidget {
     final due = project.date('dueAt');
     return MergeSemantics(
       child: Container(
-        padding: const EdgeInsets.fromLTRB(14, 14, 16, 14),
-        decoration: glBox(Colors.white, 24, shadow: true),
+        padding: EdgeInsets.fromLTRB(14, 14, 16, 14),
+        decoration: glBox(GLTheme.surface, 24, shadow: true),
         child: Row(
           children: [
             Container(
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: glHex(group?.text('tint'), Colors.white),
+                color: glHex(group?.text('tint'), GLTheme.surface),
                 shape: BoxShape.circle,
               ),
               child: GLIcon(
@@ -1823,18 +1798,18 @@ class _HomeProjectCard extends StatelessWidget {
                 size: 22,
               ),
             ),
-            const SizedBox(width: 14),
+            SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(project.text('title'), style: gl(16, w600)),
-                  const SizedBox(height: 1),
+                  SizedBox(height: 1),
                   Text(
                     '${group?.text('name') ?? ''} · deadline ${due == null ? '-' : GLFormat.date(due)}',
                     style: gl(13, w400, 0, GLTheme.secondary),
                   ),
-                  const SizedBox(height: 8),
+                  SizedBox(height: 8),
                   Row(
                     children: [
                       Expanded(
@@ -1842,11 +1817,11 @@ class _HomeProjectCard extends StatelessWidget {
                           value: tasks.isEmpty ? 0 : done / tasks.length,
                         ),
                       ),
-                      const SizedBox(width: 10),
+                      SizedBox(width: 10),
                       Text(
                         '$done/${tasks.length} selesai',
                         style: gl(13, w600).copyWith(
-                          fontFeatures: const [FontFeature.tabularFigures()],
+                          fontFeatures: [FontFeature.tabularFigures()],
                         ),
                       ),
                     ],

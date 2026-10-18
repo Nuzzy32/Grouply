@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:grouply/app.dart';
 import 'package:grouply/core/store.dart';
+import 'package:grouply/theme.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -74,6 +75,22 @@ void main() {
     }
     expect(find.text('Demo lokal · data contoh'), findsOneWidget);
     await tester.pump(const Duration(seconds: 3));
+    await tester.pumpWidget(const SizedBox.shrink());
+    store.dispose();
+  });
+
+  testWidgets('home uses the system dark background', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
+    addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+    addTearDown(() => GLTheme.dark = false);
+    final store = GrouplyStore();
+    await store.initialize();
+    await store.startDemo();
+    await tester.pumpWidget(GrouplyApp(store: store, enableLinks: false));
+    await tester.pumpAndSettle();
+    final scaffold = tester.widget<Scaffold>(find.byType(Scaffold).first);
+    expect(scaffold.backgroundColor, const Color(0xFF121314));
     await tester.pumpWidget(const SizedBox.shrink());
     store.dispose();
   });
