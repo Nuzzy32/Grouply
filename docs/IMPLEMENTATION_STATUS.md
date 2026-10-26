@@ -82,3 +82,5 @@ Review tambahan menutup pesan gagal yang terlihat lintas persona, koordinator de
 ## Target cloud dan rilis yang belum tersedia
 
 Belum tersedia/terverifikasi: deployment cloud, provider Apple nyata dan pencabutan token Apple, Realtime Group Chat lintas perangkat fisik, APNs/pengingat lokal, domain/AASA/Universal Links, operator moderasi production dan kebijakan retention. Penghapusan akun password server dan CLI moderasi tersedia lokal, bukan bukti readiness Apple/App Review. Source migration aktual ada di `supabase/migrations`; DDL dokumen produk mencakup target yang lebih luas. Tidak ada proyek cloud atau database production yang diubah. Gate cloud/TestFlight tetap belum dicentang.
+
+Draf kebijakan untuk rilis publik (belum disahkan, butuh tinjauan hukum): [Kebijakan Privasi](legal/PRIVACY_POLICY.md), [Retensi Data](legal/DATA_RETENTION.md), [Prosedur Moderasi](legal/MODERATION_OPERATIONS.md).
