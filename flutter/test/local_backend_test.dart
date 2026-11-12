@@ -507,4 +507,294 @@ void main() {
         : false,
     timeout: const Timeout(Duration(minutes: 1)),
   );
+
+  test(
+    'local organization plan: activation, division, roles, dashboard, exit',
+    () async {
+      var stage = 'private local configuration';
+      final stores = <GrouplyStore>[];
+      final backends = <SupabaseGrouplyBackend>[];
+      addTearDown(() async {
+        for (final backend in backends) {
+          await backend.disconnect().timeout(const Duration(seconds: 5));
+        }
+        for (final store in stores) {
+          store.dispose();
+        }
+      });
+      try {
+        final environment = Platform.environment;
+        final path =
+            environment['GROUPLY_LOCAL_ACCOUNTS_PATH'] ??
+            '${environment['HOME']}/Library/Application Support/'
+                'GrouplyDevelopment/accounts.json';
+        final fixture = jsonDecode(await File(path).readAsString()) as JsonMap;
+        final url = fixture['url'] as String;
+        final key = fixture['publishableKey'] as String;
+        _check(
+          url == 'http://127.0.0.1:55321' || url == 'http://localhost:55321',
+          'Only loopback HTTP port 55321 is allowed.',
+        );
+        SharedPreferences.setMockInitialValues({});
+        GrouplyStore open() {
+          final backend = SupabaseGrouplyBackend(
+            url: url,
+            anonKey: key,
+            client: SupabaseClient(
+              url,
+              key,
+              authOptions: AuthClientOptions(pkceAsyncStorage: _MemoryPKCE()),
+            ),
+            sessionStorage: _MemorySession(),
+          );
+          backends.add(backend);
+          final store = GrouplyStore(backend: backend);
+          stores.add(store);
+          return store;
+        }
+
+        // A fresh founder each run: a ketua may lead at most 3 organizations.
+        stage = 'fresh founder sign-up and two existing accounts';
+        final founder = open(), alex = open(), raka = open();
+        for (final store in stores) {
+          await store.initialize();
+        }
+        final label = 'Org lokal ${DateTime.now().microsecondsSinceEpoch}';
+        _check(
+          await founder.signUp(
+            'Uji Organisasi',
+            'flutter-org-${DateTime.now().microsecondsSinceEpoch}@example.test',
+            'Org-${_messageID()}',
+          ),
+          'Founder sign-up failed.',
+        );
+        final accounts = fixture['accounts'] as JsonMap;
+        for (final (store, name) in [(alex, 'alex'), (raka, 'raka')]) {
+          final account = accounts[name] as JsonMap;
+          await store.signIn(
+            account['email'] as String,
+            account['password'] as String,
+          );
+        }
+
+        stage = 'organization creation on an inactive plan';
+        final created = await founder.mutate('createOrganization', {
+          'name': label,
+          'periodLabel': '2026/2027',
+        });
+        final org = created.text('id'), bph = created.text('groupID');
+        _check(
+          founder.orgRole(org) == 'ketua' &&
+              founder.organization(org)?['planActive'] == false &&
+              founder.isDivision(founder.group(bph)),
+          'Organization was not created with its first division.',
+        );
+        await expectLater(
+          founder.mutate('createDivision', {
+            'organizationID': org,
+            'name': 'Terlalu cepat',
+          }),
+          throwsA(
+            isA<GrouplyException>().having(
+              (e) => e.message,
+              'message',
+              contains('Paket organisasi belum aktif'),
+            ),
+          ),
+        );
+        await _denied(
+          () => backends[0].mutate('generateInvite', {
+            'groupID': bph,
+            'maxUses': 10,
+          }),
+          'invalid_input',
+        );
+
+        // The real operator path: service-role RPC, key never printed.
+        stage = 'operator plan activation';
+        final status = await Process.run('supabase', [
+          'status',
+          '-o',
+          'json',
+        ], workingDirectory: '..');
+        _check(status.exitCode == 0, 'Local Supabase status is unavailable.');
+        final local = jsonDecode(status.stdout as String) as JsonMap;
+        _check(
+          Uri.parse(local['API_URL'] as String).port == 55321,
+          'Only the Grouply local stack may be activated.',
+        );
+        final service = local['SERVICE_ROLE_KEY'] as String;
+        final http = HttpClient();
+        addTearDown(() => http.close(force: true));
+        final request = await http.postUrl(
+          Uri.parse('$url/rest/v1/rpc/grouply_billing'),
+        );
+        request.headers
+          ..set('apikey', service)
+          ..set('Authorization', 'Bearer $service')
+          ..contentType = ContentType.json;
+        request.write(
+          jsonEncode({
+            'action': 'activatePlan',
+            'payload': {
+              'organizationID': org,
+              'seatLimit': 5,
+              'expiresAt': DateTime.now()
+                  .toUtc()
+                  .add(const Duration(days: 30))
+                  .toIso8601String(),
+            },
+          }),
+        );
+        final response = await request.close();
+        await response.drain<void>();
+        _check(response.statusCode == 200, 'Plan activation was rejected.');
+        await founder.refresh();
+        _check(
+          founder.organization(org)?['planActive'] == true &&
+              founder.organization(org)?.number('seatLimit') == 5,
+          'Activated plan did not reach the snapshot.',
+        );
+
+        stage = 'division, multi-use invite and seats';
+        final humas = (await founder.mutate('createDivision', {
+          'organizationID': org,
+          'name': 'Humas',
+        })).text('id');
+        final invite = await founder.mutate('generateInvite', {
+          'groupID': humas,
+          'maxUses': 10,
+        });
+        final code = (invite['invite'] as JsonMap).text('code');
+        for (final store in [alex, raka]) {
+          await store.mutate('joinGroup', {'code': code});
+          _check(
+            store.group(humas) != null && store.orgRole(org).isEmpty,
+            'Member did not join the division through one shared code.',
+          );
+        }
+        await founder.refresh();
+        _check(
+          founder.organization(org)?.number('seatsUsed') == 3,
+          'Seats are not counted per unique person.',
+        );
+
+        stage = 'officer roles';
+        await founder.mutate('setOrgRole', {
+          'organizationID': org,
+          'userID': raka.currentUserID,
+          'role': 'bph',
+        });
+        await raka.refresh();
+        final officers = raka.organization(org)?['roles'] as List? ?? [];
+        _check(
+          raka.orgRole(org) == 'bph' &&
+              officers.any(
+                (row) =>
+                    (row as Map)['userID'] == founder.currentUserID &&
+                    row['name'] == 'Uji Organisasi',
+              ),
+          'Officer role or officer names are missing.',
+        );
+        await _denied(
+          () => backends[1].mutate('setOrgRole', {
+            'organizationID': org,
+            'userID': raka.currentUserID,
+            'role': 'pembina',
+          }),
+          'forbidden',
+        );
+
+        stage = 'dashboard';
+        final due = DateTime.now()
+            .toUtc()
+            .add(const Duration(days: 7))
+            .toIso8601String();
+        final project = (await founder.mutate('createProject', {
+          'groupID': humas,
+          'title': label,
+          'dueAt': due,
+        })).text('id');
+        final task = (await founder.mutate('createTask', {
+          'projectID': project,
+          'title': label,
+          'dueAt': due,
+          'assigneeID': alex.currentUserID,
+          'reviewerID': raka.currentUserID,
+        })).text('id');
+        JsonMap? humasRow(JsonMap overview) =>
+            (overview['divisions'] as List<JsonMap>).firstWhere(
+              (row) => row.text('id') == humas,
+            );
+        final overview = await founder.orgOverview(org);
+        final projects = humasRow(overview)!['projects'] as List<JsonMap>;
+        _check(
+          humasRow(overview)!.number('memberCount') == 3 &&
+              projects.single.number('total') == 1 &&
+              projects.single.number('done') == 0,
+          'Dashboard counts do not match.',
+        );
+        await raka.orgOverview(org);
+        await expectLater(
+          alex.orgOverview(org),
+          throwsA(
+            isA<GrouplyException>().having(
+              (e) => e.message,
+              'message',
+              contains('tidak punya izin'),
+            ),
+          ),
+        );
+
+        stage = 'task completion';
+        await alex.mutate('startTask', {'id': task, 'expectedVersion': 1});
+        await alex.mutate('submitWork', {
+          'taskID': task,
+          'note': 'Organisasi lokal',
+          'links': ['https://example.org/org-local'],
+          'expectedVersion': 2,
+        });
+        await raka.mutate('review', {
+          'taskID': task,
+          'approve': true,
+          'feedback': 'Oke',
+          'expectedVersion': 3,
+        });
+        final done = humasRow(await founder.orgOverview(org))!['projects'];
+        _check(
+          (done as List<JsonMap>).single.number('done') == 1,
+          'Dashboard did not count the approved task.',
+        );
+
+        // Officers leaving by themselves lose the role; then the founder is
+        // the sole member and may delete the account, leaving no test account.
+        stage = 'members leave and sole founder deletes the account';
+        await raka.mutate('leaveGroup', {'id': humas});
+        await raka.refresh();
+        _check(raka.organization(org) == null, 'Leaver still sees the org.');
+        await alex.mutate('leaveGroup', {'id': humas});
+        await founder.refresh();
+        _check(
+          founder.organization(org)?.number('seatsUsed') == 1 &&
+              (founder.organization(org)?['roles'] as List).length == 1,
+          'Officer role survived leaving the last division.',
+        );
+        await founder.mutate('deleteAccount', {});
+        _check(!founder.authenticated, 'Founder account was not removed.');
+        debugPrint(
+          'PASS: org create; inactive limits; operator activation; division; '
+          'multi-use invite; seats; roles; dashboard + denial; self-leave role '
+          'drop; sole founder deletion. Dormant org rows retained.',
+        );
+      } catch (_) {
+        fail(
+          'Local organization flow failed during $stage; details suppressed.',
+        );
+      }
+    },
+    skip: Platform.environment['GROUPLY_LOCAL_INTEGRATION'] != '1'
+        ? 'Opt in with GROUPLY_LOCAL_INTEGRATION=1; existing localhost backend only.'
+        : false,
+    timeout: const Timeout(Duration(minutes: 2)),
+  );
 }
