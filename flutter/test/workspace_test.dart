@@ -596,4 +596,263 @@ void main() {
     expect(tester.takeException(), isNull);
     await _settleToasts(tester);
   });
+
+  group('Organization Plan', () {
+    Finder tile(String label) =>
+        find.ancestor(of: find.text(label), matching: find.byType(Column));
+
+    testWidgets('create organization sends its payload and lists it first', (
+      tester,
+    ) async {
+      await _show(tester, GroupsScreen(store: store));
+      expect(find.text('Organisasi'), findsNothing);
+      await _tapOn(tester, find.byKey(const Key('org-create')));
+      final division = tester.widget<EditableText>(
+        find.descendant(
+          of: find.byKey(const Key('org-division')),
+          matching: find.byType(EditableText),
+        ),
+      );
+      expect(division.controller.text, 'BPH Inti');
+      await _tapOn(tester, find.byKey(const Key('org-save')));
+      expect(find.text('Nama organisasi minimal 3 karakter.'), findsOneWidget);
+      expect(store.calls, isEmpty);
+      await _fill(tester, find.byKey(const Key('org-name')), 'BEM FST');
+      await _fill(tester, find.byKey(const Key('org-period')), '2026/2027');
+      await _tapOn(tester, find.byKey(const Key('org-save')));
+      expect(store.calls.single.action, 'createOrganization');
+      expect(store.calls.single.payload, {
+        'name': 'BEM FST',
+        'periodLabel': '2026/2027',
+        'divisionName': 'BPH Inti',
+      });
+      expect(find.byType(OrganizationScreen), findsOneWidget);
+      expect(find.text('Periode 2026/2027'), findsOneWidget);
+      expect(find.text('Paket belum aktif'), findsOneWidget);
+      expect(find.text('Ketua'), findsWidgets);
+
+      await _tapOn(tester, _labelled('Kembali'));
+      expect(find.text('Organisasi'), findsOneWidget);
+      expect(find.text('BEM FST'), findsOneWidget);
+      expect(
+        find.text('1 divisi · 1 anggota · Divisimu: BPH Inti'),
+        findsOneWidget,
+      );
+      // The division is listed under its organization, not as a group card.
+      expect(find.text('BPH Inti'), findsNothing);
+      expect(find.text('Grup kelompok'), findsOneWidget);
+      expect(find.text('Basis Data · Kelompok 3'), findsOneWidget);
+      await _settleToasts(tester);
+    });
+
+    testWidgets('organization actions follow the viewer org role', (
+      tester,
+    ) async {
+      store.demo.seedOrganization();
+      final roles = store.demo.organizations.single['roles'] as Map;
+      // u1 stays the viewer; only its org role changes (u1 is in g1 and g2).
+      for (final (role, ketua, bph, officer) in [
+        ('ketua', true, true, true),
+        ('bph', false, true, true),
+        ('pembina', false, false, true),
+        ('', false, false, false), // Kadiv or staff: no org role
+      ]) {
+        roles['u1'] = role;
+        if (role.isEmpty) roles.remove('u1');
+        await store.refresh();
+        expect(store.orgRole('o1'), role);
+        await _show(tester, OrganizationScreen(store: store, orgID: 'o1'));
+        Matcher shown(bool visible) => visible ? findsOneWidget : findsNothing;
+        expect(_labelled('Ubah info organisasi'), shown(ketua), reason: role);
+        expect(find.byKey(const Key('org-roles')), shown(ketua), reason: role);
+        expect(
+          find.byKey(const Key('org-add-division')),
+          shown(bph),
+          reason: role,
+        );
+        expect(
+          find.byKey(const Key('org-dashboard')),
+          shown(officer),
+          reason: role,
+        );
+        expect(find.byKey(const Key('org-plan-banner')), findsNothing);
+        // Officer names are visible to every member.
+        expect(find.textContaining('Nadia'), findsOneWidget, reason: role);
+        expect(find.textContaining('Laras'), findsOneWidget, reason: role);
+      }
+    });
+
+    testWidgets('ketua sets a role from the role sheet', (tester) async {
+      store.demo.seedOrganization();
+      await store.refresh();
+      await _show(tester, OrganizationScreen(store: store, orgID: 'o1'));
+      await _tapOn(tester, find.byKey(const Key('org-roles')));
+      await _tap(tester, 'Raka');
+      await _tap(tester, 'Jadikan Pembina');
+      expect(store.calls.single.action, 'setOrgRole');
+      expect(store.calls.single.payload, {
+        'organizationID': 'o1',
+        'userID': 'u2',
+        'role': 'pembina',
+      });
+      expect(store.orgRole('o1'), 'ketua');
+      expect(
+        store.organization('o1')!['roles'],
+        contains(equals({'userID': 'u2', 'name': 'Raka', 'role': 'pembina'})),
+      );
+      expect(find.text('Raka'), findsOneWidget);
+      await _settleToasts(tester);
+    });
+
+    testWidgets(
+      'dashboard renders the overview; tasks open only in member divisions',
+      (tester) async {
+        store.demo.seedOrganization();
+        await store.refresh();
+        await _show(tester, OrganizationScreen(store: store, orgID: 'o1'));
+        await _tapOn(tester, find.byKey(const Key('org-dashboard')));
+        expect(find.byType(OrgDashboardScreen), findsOneWidget);
+        // Active projects p1, p2, p9; overdue t8 (g2) and t90 (g3).
+        expect(
+          find.descendant(
+            of: tile('Proker aktif').first,
+            matching: find.text('3'),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(
+            of: tile('Terlambat').first,
+            matching: find.text('2'),
+          ),
+          findsOneWidget,
+        );
+        expect(find.text('Tanpa kabar'), findsOneWidget);
+        expect(find.text('Review >48 jam'), findsOneWidget);
+        expect(find.text('Statistika · Kelompok 1'), findsOneWidget);
+        expect(find.text('Kadiv: Bima'), findsOneWidget);
+        expect(find.text('Survei Kebiasaan Belajar'), findsOneWidget);
+        expect(find.text('Perlu perhatian'), findsOneWidget);
+        expect(find.text('Statistika · Kelompok 1 · Laras'), findsOneWidget);
+        expect(find.text('Terlambat 2 hari'), findsOneWidget);
+
+        // u1 is not in g3: summary only.
+        await _tap(tester, 'Sebar kuesioner');
+        expect(find.text('Ringkasan tugas'), findsOneWidget);
+        expect(find.byType(TaskScreen), findsNothing);
+        expect(find.textContaining('bukan anggota divisi ini'), findsOneWidget);
+        await _tapOn(tester, _labelled('Tutup'));
+
+        // u1 is in g2: the task opens.
+        await _tap(tester, 'Script wawancara');
+        expect(find.byType(TaskScreen), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    testWidgets('inactive plan shows the banner and locks the dashboard', (
+      tester,
+    ) async {
+      String? copied;
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (call) async {
+          if (call.method == 'Clipboard.setData') {
+            copied = (call.arguments as Map)['text'] as String;
+          }
+          return null;
+        },
+      );
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          SystemChannels.platform,
+          null,
+        ),
+      );
+      store.demo.seedOrganization(active: false);
+      await store.refresh();
+      await _show(tester, OrganizationScreen(store: store, orgID: 'o1'));
+      expect(find.byKey(const Key('org-plan-banner')), findsOneWidget);
+      expect(
+        find.text(
+          'Paket belum aktif. Hubungi tim Grouply dengan kode organisasi ini.',
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.text('7 anggota · batas gratis 8 orang per divisi'),
+        findsOneWidget,
+      );
+      await _tap(tester, 'Salin kode organisasi');
+      expect(copied, 'o1');
+      await _settleToasts(tester);
+      await _tapOn(tester, find.byKey(const Key('org-dashboard')));
+      expect(find.byType(OrgDashboardScreen), findsNothing);
+      expect(find.text('Dashboard tersedia saat paket aktif.'), findsOneWidget);
+      await _tapOn(tester, find.byKey(const Key('org-add-division')));
+      expect(find.byKey(const Key('division-name')), findsNothing);
+      expect(store.calls, isEmpty);
+      await _settleToasts(tester);
+    });
+
+    testWidgets('invite usage choice appears only for active-org divisions', (
+      tester,
+    ) async {
+      await _show(tester, GroupScreen(store: store, groupID: 'g1'));
+      expect(find.byKey(const Key('group-org-chip')), findsNothing);
+      await _tap(tester, 'Undang');
+      expect(find.byKey(const Key('invite-uses-10')), findsNothing);
+      expect(store.calls.last.payload, {'groupID': 'g1'});
+      await _tapOn(tester, _labelled('Tutup'));
+
+      // Inactive plan: still the free 8-member limit and single-use codes.
+      store.demo.seedOrganization(active: false);
+      final ids = store.demo.group('g1')!.ids('memberIDs');
+      store.demo.group('g1')!['memberIDs'] = [...ids, 'x1', 'x2', 'x3'];
+      await store.refresh();
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('group-org-chip')), findsOneWidget);
+      expect(find.text('8 dari 8 anggota'), findsOneWidget);
+      await _tap(tester, 'Undang');
+      expect(
+        find.text('Grup sudah penuh (maksimal 8 anggota).'),
+        findsOneWidget,
+      );
+      expect(store.calls.length, 1);
+      await _settleToasts(tester);
+
+      // Active plan: the client cap is lifted and codes can be multi-use.
+      store.demo.activatePlan('o1');
+      await store.refresh();
+      await tester.pumpAndSettle();
+      expect(find.text('8 anggota'), findsOneWidget);
+      await _tap(tester, 'Undang');
+      for (final uses in [1, 10, 30, 100]) {
+        expect(find.byKey(Key('invite-uses-$uses')), findsOneWidget);
+      }
+      await _tapOn(tester, find.byKey(const Key('invite-uses-30')));
+      expect(store.calls.last.action, 'generateInvite');
+      expect(store.calls.last.payload, {'groupID': 'g1', 'maxUses': 30});
+      expect(find.textContaining('0/30 pemakaian'), findsOneWidget);
+      expect(find.textContaining('maksimal 30 orang'), findsOneWidget);
+      await _tapOn(tester, _labelled('Tutup'));
+
+      await _tapOn(tester, find.byKey(const Key('group-org-chip')));
+      expect(find.byType(OrganizationScreen), findsOneWidget);
+      await _settleToasts(tester);
+    });
+
+    testWidgets('organization screens render in dark mode', (tester) async {
+      final previous = GLTheme.dark;
+      GLTheme.dark = true;
+      addTearDown(() => GLTheme.dark = previous);
+      store.demo.seedOrganization();
+      await store.refresh();
+      await _show(tester, GroupsScreen(store: store));
+      await _tapOn(tester, find.text('BEM FST'));
+      await _tapOn(tester, find.byKey(const Key('org-dashboard')));
+      expect(find.text('Perlu perhatian'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  });
 }

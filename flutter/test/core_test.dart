@@ -6,7 +6,8 @@ import 'package:grouply/core/backend.dart';
 import 'package:grouply/ui/gl.dart';
 import 'package:grouply/core/store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' show AuthException;
+import 'package:supabase_flutter/supabase_flutter.dart'
+    show AuthException, PostgrestException;
 
 JsonMap cloudSnapshot(String actor, {String name = 'Ayu'}) => {
   'currentUserID': actor,
@@ -94,6 +95,10 @@ class FakeBackend implements GrouplyBackend {
     mutations++;
     return write == null ? {} : write!(action, payload);
   }
+
+  Future<JsonMap> Function(String id) overview = (_) async => {};
+  @override
+  Future<JsonMap> orgOverview(String id) => overview(id);
 
   @override
   Future<void> connect(void Function() onChange) async {
@@ -401,4 +406,209 @@ void main() {
       }
     },
   );
+
+  group('Organization Plan', () {
+    JsonMap org({Object? myRole = 'bph'}) => {
+      'id': 'o1',
+      'name': 'BEM FST',
+      'description': '',
+      'periodLabel': '2026/2027',
+      'planActive': true,
+      'planExpiresAt': '2027-08-31T00:00:00Z',
+      'seatLimit': 120,
+      'seatsUsed': 87,
+      'myRole': myRole,
+      'roles': [
+        {'userID': 'k1', 'name': 'Rani', 'role': 'ketua'},
+      ],
+      'divisions': [
+        {'id': 'g1', 'name': 'Humas', 'memberCount': 14, 'isMember': true},
+      ],
+    };
+    JsonMap group(String id, Object? orgID) => {
+      'id': id,
+      'name': id,
+      'description': '',
+      'course': '',
+      'coordinatorID': 'u1',
+      'tint': '',
+      'icon': '',
+      'memberIDs': ['u1'],
+      'organizationID': orgID,
+    };
+    JsonMap snapshot([List<JsonMap>? organizations]) => cloudSnapshot('u1')
+      ..['groups'] = [group('g1', 'o1'), group('g2', '')]
+      ..addAll({'organizations': ?organizations});
+
+    test('organizations decode with helpers; a missing key is empty', () async {
+      backend.actor = 'u1';
+      backend.read = () async => snapshot([org()]);
+      await store.initialize();
+      expect(store.organization('o1')!.text('name'), 'BEM FST');
+      expect(store.orgRole('o1'), 'bph');
+      expect(store.isDivision(store.group('g1')), isTrue);
+      expect(store.isDivision(store.group('g2')), isFalse);
+      expect(store.isDivision(null), isFalse);
+
+      backend.read = () async => snapshot([org(myRole: null)]);
+      await store.refresh();
+      expect(store.orgRole('o1'), '');
+
+      // A database without the migration sends no key at all.
+      backend.read = () async => cloudSnapshot('u1');
+      await store.refresh();
+      expect(store.organizations, isEmpty);
+      expect(store.organization('o1'), isNull);
+      expect(store.orgRole('o1'), '');
+    });
+
+    test('malformed organizations never partially apply', () async {
+      backend.actor = 'u1';
+      backend.read = () async => snapshot([org()]);
+      await store.initialize();
+      for (final bad in <JsonMap>[
+        snapshot([org()..remove('planActive')]),
+        snapshot([org(myRole: 'kadiv')]),
+        snapshot([org()..['seatsUsed'] = '87']),
+        snapshot([
+          org()
+            ..['divisions'] = [
+              {'id': 'g1', 'name': 'Humas'},
+            ],
+        ]),
+        snapshot([
+          org()
+            ..['roles'] = [
+              {'userID': 'k1', 'name': 'Rani', 'role': 'kadiv'},
+            ],
+        ]),
+        snapshot()..['organizations'] = {'o1': org()},
+        snapshot([org()])..['groups'] = [group('g1', 7)],
+      ]) {
+        backend.read = () async => bad..['users'][0]['name'] = 'Partial';
+        await expectLater(store.refresh(), throwsFormatException);
+      }
+      expect(store.orgRole('o1'), 'bph');
+      expect(store.user('u1')!.text('name'), 'Ayu');
+    });
+
+    test(
+      'server error codes become Indonesian; other failures stay unconfirmed',
+      () async {
+        backend.actor = 'u1';
+        await store.initialize();
+        Future<String> failWith(Object error, [String action = 'x']) async {
+          backend.write = (_, _) async => throw error;
+          try {
+            await store.mutate(action, {});
+          } on GrouplyException catch (failure) {
+            return failure.message;
+          }
+          throw StateError('mutate should fail');
+        }
+
+        PostgrestException raised(String code) =>
+            PostgrestException(message: code, code: 'P0001');
+        expect(
+          await failWith(raised('org_full')),
+          'Kursi organisasi sudah penuh. Minta ketua menambah kursi paket.',
+        );
+        expect(store.error, startsWith('Kursi organisasi sudah penuh'));
+        expect(
+          await failWith(raised('rate_limited'), 'createOrganization'),
+          'Satu orang maksimal menjadi ketua di 3 organisasi.',
+        );
+        expect(
+          await failWith(raised('rate_limited')),
+          'Terlalu banyak permintaan. Coba lagi sebentar.',
+        );
+        const unconfirmed =
+            'Perubahan belum terkonfirmasi. Muat ulang sebelum mencoba lagi.';
+        expect(await failWith(StateError('offline')), unconfirmed);
+        expect(
+          await failWith(
+            const PostgrestException(message: 'org_full', code: '500'),
+          ),
+          unconfirmed,
+        );
+        expect(await failWith(raised('something_new')), unconfirmed);
+        for (final code in [
+          'org_full',
+          'plan_inactive',
+          'ketua_transfer_required',
+          'org_role_holder',
+          'group_full',
+          'invite_full',
+          'invite_expired',
+          'active_assignment',
+          'coordinator_transfer_required',
+          'stale_version',
+          'project_read_only',
+          'already_reviewed',
+          'rate_limited',
+          'forbidden',
+          'invalid_input',
+          'unauthorized',
+        ]) {
+          expect(
+            GrouplyStore.serverMessage(raised(code)),
+            allOf(isNotNull, isNot(contains('_'))),
+            reason: code,
+          );
+        }
+      },
+    );
+
+    test('overview maps server codes and rejects a malformed shape', () async {
+      backend.actor = 'u1';
+      await store.initialize();
+      backend.overview = (_) async => throw const PostgrestException(
+        message: 'plan_inactive',
+        code: 'P0001',
+      );
+      await expectLater(
+        store.orgOverview('o1'),
+        throwsA(
+          isA<GrouplyException>().having(
+            (e) => e.message,
+            'message',
+            startsWith('Paket organisasi belum aktif'),
+          ),
+        ),
+      );
+      backend.overview = (_) async => {'divisions': 'bad'};
+      await expectLater(
+        store.orgOverview('o1'),
+        throwsA(
+          isA<GrouplyException>().having(
+            (e) => e.message,
+            'message',
+            startsWith('Dashboard belum dapat dimuat'),
+          ),
+        ),
+      );
+      final requested = <String>[];
+      backend.overview = (id) async {
+        requested.add(id);
+        return {
+          'generatedAt': '2026-10-17T00:00:00Z',
+          'divisions': [
+            {
+              'id': 'g1',
+              'projects': [
+                {'id': 'p1', 'total': 3},
+              ],
+            },
+          ],
+          'attention': <JsonMap>[],
+          'users': <JsonMap>[],
+        };
+      };
+      final value = await store.orgOverview('o1');
+      expect(requested, ['o1']);
+      expect((value['divisions'] as List).single['projects'], [
+        {'id': 'p1', 'total': 3},
+      ]);
+    });
+  });
 }

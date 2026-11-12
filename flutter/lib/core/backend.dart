@@ -24,6 +24,9 @@ abstract class GrouplyBackend {
     String action,
     Map<String, dynamic> payload,
   );
+
+  /// Organization Dashboard summary (`grouply_org_overview`, design §4.5).
+  Future<Map<String, dynamic>> orgOverview(String id);
   Future<void> connect(void Function() onChange);
   Future<void> disconnect();
   Future<void> foreground();
@@ -326,6 +329,9 @@ class SupabaseGrouplyBackend implements GrouplyBackend {
       params: {'action': action, 'payload': payload},
     ),
   );
+  @override
+  Future<Map<String, dynamic>> orgOverview(String id) async =>
+      _object(await _sdk.rpc('grouply_org_overview', params: {'org_id': id}));
 
   @override
   Future<void> connect(void Function() onChange) async {
