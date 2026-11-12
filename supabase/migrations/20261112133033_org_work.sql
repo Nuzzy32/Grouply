@@ -164,11 +164,11 @@ RETURNS jsonb LANGUAGE sql STABLE SECURITY DEFINER SET search_path = '' AS $$
       'title', a.title, 'note', a.note, 'amount', a.amount, 'links', a.links, 'status', a.status,
       'createdAt', private.iso(a.created_at), 'closedAt', private.iso(a.closed_at),
       'requesterID', coalesce(a.requester_id::text, ''), 'requesterName', private.org_name(a.requester_id, viewer),
-      'steps', (SELECT jsonb_agg(jsonb_build_object('position', s.position, 'approverID', coalesce(s.approver_id::text, ''),
+      'steps', coalesce((SELECT jsonb_agg(jsonb_build_object('position', s.position, 'approverID', coalesce(s.approver_id::text, ''),
           'name', private.org_name(s.approver_id, viewer),
           'eligible', private.approval_eligible(a.organization_id, a.group_id, s.approver_id),
           'decision', s.decision, 'note', s.note, 'decidedAt', private.iso(s.decided_at)) ORDER BY s.position)
-        FROM public.approval_steps s WHERE s.approval_id = a.id))
+        FROM public.approval_steps s WHERE s.approval_id = a.id), '[]'))
     ORDER BY a.status <> 'pending', a.created_at DESC, a.id), '[]')
   FROM picked a JOIN public.groups g ON g.id = a.group_id;
 $$;
