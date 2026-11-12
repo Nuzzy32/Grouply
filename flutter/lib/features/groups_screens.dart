@@ -982,6 +982,7 @@ class _GroupState extends _WorkspaceState<GroupScreen>
     final unread = _grUnread(store, groupID);
     final members = group.ids('memberIDs');
     final org = store.organization(group.text('organizationID'));
+    final committee = store.isCommittee(group);
 
     return detailPage(
       title: 'Grup',
@@ -1020,7 +1021,8 @@ class _GroupState extends _WorkspaceState<GroupScreen>
                         if (org != null)
                           _grButton(
                             key: Key('group-org-chip'),
-                            label: 'Divisi dari ${org.text('name')}',
+                            label:
+                                '${committee ? 'Kepanitiaan' : 'Divisi'} dari ${org.text('name')}',
                             onTap: () => open(
                               OrganizationScreen(
                                 store: store,
@@ -1204,6 +1206,8 @@ class _GroupState extends _WorkspaceState<GroupScreen>
           ],
         ),
 
+        ..._groupWorkSection(this, group),
+
         // Projects
         Padding(
           padding: EdgeInsets.only(top: 4),
@@ -1212,11 +1216,16 @@ class _GroupState extends _WorkspaceState<GroupScreen>
             children: [
               Row(
                 children: [
-                  Expanded(child: Text('Proyek', style: gl(21, w700, -0.02))),
+                  Expanded(
+                    child: Text(
+                      committee ? 'Sie' : 'Proyek',
+                      style: gl(21, w700, -0.02),
+                    ),
+                  ),
                   SizedBox(width: 8),
                   _grButton(
                     key: Key('create-project'),
-                    label: 'Buat proyek',
+                    label: committee ? 'Buat sie' : 'Buat proyek',
                     onTap: () => _newProject(group),
                     child: Container(
                       height: 44,
@@ -1235,7 +1244,7 @@ class _GroupState extends _WorkspaceState<GroupScreen>
                           ),
                           SizedBox(width: 4),
                           Text(
-                            'Buat proyek',
+                            committee ? 'Buat sie' : 'Buat proyek',
                             style: gl(14, w600, 0, GLTheme.onInk),
                           ),
                         ],

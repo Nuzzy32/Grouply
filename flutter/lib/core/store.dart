@@ -125,6 +125,7 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
     invites = [];
     reports = [];
     organizations = [];
+    meetings = [];
     currentUserID = '';
     _blocks = {};
     _reads = {};
@@ -382,6 +383,17 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
           : serverMessage(failure, action) ??
                 'Perubahan belum terkonfirmasi. Muat ulang sebelum mencoba lagi.';
       if (generation == _generation) {
+        // A closed approval/meeting or a stale version means the card on
+        // screen is out of date: reload so it disappears (Tahap 2 §5.1).
+        if (failure is PostgrestException &&
+            failure.code == 'P0001' &&
+            const [
+              'approval_closed',
+              'meeting_closed',
+              'stale_version',
+            ].contains(failure.message)) {
+          _scheduleRefresh();
+        }
         if (_backend.currentUserID == null) {
           ++_generation;
           _clear();
@@ -414,6 +426,84 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
   /// A division is an ordinary group linked to an organization.
   bool isDivision(JsonMap? group) =>
       (group?.text('organizationID') ?? '').isNotEmpty;
+
+  // MARK: - Organization Plan Tahap 2 (ORG-07..10, docs/DESIGN-org-tahap2.md §4–5)
+
+  /// Meetings of the user's groups (§4.5); `[]` on a server without Tahap 2.
+  List<JsonMap> meetings = [];
+  JsonMap? meeting(String id) => _find(meetings, id);
+
+  /// A committee (kepanitiaan) is an organization group flagged by the server.
+  bool isCommittee(JsonMap? group) => group?['isCommittee'] == true;
+
+  /// Coordinator of the project's group, or its koordinator sie (`leadID`).
+  bool canManageTasks(JsonMap? project) {
+    final group = this.group(project?.text('groupID') ?? '');
+    if (group == null || !group.ids('memberIDs').contains(currentUserID)) {
+      return false;
+    }
+    return currentUserID.isNotEmpty &&
+        (group.text('coordinatorID') == currentUserID ||
+            project!.text('leadID') == currentUserID);
+  }
+
+  List<JsonMap> approvals(String orgID) =>
+      (organization(orgID)?['approvals'] as List? ?? []).cast<JsonMap>();
+
+  List<JsonMap> announcements(String orgID) =>
+      (organization(orgID)?['announcements'] as List? ?? []).cast<JsonMap>();
+
+  /// First step nobody has decided yet; null once the chain is complete.
+  static JsonMap? currentStep(JsonMap approval) {
+    for (final step in (approval['steps'] as List? ?? []).cast<JsonMap>()) {
+      if (step['decision'] == null) return step;
+    }
+    return null;
+  }
+
+  /// Pending approvals whose running step is the user's and still valid.
+  List<JsonMap> pendingForMe(String orgID) => [
+    for (final approval in approvals(orgID))
+      if (approval.text('status') == 'pending')
+        if (currentStep(approval) case final step?)
+          if (step.text('approverID') == currentUserID &&
+              step['eligible'] == true)
+            approval,
+  ];
+
+  List<JsonMap> unreadAnnouncements(String orgID) => [
+    for (final row in announcements(orgID))
+      if (row['read'] != true) row,
+  ];
+
+  /// Agenda, minutes and attendance (`grouply_meeting`). Not cached:
+  /// the meeting screen reloads it when the snapshot `version` changes.
+  Future<JsonMap> meetingDetail(String id) async {
+    if (!authenticated) throw const GrouplyException('Masuk terlebih dahulu.');
+    try {
+      final value = await _backend.meetingDetail(id);
+      final attendance = [
+        for (final item in value['attendance'] as List)
+          Map<String, dynamic>.from(item as Map),
+      ];
+      if (value['version'] is! int ||
+          value['agenda'] is! String ||
+          value['minutes'] is! String ||
+          attendance.any(
+            (row) =>
+                row.text('userID').isEmpty ||
+                !['hadir', 'izin'].contains(row['status']),
+          )) {
+        throw const FormatException('Invalid meeting');
+      }
+      return {...value, 'attendance': attendance};
+    } catch (failure) {
+      throw GrouplyException(
+        serverMessage(failure) ??
+            'Detail rapat belum dapat dimuat. Periksa koneksi lalu coba lagi.',
+      );
+    }
+  }
 
   /// Dashboard summary (`grouply_org_overview`). Not cached: callers reload
   /// it on open, pull to refresh and resume.
@@ -469,6 +559,10 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
       'project_read_only' =>
         'Proyek selesai atau diarsipkan hanya dapat dibaca.',
       'already_reviewed' => 'Hasil kerja ini sudah direview.',
+      'approval_closed' =>
+        'Pengajuan ini sudah diputuskan, dibatalkan, atau gugur. Daftar dimuat ulang.',
+      'meeting_closed' =>
+        'Rapat ini sudah selesai atau dibatalkan. Data dimuat ulang.',
       'rate_limited'
           when action == 'createOrganization' || action == 'transferKetua' =>
         'Satu orang maksimal menjadi ketua di 3 organisasi.',
@@ -478,6 +572,36 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
       'unauthorized' => 'Sesi berakhir. Masuk kembali untuk melanjutkan.',
       _ => null,
     };
+  }
+
+  static const _approvalStatuses = [
+    'pending',
+    'approved',
+    'rejected',
+    'cancelled',
+    'lapsed',
+  ];
+
+  /// Missing key = `[]` (database without Tahap 2); otherwise strict.
+  static List<JsonMap> _decodeMeetings(Object? raw) {
+    if (raw == null) return [];
+    if (raw is! List) throw const FormatException('Invalid meetings');
+    return [
+      for (final item in raw)
+        () {
+          final row = Map<String, dynamic>.from(item as Map);
+          if (row.text('id').isEmpty ||
+              row.text('groupID').isEmpty ||
+              row['title'] is! String ||
+              row.date('startsAt') == null ||
+              row['version'] is! int ||
+              !['scheduled', 'done', 'cancelled'].contains(row['status']) ||
+              (row['taskIDs'] != null && row['taskIDs'] is! List)) {
+            throw const FormatException('Invalid meeting');
+          }
+          return row;
+        }(),
+    ];
   }
 
   /// Validates `organizations` like the other snapshot keys, but a missing
@@ -501,6 +625,15 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
       final myRole = org['myRole'] ?? '';
       final officers = rows(org['roles']);
       final divisions = rows(org['divisions']);
+      final approvals = org['approvals'] == null
+          ? <JsonMap>[]
+          : rows(org['approvals']);
+      final announcements = org['announcements'] == null
+          ? <JsonMap>[]
+          : rows(org['announcements']);
+      for (final approval in approvals) {
+        approval['steps'] = rows(approval['steps']);
+      }
       if (org.text('id').isEmpty ||
           [
             'name',
@@ -523,7 +656,36 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
                 row.text('id').isEmpty ||
                 row['name'] is! String ||
                 row['memberCount'] is! int ||
-                row['isMember'] is! bool,
+                row['isMember'] is! bool ||
+                (row['isCommittee'] != null && row['isCommittee'] is! bool),
+          ) ||
+          approvals.any(
+            (row) =>
+                row.text('id').isEmpty ||
+                row.text('groupID').isEmpty ||
+                row['title'] is! String ||
+                row['note'] is! String ||
+                (row['amount'] != null && row['amount'] is! int) ||
+                row['links'] is! List ||
+                !_approvalStatuses.contains(row['status']) ||
+                row.date('createdAt') == null ||
+                (row['steps'] as List<JsonMap>).any(
+                  (step) =>
+                      step['position'] is! int ||
+                      step['approverID'] is! String ||
+                      step['eligible'] is! bool ||
+                      (step['decision'] != null &&
+                          !['approved', 'rejected'].contains(step['decision'])),
+                ),
+          ) ||
+          announcements.any(
+            (row) =>
+                row.text('id').isEmpty ||
+                row['title'] is! String ||
+                row['body'] is! String ||
+                row['read'] is! bool ||
+                row.date('createdAt') == null ||
+                (row['groupID'] != null && row['groupID'] is! String),
           )) {
         throw const FormatException('Invalid organization');
       }
@@ -532,6 +694,8 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
         'myRole': myRole,
         'roles': officers,
         'divisions': divisions,
+        'approvals': approvals,
+        'announcements': announcements,
       });
     }
     return result;
@@ -674,11 +838,13 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
         }
         if (key == 'groups' &&
             (row['memberIDs'] is! List ||
+                (row['isCommittee'] != null && row['isCommittee'] is! bool) ||
                 (row['memberIDs'] as List).any((id) => id is! String))) {
           throw const FormatException('Invalid membership');
         }
         if (key == 'projects' &&
             (!['active', 'completed', 'archived'].contains(row['status']) ||
+                (row['leadID'] != null && row['leadID'] is! String) ||
                 (row['previousStatus'] != null &&
                     ![
                       'active',
@@ -715,6 +881,7 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
       value['organizations'],
       decoded['groups']!,
     );
+    final meetings = _decodeMeetings(value['meetings']);
     final codes = {
       for (final invite in invites)
         if (invite.text('code').isNotEmpty)
@@ -738,6 +905,7 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
     invites = decoded['invites']!;
     reports = decoded['reports']!;
     organizations = orgs;
+    this.meetings = meetings;
     currentUserID = actor;
     _blocks = {actor: blocks};
     _reads = {actor: reads};

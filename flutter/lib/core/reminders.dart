@@ -5,14 +5,11 @@ import 'package:timezone/timezone.dart' as tz;
 import 'store.dart';
 
 /// Local reminders for the signed-in user's own open tasks: H-3 and H-1 before the deadline,
-/// plus one nudge after 48 hours without recorded activity.
+/// plus one nudge after 48 hours without recorded activity; and for scheduled
+/// meetings of the user's groups: H-1 and one hour before (Tahap 2 §5.1).
 /// Device-only, no server push. (The SwiftUI client still does H-1 only.)
-typedef Reminder = ({
-  String taskID,
-  String heading,
-  String title,
-  DateTime fireAt,
-});
+/// [id] is the task or meeting ID.
+typedef Reminder = ({String id, String heading, String title, DateTime fireAt});
 
 List<Reminder> reminderPlan(GrouplyStore store, DateTime now) {
   final plan = <Reminder>[];
@@ -39,9 +36,34 @@ List<Reminder> reminderPlan(GrouplyStore store, DateTime now) {
     ]) {
       if (fireAt.isAfter(now)) {
         plan.add((
-          taskID: t.text('id'),
+          id: t.text('id'),
           heading: heading,
           title: t.text('title'),
+          fireAt: fireAt,
+        ));
+      }
+    }
+  }
+  for (final m in store.meetings) {
+    final start = m.date('startsAt');
+    if (start == null ||
+        m.text('status') != 'scheduled' ||
+        store
+                .group(m.text('groupID'))
+                ?.ids('memberIDs')
+                .contains(store.currentUserID) !=
+            true) {
+      continue;
+    }
+    for (final (heading, fireAt) in [
+      ('Rapat besok', start.subtract(const Duration(days: 1))),
+      ('Rapat 1 jam lagi', start.subtract(const Duration(hours: 1))),
+    ]) {
+      if (fireAt.isAfter(now)) {
+        plan.add((
+          id: m.text('id'),
+          heading: heading,
+          title: m.text('title'),
           fireAt: fireAt,
         ));
       }
@@ -61,7 +83,7 @@ class DeadlineReminders {
   /// Calls run one after another so an older plan never lands after a newer one.
   void sync(List<Reminder> plan) {
     final key = plan
-        .map((r) => '${r.taskID}|${r.heading}|${r.title}|${r.fireAt}')
+        .map((r) => '${r.id}|${r.heading}|${r.title}|${r.fireAt}')
         .join(',');
     if (key == _lastKey) return;
     _lastKey = key;
@@ -98,7 +120,7 @@ class DeadlineReminders {
     // ponytail: iOS keeps max 64 pending requests; nearest 60 only.
     for (final r in plan.take(60)) {
       await _plugin.zonedSchedule(
-        id: '${r.heading}|${r.taskID}'.hashCode & 0x7fffffff,
+        id: '${r.heading}|${r.id}'.hashCode & 0x7fffffff,
         title: r.heading,
         body: r.title,
         // Absolute instant in UTC, so the device time zone does not matter.

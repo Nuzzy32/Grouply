@@ -29,7 +29,10 @@ Future<void> _show(WidgetTester tester, Widget screen) async {
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
-  await tester.pumpWidget(MaterialApp(theme: GLTheme.data, home: screen));
+  // A fresh key drops routes pushed by an earlier `_show` in the same test.
+  await tester.pumpWidget(
+    MaterialApp(key: UniqueKey(), theme: GLTheme.data, home: screen),
+  );
   await tester.pumpAndSettle();
 }
 
@@ -853,6 +856,634 @@ void main() {
       await _tapOn(tester, find.byKey(const Key('org-dashboard')));
       expect(find.text('Perlu perhatian'), findsOneWidget);
       expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('Organization Plan Tahap 2', () {
+    Finder inSheet(String text) => find.descendant(
+      of: find.byType(BottomSheet),
+      matching: find.text(text),
+    );
+    Finder badge(int count) =>
+        find.byWidgetPredicate((w) => w is GLCountBadge && w.count == count);
+
+    /// The session chain started in setUp runs outside the fake clock.
+    Future<void> signInAs(WidgetTester tester, String id) async {
+      await tester.runAsync(() => store.signIn(id, 'demo'));
+      await tester.pumpAndSettle();
+    }
+
+    Future<void> seed({bool active = true}) async {
+      store.demo
+        ..seedOrganization(active: active)
+        ..seedOrgWork();
+      await store.refresh();
+    }
+
+    testWidgets('organization lists committees, badges and adds a committee', (
+      tester,
+    ) async {
+      await seed();
+      await _show(tester, GroupsScreen(store: store));
+      // u1: approval a1 waits on u1, announcement n1 is unread.
+      expect(badge(2), findsOneWidget);
+      await _tapOn(tester, find.text('BEM FST'));
+      expect(find.text('Kepanitiaan'), findsOneWidget);
+      expect(find.text('0 kepanitiaan'), findsOneWidget);
+      expect(find.text('1 menunggu keputusanmu'), findsOneWidget);
+      expect(find.text('1 belum dibaca'), findsOneWidget);
+      await _tapOn(tester, find.byKey(const Key('org-add-committee')));
+      await _fill(
+        tester,
+        find.byKey(const Key('division-name')),
+        'Panitia Dies Natalis',
+      );
+      await _tapOn(tester, find.byKey(const Key('org-save')));
+      expect(store.calls.last.action, 'createDivision');
+      expect(store.calls.last.payload, {
+        'organizationID': 'o1',
+        'name': 'Panitia Dies Natalis',
+        'committee': true,
+      });
+      expect(find.byType(GroupScreen), findsOneWidget);
+      expect(find.text('Sie'), findsOneWidget);
+      expect(find.text('Buat sie'), findsOneWidget);
+      expect(find.text('Rapat'), findsOneWidget);
+      await _tapOn(tester, _labelled('Kembali'));
+      expect(find.text('1 kepanitiaan'), findsOneWidget);
+      expect(find.text('Panitia Dies Natalis'), findsOneWidget);
+      // Divisions still list the three seed groups only.
+      expect(find.text('3 divisi'), findsOneWidget);
+      await _settleToasts(tester);
+    });
+
+    testWidgets('Tahap 2 buttons follow org role and coordinator status', (
+      tester,
+    ) async {
+      await seed();
+      final roles = store.demo.organizations.single['roles'] as Map;
+      for (final (role, officer) in [
+        ('ketua', true),
+        ('bph', true),
+        ('pembina', false),
+        ('', false),
+      ]) {
+        roles['u1'] = role;
+        if (role.isEmpty) roles.remove('u1');
+        await store.refresh();
+        await _show(tester, OrganizationScreen(store: store, orgID: 'o1'));
+        Matcher shown(bool visible) => visible ? findsOneWidget : findsNothing;
+        expect(
+          find.byKey(const Key('org-add-committee')),
+          shown(officer),
+          reason: role,
+        );
+        expect(find.byKey(const Key('org-approvals')), findsOneWidget);
+        expect(find.byKey(const Key('org-announcements')), findsOneWidget);
+        await _show(tester, ApprovalsScreen(store: store, orgID: 'o1'));
+        expect(
+          find.byKey(const Key('approvals-tab-all')),
+          shown(role.isNotEmpty),
+          reason: role,
+        );
+        await _show(tester, AnnouncementsScreen(store: store, orgID: 'o1'));
+        // u1 coordinates g1, so it may always post to its own group.
+        expect(find.byKey(const Key('announcement-new')), findsOneWidget);
+      }
+      // g2 is coordinated by u3: u1 sees the meeting list but cannot schedule.
+      await _show(tester, GroupScreen(store: store, groupID: 'g2'));
+      expect(find.byKey(const Key('meeting-schedule')), findsNothing);
+      expect(find.byKey(const Key('approval-request')), findsOneWidget);
+      await _show(tester, ProjectScreen(store: store, projectID: 'p2'));
+      expect(find.byKey(const Key('project-lead')), findsOneWidget);
+      expect(find.byKey(const Key('project-lead-set')), findsNothing);
+      // A plain group (no organization) gets none of the Tahap 2 sections.
+      store.demo.group('g3')!.remove('organizationID');
+      store.demo.group('g3')!['memberIDs'] = ['u6', 'u7', 'u1'];
+      await store.refresh();
+      await _show(tester, GroupScreen(store: store, groupID: 'g3'));
+      expect(find.byKey(const Key('group-meetings')), findsNothing);
+      expect(find.byKey(const Key('approval-request')), findsNothing);
+    });
+
+    testWidgets('inactive plan locks creating but keeps reading and deciding', (
+      tester,
+    ) async {
+      await seed(active: false);
+      await _show(tester, GroupScreen(store: store, groupID: 'g1'));
+      expect(
+        _icon(find.byKey(const Key('meeting-schedule')), 'lock'),
+        findsOneWidget,
+      );
+      await _tapOn(tester, find.byKey(const Key('meeting-schedule')));
+      expect(find.byKey(const Key('meeting-title')), findsNothing);
+      expect(
+        find.text('Rapat baru bisa dijadwalkan saat paket organisasi aktif.'),
+        findsOneWidget,
+      );
+      await _settleToasts(tester);
+      await _tapOn(tester, find.byKey(const Key('approval-request')));
+      expect(find.byKey(const Key('approval-title')), findsNothing);
+      await _settleToasts(tester);
+      await _show(tester, ProjectScreen(store: store, projectID: 'p1'));
+      await _tapOn(tester, find.byKey(const Key('project-lead-set')));
+      expect(find.text('Tunjuk koordinator sie'), findsNothing);
+      await _settleToasts(tester);
+      expect(store.calls, isEmpty);
+      // Deciding stays available after the plan ends (§1.10).
+      await _show(
+        tester,
+        ApprovalScreen(store: store, orgID: 'o1', approvalID: 'a1'),
+      );
+      await _tapOn(tester, find.byKey(const Key('approval-approve')));
+      await _tap(tester, 'Setujui');
+      expect(store.calls.single.action, 'decideApproval');
+      await _settleToasts(tester);
+    });
+
+    testWidgets('coordinator appoints a koordinator sie who manages tasks', (
+      tester,
+    ) async {
+      await seed();
+      await _show(tester, ProjectScreen(store: store, projectID: 'p1'));
+      expect(find.text('Penanggung jawab'), findsOneWidget);
+      expect(find.text('Belum ditunjuk'), findsOneWidget);
+      await _tapOn(tester, find.byKey(const Key('project-lead-set')));
+      await _tapOn(tester, inSheet('Raka'));
+      expect(store.calls.last.action, 'setProjectLead');
+      expect(store.calls.last.payload, {'projectID': 'p1', 'userID': 'u2'});
+      expect(store.project('p1')!.text('leadID'), 'u2');
+      await _settleToasts(tester);
+
+      // Raka (staff) now manages p1's tasks but not the project itself.
+      await signInAs(tester, 'u2');
+      expect(store.canManageTasks(store.project('p1')), isTrue);
+      expect(
+        _icon(find.byKey(const ValueKey('add-task')), 'plus'),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('project-lead-set')), findsNothing);
+      await _tapOn(tester, find.byKey(const ValueKey('add-task')));
+      await _fill(tester, find.byKey(const Key('task-title')), 'Desain poster');
+      await _tapOn(tester, inSheet('Dimas').first);
+      await _tapOn(tester, inSheet('Sinta').last);
+      await _tapOn(tester, find.widgetWithText(GLSubmitButton, 'Buat tugas'));
+      expect(store.calls.last.action, 'createTask');
+      expect(store.tasks.last.text('title'), 'Desain poster');
+      await expectLater(
+        store.mutate('completeProject', {'id': 'p1'}),
+        throwsA(isA<GrouplyException>()),
+      );
+      await _settleToasts(tester);
+
+      await signInAs(tester, 'u1');
+      await _show(tester, ProjectScreen(store: store, projectID: 'p1'));
+      await _tapOn(tester, find.byKey(const Key('project-lead-clear')));
+      await _tap(tester, 'Cabut');
+      expect(store.calls.last.payload, {'projectID': 'p1', 'userID': null});
+      expect(find.text('Belum ditunjuk'), findsOneWidget);
+      await signInAs(tester, 'u2');
+      expect(store.canManageTasks(store.project('p1')), isFalse);
+      await _settleToasts(tester);
+    });
+
+    testWidgets('schedule, record and turn a meeting into a task', (
+      tester,
+    ) async {
+      await seed();
+      await _show(tester, GroupScreen(store: store, groupID: 'g1'));
+      expect(find.text('Rapat mingguan'), findsOneWidget);
+      await _tapOn(tester, find.byKey(const Key('meeting-schedule')));
+      await _fill(
+        tester,
+        find.byKey(const Key('meeting-title')),
+        'Rapat evaluasi',
+      );
+      await _fill(tester, find.byKey(const Key('meeting-place')), 'Sekre');
+      await _tapOn(tester, find.byKey(const Key('meeting-notetaker-u3')));
+      await _tapOn(tester, find.byKey(const Key('meeting-save')));
+      final created = store.calls.last;
+      expect(created.action, 'createMeeting');
+      expect(created.payload.keys.toSet(), {
+        'groupID',
+        'title',
+        'startsAt',
+        'place',
+        'agenda',
+        'noteTakerID',
+      });
+      expect(created.payload['groupID'], 'g1');
+      expect(created.payload['title'], 'Rapat evaluasi');
+      expect(created.payload['place'], 'Sekre');
+      expect(created.payload['noteTakerID'], 'u3');
+      expect(created.payload.date('startsAt')!.isAfter(DateTime.now()), isTrue);
+      expect(find.byType(MeetingScreen), findsOneWidget);
+      expect(find.textContaining('Notulis: Nadia'), findsOneWidget);
+      // Future meetings cannot be recorded yet.
+      await _tapOn(tester, find.byKey(const Key('meeting-record')));
+      expect(find.byKey(const Key('meeting-minutes')), findsNothing);
+      await _settleToasts(tester);
+
+      // Edit then cancel through the actions sheet.
+      await _tapOn(tester, _labelled('Aksi rapat'));
+      await _tapOn(tester, find.byKey(const Key('meeting-edit')));
+      await _fill(tester, find.byKey(const Key('meeting-agenda')), 'Evaluasi');
+      await _tapOn(tester, find.byKey(const Key('meeting-save')));
+      expect(store.calls.last.action, 'updateMeeting');
+      expect(store.calls.last.payload.keys.toSet(), {
+        'id',
+        'expectedVersion',
+        'title',
+        'startsAt',
+        'place',
+        'agenda',
+        'noteTakerID',
+      });
+      expect(store.calls.last.payload['expectedVersion'], 1);
+      await tester.pumpAndSettle();
+      expect(find.text('Evaluasi'), findsOneWidget);
+      await _tapOn(tester, _labelled('Aksi rapat'));
+      await _tapOn(tester, find.byKey(const Key('meeting-cancel')));
+      await _tap(tester, 'Batalkan rapat');
+      expect(store.calls.last.action, 'cancelMeeting');
+      expect(store.calls.last.payload['expectedVersion'], 2);
+      expect(find.text('Dibatalkan'), findsOneWidget);
+      await _settleToasts(tester);
+
+      // Past meeting m2: minutes, attendance and a task from it.
+      await _show(tester, MeetingScreen(store: store, meetingID: 'm2'));
+      expect(find.text('Pembagian tugas'), findsOneWidget);
+      expect(find.text('Raka menyusun ERD.'), findsOneWidget);
+      expect(
+        find.text('2 hadir · 1 izin · 2 tanpa keterangan'),
+        findsOneWidget,
+      );
+      await _tapOn(tester, find.byKey(const Key('meeting-record')));
+      await _tapOn(tester, find.byKey(const Key('attendance-u3-hadir')));
+      await _tapOn(tester, find.byKey(const Key('attendance-u4-izin')));
+      await _fill(
+        tester,
+        find.byKey(const Key('meeting-minutes')),
+        'ERD disetujui.',
+      );
+      await _tapOn(tester, find.byKey(const Key('meeting-record-save')));
+      expect(store.calls.last.action, 'recordMeeting');
+      expect(store.calls.last.payload, {
+        'id': 'm2',
+        'expectedVersion': 2,
+        'minutes': 'ERD disetujui.',
+        'attendance': [
+          {'userID': 'u1', 'status': 'hadir'},
+          {'userID': 'u2', 'status': 'hadir'},
+          {'userID': 'u3', 'status': 'hadir'},
+        ],
+      });
+      await tester.pumpAndSettle();
+      expect(find.text('ERD disetujui.'), findsOneWidget);
+      expect(
+        find.text('3 hadir · 0 izin · 2 tanpa keterangan'),
+        findsOneWidget,
+      );
+      await _settleToasts(tester);
+
+      await _tapOn(tester, find.byKey(const Key('meeting-task')));
+      final title = tester.widget<EditableText>(
+        find.descendant(
+          of: find.byKey(const Key('task-title')),
+          matching: find.byType(EditableText),
+        ),
+      );
+      expect(title.controller.text, 'Tindak lanjut Rapat perdana');
+      await _tapOn(tester, inSheet('Raka').first);
+      await _tapOn(tester, inSheet('Nadia').last);
+      await _tapOn(tester, find.widgetWithText(GLSubmitButton, 'Buat tugas'));
+      expect(store.calls.last.action, 'createTask');
+      expect(store.calls.last.payload['meetingID'], 'm2');
+      expect(store.calls.last.payload['projectID'], 'p1');
+      await tester.pumpAndSettle();
+      expect(find.text('Tindak lanjut Rapat perdana'), findsOneWidget);
+      await _settleToasts(tester);
+    });
+
+    testWidgets('notulis records; staff only reads', (tester) async {
+      await seed();
+      store.demo.meetings.first['startsAt'] = DateTime.now()
+          .subtract(const Duration(hours: 1))
+          .toUtc()
+          .toIso8601String();
+      await signInAs(tester, 'u2'); // notulis of m1, not coordinator
+      await _show(tester, MeetingScreen(store: store, meetingID: 'm1'));
+      expect(_labelled('Aksi rapat'), findsNothing);
+      expect(find.byKey(const Key('meeting-task')), findsNothing);
+      await _tapOn(tester, find.byKey(const Key('meeting-record')));
+      await _tapOn(tester, find.byKey(const Key('attendance-u2-hadir')));
+      await _tapOn(tester, find.byKey(const Key('meeting-record-save')));
+      expect(store.calls.last.action, 'recordMeeting');
+      expect(store.calls.last.payload['attendance'], [
+        {'userID': 'u2', 'status': 'hadir'},
+      ]);
+      await _settleToasts(tester);
+      await signInAs(tester, 'u4');
+      expect(find.byKey(const Key('meeting-record')), findsNothing);
+      expect(
+        find.text('1 hadir · 0 izin · 4 tanpa keterangan'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('approval chain: request, approve in order, reject, cancel', (
+      tester,
+    ) async {
+      await seed();
+      // Raka (staff in g1) requests with Nadia (BPH) then Alex (coordinator).
+      await signInAs(tester, 'u2');
+      await _show(tester, GroupScreen(store: store, groupID: 'g1'));
+      await _tapOn(tester, find.byKey(const Key('approval-request')));
+      await _tapOn(tester, find.byKey(const Key('approval-save')));
+      expect(find.text('Judul pengajuan wajib diisi.'), findsOneWidget);
+      await _fill(tester, find.byKey(const Key('approval-title')), 'Dana dies');
+      await _fill(
+        tester,
+        find.byKey(const Key('approval-note')),
+        'Konsumsi 40 orang.',
+      );
+      await _fill(
+        tester,
+        find.byKey(const Key('approval-amount')),
+        '1.200.000',
+      );
+      await _fill(
+        tester,
+        find.byKey(const Key('approval-links')),
+        'https://drive.google.com/rab',
+      );
+      // Pembina u7 is a candidate too; staff u4 is not.
+      expect(find.byKey(const Key('approver-u7')), findsOneWidget);
+      expect(find.byKey(const Key('approver-u4')), findsNothing);
+      expect(find.byKey(const Key('approver-u2')), findsNothing);
+      await _tapOn(tester, find.byKey(const Key('approver-u3')));
+      await _tapOn(tester, find.byKey(const Key('approver-u1')));
+      await _tapOn(tester, find.byKey(const Key('approval-save')));
+      expect(store.calls.last.action, 'requestApproval');
+      expect(store.calls.last.payload, {
+        'groupID': 'g1',
+        'title': 'Dana dies',
+        'note': 'Konsumsi 40 orang.',
+        'amount': 1200000,
+        'links': ['https://drive.google.com/rab'],
+        'approverIDs': ['u3', 'u1'],
+      });
+      expect(find.byType(ApprovalScreen), findsOneWidget);
+      expect(find.text('Rp 1.200.000'), findsOneWidget);
+      expect(find.text('Menunggu keputusan'), findsOneWidget);
+      expect(find.text('Belum giliran'), findsOneWidget);
+      final id = store
+          .approvals('o1')
+          .firstWhere((a) => a['title'] == 'Dana dies')
+          .text('id');
+      await _settleToasts(tester);
+
+      // Alex (step 2) cannot decide yet.
+      await signInAs(tester, 'u1');
+      expect(find.byKey(const Key('approval-approve')), findsNothing);
+      await expectLater(
+        store.mutate('decideApproval', {'id': id, 'approve': true, 'note': ''}),
+        throwsA(isA<GrouplyException>()),
+      );
+      // Nadia approves step 1, then Alex closes the chain.
+      await signInAs(tester, 'u3');
+      await _tapOn(tester, find.byKey(const Key('approval-approve')));
+      await _tap(tester, 'Setujui');
+      expect(store.calls.last.payload, {'id': id, 'approve': true, 'note': ''});
+      await _settleToasts(tester);
+      await signInAs(tester, 'u1');
+      await _tapOn(tester, find.byKey(const Key('approval-approve')));
+      expect(find.textContaining('penyetuju terakhir'), findsOneWidget);
+      await _tap(tester, 'Setujui');
+      expect(find.text('Disetujui'), findsWidgets);
+      await _settleToasts(tester);
+
+      // a1 (u1 → u3): Alex rejects; a reason is required.
+      await _show(
+        tester,
+        ApprovalScreen(store: store, orgID: 'o1', approvalID: 'a1'),
+      );
+      expect(find.text('Rp 750.000'), findsOneWidget);
+      await _tapOn(tester, find.byKey(const Key('approval-reject')));
+      await _tapOn(tester, find.byKey(const Key('org-save')));
+      expect(find.text('Alasan minimal 1 karakter.'), findsOneWidget);
+      await _fill(
+        tester,
+        find.byKey(const Key('approval-reason')),
+        'Pakai poster digital.',
+      );
+      await _tapOn(tester, find.byKey(const Key('org-save')));
+      expect(store.calls.last.payload, {
+        'id': 'a1',
+        'approve': false,
+        'note': 'Pakai poster digital.',
+      });
+      expect(find.text('Ditolak'), findsWidgets);
+      expect(find.text('Pakai poster digital.'), findsOneWidget);
+      await _settleToasts(tester);
+
+      // A closed approval reloads instead of acting twice.
+      await expectLater(
+        store.mutate('decideApproval', {
+          'id': 'a1',
+          'approve': true,
+          'note': '',
+        }),
+        throwsA(
+          isA<GrouplyException>().having(
+            (e) => e.message,
+            'message',
+            startsWith('Pengajuan ini sudah diputuskan'),
+          ),
+        ),
+      );
+      await _settleToasts(tester);
+
+      // The requester cancels a pending one.
+      await signInAs(tester, 'u2');
+      await store.mutate('requestApproval', {
+        'groupID': 'g1',
+        'title': 'Sewa sound',
+        'note': 'Untuk acara.',
+        'approverIDs': ['u1'],
+      });
+      final pending = store
+          .approvals('o1')
+          .firstWhere((a) => a['title'] == 'Sewa sound');
+      await _show(
+        tester,
+        ApprovalScreen(
+          store: store,
+          orgID: 'o1',
+          approvalID: pending.text('id'),
+        ),
+      );
+      await _tapOn(tester, find.byKey(const Key('approval-cancel')));
+      await _tap(tester, 'Batalkan pengajuan');
+      expect(store.calls.last.action, 'cancelApproval');
+      expect(store.calls.last.payload, {'id': pending.text('id')});
+      expect(find.text('Dibatalkan'), findsWidgets);
+      await _settleToasts(tester);
+    });
+
+    testWidgets('approval lists by tab; stale approver and lapse', (
+      tester,
+    ) async {
+      // a1 now waits on Nadia (BPH) first, then Alex.
+      final steps = store.demo
+        ..seedOrganization()
+        ..seedOrgWork();
+      steps.approvals.first['steps'][0]['approverID'] = 'u3';
+      steps.approvals.first['steps'][1]['approverID'] = 'u1';
+      await store.refresh();
+      await _show(tester, ApprovalsScreen(store: store, orgID: 'o1'));
+      expect(find.text('Tidak ada yang menunggu'), findsOneWidget);
+      await _tapOn(tester, find.byKey(const Key('approvals-tab-sent')));
+      expect(find.text('Belum ada pengajuan'), findsOneWidget);
+      await _tapOn(tester, find.byKey(const Key('approvals-tab-all')));
+      expect(find.text('Dana cetak poster'), findsOneWidget);
+      expect(find.text('Tertahan di Nadia · 3 hari'), findsOneWidget);
+
+      // Ketua revokes Nadia's BPH role: she may no longer decide.
+      await store.mutate('setOrgRole', {
+        'organizationID': 'o1',
+        'userID': 'u3',
+        'role': null,
+      });
+      await tester.pumpAndSettle();
+      expect(find.text('Penyetuju tidak lagi menjabat'), findsOneWidget);
+      await signInAs(tester, 'u3');
+      expect(store.approvals('o1'), isEmpty);
+      // The requester sees the warning and can only cancel.
+      await signInAs(tester, 'u2');
+      await _show(
+        tester,
+        ApprovalScreen(store: store, orgID: 'o1', approvalID: 'a1'),
+      );
+      expect(find.byKey(const Key('approval-stale')), findsOneWidget);
+      expect(find.text('Tidak lagi menjabat'), findsOneWidget);
+      expect(find.byKey(const Key('approval-approve')), findsNothing);
+      expect(find.byKey(const Key('approval-cancel')), findsOneWidget);
+
+      // Staff Sinta never sees others' approvals.
+      await signInAs(tester, 'u5');
+      expect(store.approvals('o1'), isEmpty);
+
+      // The requester leaving the organization lapses the approval.
+      (store.demo.group('g1')!['memberIDs'] as List).remove('u2');
+      (store.demo.group('g2')!['memberIDs'] as List).add('u2');
+      await signInAs(tester, 'u2');
+      await store.mutate('leaveGroup', {'id': 'g2'});
+      await signInAs(tester, 'u1');
+      expect(store.approvals('o1').first.text('status'), 'lapsed');
+      await _show(
+        tester,
+        ApprovalScreen(store: store, orgID: 'o1', approvalID: 'a1'),
+      );
+      expect(find.text('Gugur'), findsOneWidget);
+      expect(find.textContaining('Pengajuan gugur'), findsOneWidget);
+      await _settleToasts(tester);
+    });
+
+    testWidgets('announcements: read, counts, unread names, post, withdraw', (
+      tester,
+    ) async {
+      await seed();
+      await _show(tester, AnnouncementsScreen(store: store, orgID: 'o1'));
+      expect(find.text('Rapat pleno ditiadakan'), findsOneWidget);
+      expect(find.text('Belum dibaca'), findsOneWidget);
+      await _tap(tester, 'Rapat pleno ditiadakan');
+      // Ketua sees counts: 7 recipients minus the author, Raka has read.
+      expect(find.text('1 dari 6 sudah baca'), findsOneWidget);
+      // Unread names only for people sharing a group with Alex (g1, g2).
+      expect(find.text('Dimas'), findsOneWidget);
+      expect(find.text('Sinta'), findsOneWidget);
+      expect(find.text('Bima'), findsNothing);
+      expect(find.text('Laras'), findsNothing);
+      await _tapOn(tester, find.byKey(const Key('announcement-read')));
+      expect(store.calls.last.action, 'markAnnouncementRead');
+      expect(store.calls.last.payload, {'id': 'n1'});
+      expect(find.text('Sudah kamu baca.'), findsOneWidget);
+      expect(find.text('2 dari 6 sudah baca'), findsOneWidget);
+      // Ketua may withdraw an org-wide announcement.
+      expect(find.byKey(const Key('announcement-delete')), findsOneWidget);
+      await _settleToasts(tester);
+
+      // Staff Dimas: no counts, no names, no delete, no post button.
+      await signInAs(tester, 'u4');
+      expect(find.byKey(const Key('announcement-reads')), findsNothing);
+      expect(find.text('Belum baca'), findsNothing);
+      expect(find.byKey(const Key('announcement-delete')), findsNothing);
+      await _show(tester, AnnouncementsScreen(store: store, orgID: 'o1'));
+      expect(find.byKey(const Key('announcement-new')), findsNothing);
+
+      // Ketua posts to the whole organization, then withdraws it.
+      await signInAs(tester, 'u1');
+      await _tapOn(tester, find.byKey(const Key('announcement-new')));
+      await _tapOn(tester, find.byKey(const Key('announce-target-org')));
+      await _fill(
+        tester,
+        find.byKey(const Key('announcement-title')),
+        'Libur rapat',
+      );
+      await _fill(
+        tester,
+        find.byKey(const Key('announcement-body')),
+        'Minggu UTS.',
+      );
+      await _tapOn(tester, find.byKey(const Key('org-save')));
+      expect(store.calls.last.action, 'postAnnouncement');
+      expect(store.calls.last.payload, {
+        'organizationID': 'o1',
+        'title': 'Libur rapat',
+        'body': 'Minggu UTS.',
+      });
+      await _settleToasts(tester);
+      // Group-scoped post carries groupID.
+      await _tapOn(tester, find.byKey(const Key('announcement-new')));
+      await _tapOn(tester, find.byKey(const Key('announce-target-g1')));
+      await _fill(tester, find.byKey(const Key('announcement-title')), 'Kas');
+      await _fill(tester, find.byKey(const Key('announcement-body')), 'Bayar.');
+      await _tapOn(tester, find.byKey(const Key('org-save')));
+      expect(store.calls.last.payload, {
+        'organizationID': 'o1',
+        'groupID': 'g1',
+        'title': 'Kas',
+        'body': 'Bayar.',
+      });
+      await _settleToasts(tester);
+      await _tap(tester, 'Libur rapat');
+      await _tapOn(tester, find.byKey(const Key('announcement-delete')));
+      await _tap(tester, 'Tarik');
+      expect(store.calls.last.action, 'deleteAnnouncement');
+      expect(find.byType(AnnouncementScreen), findsNothing);
+      expect(find.text('Libur rapat'), findsNothing);
+      await _settleToasts(tester);
+    });
+
+    testWidgets('Tahap 2 screens render in dark mode', (tester) async {
+      final previous = GLTheme.dark;
+      GLTheme.dark = true;
+      addTearDown(() => GLTheme.dark = previous);
+      await seed();
+      for (final screen in <Widget>[
+        OrganizationScreen(store: store, orgID: 'o1'),
+        GroupScreen(store: store, groupID: 'g1'),
+        MeetingsScreen(store: store, groupID: 'g1'),
+        MeetingScreen(store: store, meetingID: 'm2'),
+        ApprovalsScreen(store: store, orgID: 'o1'),
+        ApprovalScreen(store: store, orgID: 'o1', approvalID: 'a1'),
+        AnnouncementsScreen(store: store, orgID: 'o1'),
+        AnnouncementScreen(store: store, orgID: 'o1', announcementID: 'n1'),
+      ]) {
+        await _show(tester, screen);
+        expect(tester.takeException(), isNull, reason: '$screen');
+      }
     });
   });
 }

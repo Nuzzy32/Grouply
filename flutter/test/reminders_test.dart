@@ -60,7 +60,7 @@ void main() {
         },
       ];
     final plan = reminderPlan(store, now);
-    expect(plan.map((r) => '${r.heading}:${r.taskID}'), [
+    expect(plan.map((r) => '${r.heading}:${r.id}'), [
       'Belum ada kabar 2 hari:open',
       'Deadline besok:revise',
       'Deadline 3 hari lagi:later',
@@ -68,6 +68,50 @@ void main() {
       'Deadline besok:later',
     ]);
     expect(plan[3].fireAt, now.add(const Duration(days: 2)));
+  });
+
+  test('scheduled meetings of my groups remind H-1 and one hour before', () {
+    final now = DateTime.utc(2026, 11, 12, 8);
+    JsonMap meeting(
+      String id,
+      Duration from, {
+      String group = 'g1',
+      String status = 'scheduled',
+    }) => {
+      'id': id,
+      'groupID': group,
+      'title': 'Rapat $id',
+      'status': status,
+      'startsAt': now.add(from).toIso8601String(),
+    };
+    final store = GrouplyStore()
+      ..currentUserID = 'u1'
+      ..groups = [
+        {
+          'id': 'g1',
+          'memberIDs': ['u1'],
+        },
+        {
+          'id': 'g2',
+          'memberIDs': ['u2'],
+        },
+      ]
+      ..meetings = [
+        meeting('soon', const Duration(minutes: 90)),
+        meeting('week', const Duration(days: 7)),
+        meeting('past', const Duration(hours: -2)),
+        meeting('off', const Duration(days: 2), status: 'cancelled'),
+        meeting('done', const Duration(days: 2), status: 'done'),
+        meeting('other', const Duration(days: 2), group: 'g2'),
+      ];
+    final plan = reminderPlan(store, now);
+    expect(plan.map((r) => '${r.heading}:${r.id}'), [
+      'Rapat 1 jam lagi:soon',
+      'Rapat besok:week',
+      'Rapat 1 jam lagi:week',
+    ]);
+    expect(plan.first.title, 'Rapat soon');
+    expect(plan.first.fireAt, now.add(const Duration(minutes: 30)));
   });
 
   test(

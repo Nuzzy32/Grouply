@@ -100,6 +100,10 @@ class FakeBackend implements GrouplyBackend {
   @override
   Future<JsonMap> orgOverview(String id) => overview(id);
 
+  Future<JsonMap> Function(String id) meeting = (_) async => {};
+  @override
+  Future<JsonMap> meetingDetail(String id) => meeting(id);
+
   @override
   Future<void> connect(void Function() onChange) async {
     connections++;
@@ -545,6 +549,8 @@ void main() {
           'stale_version',
           'project_read_only',
           'already_reviewed',
+          'approval_closed',
+          'meeting_closed',
           'rate_limited',
           'forbidden',
           'invalid_input',
@@ -609,6 +615,298 @@ void main() {
       expect((value['divisions'] as List).single['projects'], [
         {'id': 'p1', 'total': 3},
       ]);
+    });
+  });
+
+  group('Organization Plan Tahap 2', () {
+    JsonMap approval({
+      String status = 'pending',
+      bool eligible = true,
+      String approver = 'u1',
+    }) => {
+      'id': 'a1',
+      'groupID': 'g1',
+      'groupName': 'Humas',
+      'title': 'Dana publikasi',
+      'note': 'Cetak poster',
+      'amount': 750000,
+      'links': <String>[],
+      'status': status,
+      'createdAt': '2026-11-10T00:00:00Z',
+      'closedAt': null,
+      'requesterID': 'u2',
+      'requesterName': 'Raka',
+      'steps': [
+        {
+          'position': 1,
+          'approverID': 'k1',
+          'name': 'Rani',
+          'eligible': true,
+          'decision': 'approved',
+          'note': '',
+          'decidedAt': '2026-11-11T00:00:00Z',
+        },
+        {
+          'position': 2,
+          'approverID': approver,
+          'name': 'Ayu',
+          'eligible': eligible,
+          'decision': null,
+          'note': '',
+          'decidedAt': null,
+        },
+      ],
+    };
+    JsonMap announcement(String id, bool read) => {
+      'id': id,
+      'groupID': '',
+      'title': 'Info',
+      'body': 'Isi',
+      'createdAt': '2026-11-12T00:00:00Z',
+      'authorID': 'k1',
+      'authorName': 'Rani',
+      'read': read,
+      'readCount': 0,
+      'audienceCount': 0,
+      'unreadIDs': <String>[],
+    };
+    JsonMap org({List<JsonMap>? approvals, List<JsonMap>? announcements}) => {
+      'id': 'o1',
+      'name': 'BEM FST',
+      'description': '',
+      'periodLabel': '',
+      'planActive': true,
+      'planExpiresAt': null,
+      'seatLimit': 120,
+      'seatsUsed': 3,
+      'myRole': '',
+      'roles': <JsonMap>[],
+      'divisions': [
+        {
+          'id': 'g1',
+          'name': 'Humas',
+          'memberCount': 3,
+          'isMember': true,
+          'isCommittee': false,
+        },
+      ],
+      'approvals': ?approvals,
+      'announcements': ?announcements,
+    };
+    JsonMap group(String id, {Object? committee}) => {
+      'id': id,
+      'name': id,
+      'description': '',
+      'course': '',
+      'coordinatorID': 'k1',
+      'tint': '',
+      'icon': '',
+      'memberIDs': ['u1', 'k1'],
+      'organizationID': 'o1',
+      'isCommittee': ?committee,
+    };
+    JsonMap project(String id, Object? lead) => {
+      'id': id,
+      'groupID': 'g1',
+      'title': id,
+      'description': '',
+      'dueAt': '2026-12-01T00:00:00Z',
+      'status': 'active',
+      'leadID': ?lead,
+    };
+    JsonMap meeting({String status = 'scheduled'}) => {
+      'id': 'm1',
+      'groupID': 'g1',
+      'title': 'Rapat mingguan',
+      'startsAt': '2026-11-14T09:00:00Z',
+      'place': 'Sekre',
+      'status': status,
+      'version': 1,
+      'createdBy': 'k1',
+      'noteTakerID': '',
+      'hasMinutes': false,
+      'present': 0,
+      'excused': 0,
+      'myStatus': '',
+      'taskIDs': <String>[],
+    };
+    JsonMap snapshot({
+      JsonMap? organization,
+      List<JsonMap>? meetings,
+      Object? committee = true,
+    }) => cloudSnapshot('u1')
+      ..['groups'] = [group('g1'), group('g2', committee: committee)]
+      ..['projects'] = [project('p1', 'u1'), project('p2', '')]
+      ..addAll({
+        'organizations': [organization ?? org()],
+        'meetings': ?meetings,
+      });
+
+    test('decodes Tahap 2 keys with helpers', () async {
+      backend.actor = 'u1';
+      backend.read = () async => snapshot(
+        organization: org(
+          approvals: [
+            approval(),
+            approval(eligible: false)..['id'] = 'a2',
+            approval(status: 'approved')..['id'] = 'a3',
+            approval(approver: 'x9')..['id'] = 'a4',
+          ],
+          announcements: [announcement('n1', false), announcement('n2', true)],
+        ),
+        meetings: [meeting()],
+      );
+      await store.initialize();
+      expect(store.isCommittee(store.group('g2')), isTrue);
+      expect(store.isCommittee(store.group('g1')), isFalse);
+      expect(store.isCommittee(null), isFalse);
+      // u1 is not the coordinator (k1) but leads p1.
+      expect(store.canManageTasks(store.project('p1')), isTrue);
+      expect(store.canManageTasks(store.project('p2')), isFalse);
+      expect(store.canManageTasks(null), isFalse);
+      expect(store.pendingForMe('o1').map((a) => a['id']), ['a1']);
+      expect(store.unreadAnnouncements('o1').map((a) => a['id']), ['n1']);
+      expect(store.meeting('m1')!.text('title'), 'Rapat mingguan');
+      expect(
+        GrouplyStore.currentStep(store.approvals('o1').first)!['position'],
+        2,
+      );
+    });
+
+    test('a database without Tahap 2 decodes as empty', () async {
+      backend.actor = 'u1';
+      backend.read = () async =>
+          snapshot(committee: null)..['projects'] = [project('p1', null)];
+      await store.initialize();
+      expect(store.meetings, isEmpty);
+      expect(store.approvals('o1'), isEmpty);
+      expect(store.announcements('o1'), isEmpty);
+      expect(store.pendingForMe('o1'), isEmpty);
+      expect(store.isCommittee(store.group('g2')), isFalse);
+      expect(store.canManageTasks(store.project('p1')), isFalse);
+    });
+
+    test('malformed Tahap 2 keys never partially apply', () async {
+      backend.actor = 'u1';
+      backend.read = () async => snapshot(meetings: [meeting()]);
+      await store.initialize();
+      for (final bad in <JsonMap>[
+        snapshot(meetings: [meeting(status: 'postponed')]),
+        snapshot(meetings: [meeting()..['version'] = '1']),
+        snapshot()..['meetings'] = {'m1': meeting()},
+        snapshot(committee: 'yes'),
+        snapshot()..['projects'] = [project('p1', 7)],
+        snapshot(
+          organization: org(approvals: [approval(status: 'open')]),
+        ),
+        snapshot(
+          organization: org(approvals: [approval()..['amount'] = '750000']),
+        ),
+        snapshot(
+          organization: org(
+            approvals: [
+              approval()
+                ..['steps'] = [
+                  {'position': 1, 'approverID': 'u1'},
+                ],
+            ],
+          ),
+        ),
+        snapshot(
+          organization: org(
+            announcements: [announcement('n1', false)..['read'] = 'no'],
+          ),
+        ),
+      ]) {
+        backend.read = () async => bad..['users'][0]['name'] = 'Partial';
+        await expectLater(store.refresh(), throwsFormatException);
+      }
+      expect(store.meeting('m1'), isNotNull);
+      expect(store.user('u1')!.text('name'), 'Ayu');
+    });
+
+    test('closed approval, closed meeting and stale version reload', () async {
+      backend.actor = 'u1';
+      await store.initialize();
+      for (final code in [
+        'approval_closed',
+        'meeting_closed',
+        'stale_version',
+      ]) {
+        final before = backend.snapshots;
+        backend.write = (_, _) async =>
+            throw PostgrestException(message: code, code: 'P0001');
+        await expectLater(
+          store.mutate('decideApproval', {'id': 'a1'}),
+          throwsA(isA<GrouplyException>()),
+        );
+        // Mutation failed before its own snapshot; the reload is scheduled.
+        expect(backend.snapshots, before);
+        await Future<void>.delayed(const Duration(milliseconds: 200));
+        expect(backend.snapshots, before + 1, reason: code);
+      }
+      final before = backend.snapshots;
+      backend.write = (_, _) async =>
+          throw const PostgrestException(message: 'forbidden', code: 'P0001');
+      await expectLater(
+        store.mutate('decideApproval', {'id': 'a1'}),
+        throwsA(isA<GrouplyException>()),
+      );
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+      expect(backend.snapshots, before);
+    });
+
+    test('meeting detail decodes, maps codes and rejects bad shapes', () async {
+      backend.actor = 'u1';
+      await store.initialize();
+      final requested = <String>[];
+      backend.meeting = (id) async {
+        requested.add(id);
+        return {
+          'id': id,
+          'version': 3,
+          'agenda': 'Evaluasi',
+          'minutes': '',
+          'attendance': [
+            {'userID': 'u1', 'status': 'hadir'},
+          ],
+        };
+      };
+      final value = await store.meetingDetail('m1');
+      expect(requested, ['m1']);
+      expect(value['attendance'], [
+        {'userID': 'u1', 'status': 'hadir'},
+      ]);
+      backend.meeting = (_) async => {
+        'version': 3,
+        'agenda': '',
+        'minutes': '',
+        'attendance': [
+          {'userID': 'u1', 'status': 'alpa'},
+        ],
+      };
+      await expectLater(
+        store.meetingDetail('m1'),
+        throwsA(
+          isA<GrouplyException>().having(
+            (e) => e.message,
+            'message',
+            startsWith('Detail rapat belum dapat dimuat'),
+          ),
+        ),
+      );
+      backend.meeting = (_) async =>
+          throw const PostgrestException(message: 'forbidden', code: 'P0001');
+      await expectLater(
+        store.meetingDetail('m1'),
+        throwsA(
+          isA<GrouplyException>().having(
+            (e) => e.message,
+            'message',
+            'Kamu tidak punya izin untuk tindakan ini.',
+          ),
+        ),
+      );
     });
   });
 }

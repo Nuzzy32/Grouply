@@ -155,6 +155,7 @@ class _OrgCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final divisions = _orgRows(org, 'divisions');
+    final committees = divisions.where((d) => d['isCommittee'] == true).length;
     final mine = divisions
         .where((d) => d['isMember'] == true)
         .map((d) => d.text('name'))
@@ -189,12 +190,17 @@ class _OrgCard extends StatelessWidget {
                   ],
                 ),
               ),
+              if (_orgWorkBadge(store, org.text('id')) case final n when n > 0)
+                Padding(
+                  padding: EdgeInsets.only(right: 6),
+                  child: GLCountBadge(count: n, size: 24),
+                ),
               GLIcon('chevron.right', size: 22, color: GLTheme.secondary),
             ],
           ),
           SizedBox(height: 14),
           Text(
-            '${divisions.length} divisi · ${org.number('seatsUsed')} anggota${mine.isEmpty ? '' : ' · Divisimu: $mine'}',
+            '${divisions.length - committees} divisi${committees > 0 ? ' · $committees kepanitiaan' : ''} · ${org.number('seatsUsed')} anggota${mine.isEmpty ? '' : ' · Divisimu: $mine'}',
             style: gl(14, w400, 0, GLTheme.text3),
           ),
           SizedBox(height: 14),
@@ -413,7 +419,15 @@ class _OrgState extends _WorkspaceState<OrganizationScreen>
     final limit = org.number('seatLimit').toInt();
     final description = org.text('description');
     final period = org.text('periodLabel');
-    final divisions = _orgRows(org, 'divisions');
+    final all = _orgRows(org, 'divisions');
+    final divisions = [
+      for (final d in all)
+        if (d['isCommittee'] != true) d,
+    ];
+    final committees = [
+      for (final d in all)
+        if (d['isCommittee'] == true) d,
+    ];
     final officers = _orgRows(org, 'roles')
       ..sort(
         (a, b) => _orgRoleOrder
@@ -532,47 +546,23 @@ class _OrgState extends _WorkspaceState<OrganizationScreen>
             onCopy: () => _copy(orgID, 'Kode organisasi disalin'),
           ),
 
-        // Divisions
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Divisi', style: gl(21, w700, -0.02)),
-                      Text(
-                        '${divisions.length} divisi',
-                        style: gl(13, w400, 0, GLTheme.secondary),
-                      ),
-                    ],
-                  ),
-                ),
-                if (role == 'ketua' || role == 'bph') ...[
-                  SizedBox(width: 8),
-                  _orgPill(
-                    'Tambah divisi',
-                    active ? 'plus' : 'lock',
-                    () => _addDivision(active),
-                    key: Key('org-add-division'),
-                  ),
-                ],
-              ],
-            ),
-            SizedBox(height: 10),
-            Container(
-              padding: EdgeInsets.symmetric(vertical: 4, horizontal: 14),
-              decoration: glBox(GLTheme.surface, 24),
-              child: Column(
-                children: [
-                  for (final division in divisions) _divisionRow(division),
-                ],
-              ),
-            ),
-          ],
+        _orgWorkLinks(this, orgID),
+
+        _divisionBlock(
+          'Divisi',
+          divisions,
+          role == 'ketua' || role == 'bph',
+          active,
+          committee: false,
         ),
+        if (committees.isNotEmpty || role == 'ketua' || role == 'bph')
+          _divisionBlock(
+            'Kepanitiaan',
+            committees,
+            role == 'ketua' || role == 'bph',
+            active,
+            committee: true,
+          ),
 
         // Officers
         Column(
@@ -614,6 +604,46 @@ class _OrgState extends _WorkspaceState<OrganizationScreen>
       ],
     );
   }
+
+  Widget _divisionBlock(
+    String title,
+    List<JsonMap> rows,
+    bool canAdd,
+    bool active, {
+    required bool committee,
+  }) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      _workHeading(
+        title,
+        sub: '${rows.length} ${committee ? 'kepanitiaan' : 'divisi'}',
+        action: canAdd
+            ? _orgPill(
+                committee ? 'Tambah kepanitiaan' : 'Tambah divisi',
+                active ? 'plus' : 'lock',
+                () => _addDivision(active, committee: committee),
+                key: Key(committee ? 'org-add-committee' : 'org-add-division'),
+              )
+            : null,
+      ),
+      SizedBox(height: 10),
+      if (rows.isEmpty)
+        Text(
+          committee
+              ? 'Belum ada kepanitiaan. Anggotanya boleh dari divisi mana pun.'
+              : 'Belum ada divisi.',
+          style: gl(14, w400, 0, GLTheme.secondary),
+        )
+      else
+        Container(
+          padding: EdgeInsets.symmetric(vertical: 4, horizontal: 14),
+          decoration: glBox(GLTheme.surface, 24),
+          child: Column(
+            children: [for (final division in rows) _divisionRow(division)],
+          ),
+        ),
+    ],
+  );
 
   Widget _divisionRow(JsonMap division) {
     final id = division.text('id');
@@ -736,35 +766,41 @@ class _OrgState extends _WorkspaceState<OrganizationScreen>
     ),
   );
 
-  Future<void> _addDivision(bool active) async {
+  Future<void> _addDivision(bool active, {bool committee = false}) async {
+    final kind = committee ? 'Kepanitiaan' : 'Divisi';
     if (!active) {
       return feedback(
-        'Divisi baru bisa dibuat saat paket aktif.',
+        '$kind baru bisa dibuat saat paket aktif.',
         kind: GLToastKind.err,
       );
     }
     final result = await showGLSheet<JsonMap>(
       context,
-      title: 'Tambah divisi',
+      title: committee ? 'Tambah kepanitiaan' : 'Tambah divisi',
       builder: (_) => _OrgFormSheet(
         store: store,
         action: 'createDivision',
         inputs: [
           (
             key: 'division-name',
-            label: 'Nama divisi',
-            hint: 'Contoh: Humas',
+            label: 'Nama ${kind.toLowerCase()}',
+            hint: committee ? 'Contoh: Panitia Dies Natalis' : 'Contoh: Humas',
             initial: '',
             min: 3,
             max: 40,
             lines: 1,
           ),
         ],
-        payload: (v) => {'organizationID': orgID, 'name': v[0]},
-        note:
-            'Kamu jadi koordinator divisi ini. Undang anggotanya, lalu serahkan peran koordinator ke Kadiv lewat menu anggota.',
-        submit: 'Buat divisi',
-        success: 'Divisi dibuat',
+        payload: (v) => {
+          'organizationID': orgID,
+          'name': v[0],
+          if (committee) 'committee': true,
+        },
+        note: committee
+            ? 'Kamu jadi koordinator kepanitiaan ini. Undang panitia dari divisi mana pun, lalu serahkan peran koordinator ke ketua pelaksana. Proyek di kepanitiaan tampil sebagai Sie.'
+            : 'Kamu jadi koordinator divisi ini. Undang anggotanya, lalu serahkan peran koordinator ke Kadiv lewat menu anggota.',
+        submit: committee ? 'Buat kepanitiaan' : 'Buat divisi',
+        success: '$kind dibuat',
       ),
     );
     if (result != null && mounted && result.text('id').isNotEmpty) {

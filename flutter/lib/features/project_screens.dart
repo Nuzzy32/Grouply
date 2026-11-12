@@ -215,6 +215,7 @@ class _ProjectState extends _WorkspaceState<ProjectScreen> {
   Widget _content(JsonMap p, JsonMap group) {
     final tasks = _pjTasks(store, p.text('id'));
     final isCoord = _coordinator(store, group);
+    final canTasks = store.canManageTasks(p);
     final status = p.text('status');
     final shown = tasks
         .where((t) => filter == null || t.text('status') == filter)
@@ -225,7 +226,7 @@ class _ProjectState extends _WorkspaceState<ProjectScreen> {
         .where((t) => (store.idleHours(t, now) ?? 0) >= idleNudgeHours)
         .length;
     return GLDetailScaffold(
-      title: 'Proyek',
+      title: store.isCommittee(group) ? 'Sie' : 'Proyek',
       trailing: GLCircleButton(
         icon: 'ellipsis',
         label: 'Aksi proyek',
@@ -246,6 +247,7 @@ class _ProjectState extends _WorkspaceState<ProjectScreen> {
         if (status == 'archived') _archivedBanner(p, group),
         if (status == 'completed') _doneBanner(p, group, isCoord),
         _hero(p, group),
+        ?_projectLeadRow(this, p, group),
         _pulse(p, group, tasks, isCoord, stale, idle),
         Padding(
           padding: EdgeInsets.only(top: 4),
@@ -265,7 +267,7 @@ class _ProjectState extends _WorkspaceState<ProjectScreen> {
                     spacing: 4,
                     children: [
                       GLIcon(
-                        isCoord && status == 'active' ? 'plus' : 'lock',
+                        canTasks && status == 'active' ? 'plus' : 'lock',
                         size: 20,
                       ),
                       Text('Buat tugas', style: gl(15, w600)),
@@ -305,7 +307,7 @@ class _ProjectState extends _WorkspaceState<ProjectScreen> {
                 child: Text(
                   tasks.isNotEmpty
                       ? 'Tidak ada tugas dengan status ini.'
-                      : 'Belum ada tugas. ${isCoord ? 'Tambahkan tugas pertama.' : 'Koordinator akan menambahkan tugas.'}',
+                      : 'Belum ada tugas. ${canTasks ? 'Tambahkan tugas pertama.' : 'Koordinator akan menambahkan tugas.'}',
                   textAlign: TextAlign.center,
                   style: gl(15, w400, 0, GLTheme.secondary),
                 ),
@@ -1162,8 +1164,10 @@ class _ProjectState extends _WorkspaceState<ProjectScreen> {
   }
 
   Future<void> _openNewTask(JsonMap p, JsonMap group) async {
-    if (!_coordinator(store, group)) {
-      return _deny('Hanya koordinator yang bisa membuat tugas.');
+    if (!store.canManageTasks(p)) {
+      return _deny(
+        'Hanya koordinator atau koordinator sie yang bisa membuat tugas.',
+      );
     }
     switch (p.text('status')) {
       case 'archived':
