@@ -79,6 +79,11 @@ Review tambahan menutup pesan gagal yang terlihat lintas persona, koordinator de
 - Lima interleaving dua worker direproduksi sebagai deadlock pada `050000`, lalu **5/5 lulus** pada `060000`: assignment/member mutation dan deletion/moderation dismissed/removed bagi pelapor aktif/mantan anggota. Actor memakai `FOR NO KEY UPDATE`; deletion mengunci konten sebelum sync/trigger membership/blokir. Ini regresi kasus terarah, bukan uji beban atau bukti bebas seluruh deadlock. Fresh database replay tidak dijalankan.
 - Tes HTTP lokal **5 skenario lulus** setelah memperbaiki serialization `reviews.reviewer_id` nullable menjadi string kosong pada migration additive `070000`; semua fixture terhapus (`cleanup_failures: 0`). Offline self-check script juga lulus. `070000` diterapkan incrementally setelah suite SQL 54 checks, workflow 40 notices, dan race 5/5 dijalankan; lint tidak menemukan schema errors.
 
+## Reminder bertahap dan penanda tugas mandek — 12 November 2026
+
+- Flutter saja (client SwiftUI tetap H-1 dan tidak diubah): local notification H-3 dan H-1 untuk tugas milik sendiri, plus nudge "Belum ada kabar 2 hari" 48 jam setelah aktivitas terakhir task (submission atau pesan di thread task). Chip **Tanpa kabar N hari** di kartu/detail task dan hitungan di Group Pulse coordinator. Tanpa perubahan schema atau migration.
+- Verifikasi: `flutter analyze` bersih dan **131 tes Flutter lulus**. Notifikasi di perangkat/emulator nyata belum diuji. Nudge hanya sampai ke perangkat assignee sendiri karena push server belum ada.
+
 ## Target cloud dan rilis yang belum tersedia
 
 Belum tersedia/terverifikasi: deployment cloud, provider Apple nyata dan pencabutan token Apple, Realtime Group Chat lintas perangkat fisik, APNs/pengingat lokal, domain/AASA/Universal Links, operator moderasi production dan kebijakan retention. Penghapusan akun password server dan CLI moderasi tersedia lokal, bukan bukti readiness Apple/App Review. Source migration aktual ada di `supabase/migrations`; DDL dokumen produk mencakup target yang lebih luas. Tidak ada proyek cloud atau database production yang diubah. Gate cloud/TestFlight tetap belum dicentang.

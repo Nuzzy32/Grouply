@@ -120,7 +120,7 @@ AI, scoring kontribusi anggota, leaderboard, streak, DM personal, reaction emoji
 | DISC-02 | System events di thread task | P0 | Submit/approve/revision muncul sebagai item sistem di Task Discussion terkait |
 | DISC-03 | Sending / sent / failed | P0 | Retry aman tanpa duplikat komentar |
 | NOTIF-01 | Push notification | P0 | Assign/reassign, submission baru (ke reviewer), keputusan review (ke assignee), komentar baru (ke assignee & reviewer) |
-| NOTIF-02 | Pengingat deadline lokal | P0 | Local notification H-1 untuk task milik sendiri, dijadwalkan ulang saat app dibuka |
+| NOTIF-02 | Pengingat deadline lokal | P0 | Local notification H-3 dan H-1 untuk task milik sendiri, plus satu nudge "Belum ada kabar 2 hari" setelah 48 jam tanpa aktivitas tercatat; dijadwalkan ulang saat app dibuka atau data berubah |
 | SHARE-01 | Bagikan ke WhatsApp | P0 | iOS Share Sheet berisi ringkasan event + Universal Link ke task |
 | SAFE-01 | Report & block | P0 (sebelum TestFlight eksternal) | Report komentar/user, block user, kanal laporan ke pengembang |
 | PULSE-01 | Group Pulse sederhana | P0 | Ringkasan hitungan status task, progress %, deadline, penanda review pending |
@@ -145,6 +145,7 @@ AI, scoring kontribusi anggota, leaderboard, streak, DM personal, reaction emoji
 - Edit dan pengalihan assignee maupun reviewer dikunci saat `in_review` dan `done`, serta saat proyek selesai/arsip.
 - Pengalihan di `needs_revision` memerlukan konfirmasi dan mempertahankan status `needs_revision`; penulis dan riwayat submission lama tidak berubah. Pengalihan di `todo`/`in_progress` kembali ke `todo`.
 - Task `in_review` lebih dari 48 jam ditandai **Review pending** di Home coordinator, supaya ia bisa mengingatkan reviewer; pengalihan tetap terkunci selama review.
+- Task `todo`/`in_progress`/`needs_revision` tanpa aktivitas tercatat (submission atau pesan apa pun di thread task, termasuk event sistem buat/ubah/alihkan/review) selama 48 jam diberi chip **Tanpa kabar N hari** di kartu dan detail task, serta dihitung di Group Pulse untuk coordinator. Ini penanda per task, bukan skor anggota. `startTask` belum menulis event thread, jadi tidak menghitung sebagai aktivitas.
 - Ketika tidak ada task, progress menampilkan `Belum ada task`, bukan 100%.
 
 **Submission dan review**

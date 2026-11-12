@@ -7,6 +7,9 @@ import 'backend.dart';
 
 typedef JsonMap = Map<String, dynamic>;
 
+/// Hours without recorded activity before an open task counts as stalled ("tanpa kabar").
+const idleNudgeHours = 48;
+
 extension Fields on JsonMap {
   String text(String key) => this[key] is String ? this[key] as String : '';
   num number(String key) => this[key] is num ? this[key] as num : 0;
@@ -77,6 +80,36 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
   JsonMap? group(String id) => _find(groups, id);
   JsonMap? project(String id) => _find(projects, id);
   JsonMap? task(String id) => _find(tasks, id);
+
+  /// Latest recorded activity on an open task: a submission or any message in its thread
+  /// (the server logs create/edit/reassign/submit/review there). Null when done/in review.
+  DateTime? lastActivity(JsonMap task) {
+    if (![
+      'todo',
+      'in_progress',
+      'needs_revision',
+    ].contains(task.text('status'))) {
+      return null;
+    }
+    final id = task.text('id');
+    DateTime? last;
+    for (final d in [
+      for (final s in (task['submissions'] as List? ?? []).whereType<JsonMap>())
+        s.date('createdAt'),
+      for (final m in messages)
+        if (m.text('taskID') == id) m.date('createdAt'),
+    ]) {
+      if (d != null && (last == null || d.isAfter(last))) last = d;
+    }
+    return last;
+  }
+
+  /// Whole hours an open task has gone without recorded activity.
+  /// See [idleNudgeHours] for the "mandek" threshold.
+  int? idleHours(JsonMap task, DateTime now) {
+    final last = lastActivity(task);
+    return last == null ? null : now.difference(last).inHours;
+  }
 
   void _notify() {
     if (!_disposed) notifyListeners();

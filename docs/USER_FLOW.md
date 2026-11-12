@@ -178,7 +178,7 @@ flowchart TD
 - Share ke WhatsApp hanya berisi judul task, status, dan link. Penerima tetap harus login dan menjadi anggota untuk membuka isinya.
 - Izin push diminta setelah user pertama kali join group atau mendapat task, dengan layar penjelasan singkat sebelum dialog sistem iOS. Jika ditolak, jangan tanya ulang otomatis.
 - Push hanya memuat jenis event dan judul task, tanpa isi komentar atau catatan submission.
-- Pengingat deadline H-1 memakai local notification untuk task milik sendiri yang belum `done`, dijadwalkan ulang setiap app dibuka atau data task berubah.
+- Pengingat deadline H-3 dan H-1 memakai local notification untuk task milik sendiri yang belum `in_review`/`done`, plus satu nudge "Belum ada kabar 2 hari" 48 jam setelah aktivitas terakhir task; semuanya dijadwalkan ulang setiap app dibuka atau data task berubah. Tanpa server push, nudge hanya sampai ke perangkat assignee sendiri.
 
 ## 7. State UX per layar
 

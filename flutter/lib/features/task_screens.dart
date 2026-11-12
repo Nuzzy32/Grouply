@@ -173,6 +173,7 @@ class _TaskRow extends StatelessWidget {
     final status = task.text('status');
     final due = _taskDue(task);
     final hours = _taskWaitHours(task, now);
+    final idle = store.idleHours(task, now);
     final pair = Row(
       mainAxisSize: MainAxisSize.min,
       spacing: 6,
@@ -253,6 +254,13 @@ class _TaskRow extends StatelessWidget {
                     label: 'Menunggu $hours jam',
                     icon: 'list.bullet.clipboard',
                     background: GLTheme.lavender,
+                    outlined: true,
+                  ),
+                if (idle != null && idle >= idleNudgeHours)
+                  GLChip(
+                    label: 'Tanpa kabar ${idle ~/ 24} hari',
+                    icon: 'hourglass',
+                    background: GLTheme.butter,
                     outlined: true,
                   ),
               ],
@@ -722,6 +730,7 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
     final now = DateTime.now();
     final status = task.text('status');
     final hours = _taskWaitHours(task, now);
+    final idle = store.idleHours(task, now);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       spacing: 8,
@@ -748,6 +757,13 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
                 'Menunggu $hours jam',
                 'list.bullet.clipboard',
                 GLTheme.lavender,
+                true,
+              ),
+            if (idle != null && idle >= idleNudgeHours)
+              _headerChip(
+                'Tanpa kabar ${idle ~/ 24} hari',
+                'hourglass',
+                GLTheme.butter,
                 true,
               ),
           ],

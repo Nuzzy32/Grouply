@@ -4,9 +4,15 @@ import 'package:timezone/timezone.dart' as tz;
 
 import 'store.dart';
 
-/// Local H-1 deadline reminders for the signed-in user's own open tasks.
-/// Mirrors `Grouply/Core/DeadlineReminders.swift`; device-only, no server push.
-typedef Reminder = ({String taskID, String title, DateTime fireAt});
+/// Local reminders for the signed-in user's own open tasks: H-3 and H-1 before the deadline,
+/// plus one nudge after 48 hours without recorded activity.
+/// Device-only, no server push. (The SwiftUI client still does H-1 only.)
+typedef Reminder = ({
+  String taskID,
+  String heading,
+  String title,
+  DateTime fireAt,
+});
 
 List<Reminder> reminderPlan(GrouplyStore store, DateTime now) {
   final plan = <Reminder>[];
@@ -21,9 +27,24 @@ List<Reminder> reminderPlan(GrouplyStore store, DateTime now) {
         group?.ids('memberIDs').contains(store.currentUserID) != true) {
       continue;
     }
-    final fireAt = due.subtract(const Duration(days: 1));
-    if (fireAt.isAfter(now)) {
-      plan.add((taskID: t.text('id'), title: t.text('title'), fireAt: fireAt));
+    final idleSince = store.lastActivity(t);
+    for (final (heading, fireAt) in [
+      ('Deadline 3 hari lagi', due.subtract(const Duration(days: 3))),
+      ('Deadline besok', due.subtract(const Duration(days: 1))),
+      if (idleSince != null)
+        (
+          'Belum ada kabar 2 hari',
+          idleSince.add(const Duration(hours: idleNudgeHours)),
+        ),
+    ]) {
+      if (fireAt.isAfter(now)) {
+        plan.add((
+          taskID: t.text('id'),
+          heading: heading,
+          title: t.text('title'),
+          fireAt: fireAt,
+        ));
+      }
     }
   }
   plan.sort((a, b) => a.fireAt.compareTo(b.fireAt));
@@ -39,7 +60,9 @@ class DeadlineReminders {
   /// Replaces every scheduled reminder with [plan]; an empty plan (logout) clears them.
   /// Calls run one after another so an older plan never lands after a newer one.
   void sync(List<Reminder> plan) {
-    final key = plan.map((r) => '${r.taskID}|${r.title}|${r.fireAt}').join(',');
+    final key = plan
+        .map((r) => '${r.taskID}|${r.heading}|${r.title}|${r.fireAt}')
+        .join(',');
     if (key == _lastKey) return;
     _lastKey = key;
     _work = _work.then((_) => _apply(plan)).catchError((Object _) {});
@@ -75,8 +98,8 @@ class DeadlineReminders {
     // ponytail: iOS keeps max 64 pending requests; nearest 60 only.
     for (final r in plan.take(60)) {
       await _plugin.zonedSchedule(
-        id: r.taskID.hashCode & 0x7fffffff,
-        title: 'Deadline besok',
+        id: '${r.heading}|${r.taskID}'.hashCode & 0x7fffffff,
+        title: r.heading,
         body: r.title,
         // Absolute instant in UTC, so the device time zone does not matter.
         scheduledDate: tz.TZDateTime.from(r.fireAt.toUtc(), tz.UTC),

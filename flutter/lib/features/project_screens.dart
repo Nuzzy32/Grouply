@@ -112,6 +112,7 @@ class _ProjectTaskRow extends StatelessWidget {
     final now = DateTime.now();
     final overdue = due != null && GLFormat.isOverdue(due, status, now);
     final hours = _pjReviewWaitHours(task);
+    final idle = store.idleHours(task, now);
     final assignee = task.text('assigneeID'),
         reviewer = task.text('reviewerID');
     final pair = Row(
@@ -165,6 +166,13 @@ class _ProjectTaskRow extends StatelessWidget {
                     background: GLTheme.lavender,
                     outlined: true,
                   ),
+                if (idle != null && idle >= idleNudgeHours)
+                  GLChip(
+                    label: 'Tanpa kabar ${idle ~/ 24} hari',
+                    icon: 'hourglass',
+                    background: GLTheme.butter,
+                    outlined: true,
+                  ),
               ],
             ),
             Text(task.text('title'), style: gl(17, w600)),
@@ -212,6 +220,10 @@ class _ProjectState extends _WorkspaceState<ProjectScreen> {
         .where((t) => filter == null || t.text('status') == filter)
         .toList();
     final stale = tasks.where((t) => (_pjReviewWaitHours(t) ?? 0) > 48).length;
+    final now = DateTime.now();
+    final idle = tasks
+        .where((t) => (store.idleHours(t, now) ?? 0) >= idleNudgeHours)
+        .length;
     return GLDetailScaffold(
       title: 'Proyek',
       trailing: GLCircleButton(
@@ -234,7 +246,7 @@ class _ProjectState extends _WorkspaceState<ProjectScreen> {
         if (status == 'archived') _archivedBanner(p, group),
         if (status == 'completed') _doneBanner(p, group, isCoord),
         _hero(p, group),
-        _pulse(p, group, tasks, isCoord, stale),
+        _pulse(p, group, tasks, isCoord, stale, idle),
         Padding(
           padding: EdgeInsets.only(top: 4),
           child: Row(
@@ -569,6 +581,7 @@ class _ProjectState extends _WorkspaceState<ProjectScreen> {
     List<JsonMap> tasks,
     bool isCoord,
     int stale,
+    int idle,
   ) {
     final n = tasks.length;
     int c(String s) => tasks.where((t) => t.text('status') == s).length;
@@ -652,31 +665,33 @@ class _ProjectState extends _WorkspaceState<ProjectScreen> {
             ),
           _members(group, tasks),
           if (isCoord && stale > 0)
-            Container(
-              padding: EdgeInsets.symmetric(vertical: 12, horizontal: 14),
-              decoration: glBox(
-                GLTheme.lavender,
-                18,
-                border: GLTheme.ink,
-                borderWidth: 1.5,
-              ),
-              child: Row(
-                spacing: 10,
-                children: [
-                  GLIcon('list.bullet.clipboard', size: 20),
-                  Expanded(
-                    child: Text(
-                      '$stale tugas menunggu review lebih dari 48 jam',
-                      style: gl(14, w500),
-                    ),
-                  ),
-                ],
-              ),
+            _pulseAlert(
+              'list.bullet.clipboard',
+              GLTheme.lavender,
+              '$stale tugas menunggu review lebih dari 48 jam',
+            ),
+          if (isCoord && idle > 0)
+            _pulseAlert(
+              'hourglass',
+              GLTheme.butter,
+              '$idle tugas tanpa aktivitas lebih dari 48 jam',
             ),
         ],
       ),
     );
   }
+
+  Widget _pulseAlert(String icon, Color background, String text) => Container(
+    padding: EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+    decoration: glBox(background, 18, border: GLTheme.ink, borderWidth: 1.5),
+    child: Row(
+      spacing: 10,
+      children: [
+        GLIcon(icon, size: 20),
+        Expanded(child: Text(text, style: gl(14, w500))),
+      ],
+    ),
+  );
 
   Widget _legend(List<JsonMap> tasks) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
