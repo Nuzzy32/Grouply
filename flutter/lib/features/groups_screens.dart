@@ -42,6 +42,42 @@ int _grTaskCount(
       .length;
 }
 
+/// Divisions of an active organization have no client-side 8-member cap.
+String _grCapacity(GrouplyStore store, JsonMap group) {
+  final count = group.ids('memberIDs').length;
+  return _activeDivision(store, group)
+      ? '$count anggota'
+      : '$count dari $_maxMembers anggota';
+}
+
+/// Dashed 56pt row on the Grup tab ("Gabung …", "Buat organisasi").
+Widget _grDashed(String icon, String label, VoidCallback onTap, {Key? key}) =>
+    GLTap(
+      key: key,
+      onTap: onTap,
+      child: CustomPaint(
+        painter: _DashedBorder(),
+        child: SizedBox(
+          height: 56,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              GLIcon(icon, size: 20),
+              SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: gl(15, w600),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
 /// Prototype `invStatus`: valid / expired / revoked / used / nogroup.
 String _grInviteStatus(GrouplyStore store, JsonMap invite) {
   if (store.group(invite.text('groupID')) == null) return 'nogroup';
@@ -146,13 +182,27 @@ mixin _GroupActions<T extends _WorkspaceScreen> on _WorkspaceState<T> {
         kind: GLToastKind.err,
       );
     }
-    if (group!.ids('memberIDs').length >= _maxMembers) {
+    final division = _activeDivision(store, group);
+    if (!division && group!.ids('memberIDs').length >= _maxMembers) {
       return feedback(
         'Grup sudah penuh (maksimal 8 anggota).',
         kind: GLToastKind.err,
       );
     }
-    final result = await run('generateInvite', {'groupID': groupID});
+    int? uses;
+    if (division) {
+      uses = await showGLSheet<int>(
+        context,
+        title: 'Undang anggota',
+        subtitle: 'Berapa orang yang boleh memakai kode ini?',
+        builder: _orgInviteUses,
+      );
+      if (uses == null || !mounted) return;
+    }
+    final result = await run('generateInvite', {
+      'groupID': groupID,
+      'maxUses': ?uses,
+    });
     if (result == null || !mounted) return;
     final made = result['invite'] is JsonMap
         ? result['invite'] as JsonMap
@@ -313,7 +363,9 @@ mixin _GroupActions<T extends _WorkspaceScreen> on _WorkspaceState<T> {
         ),
         SizedBox(height: 16),
         Text(
-          'Bagikan kode ini kepada anggota yang ingin bergabung. Kode berlaku 7 hari dan sekali pakai.',
+          invite.number('maxUses') > 1
+              ? 'Bagikan kode ini kepada anggota yang ingin bergabung. Kode berlaku 7 hari untuk maksimal ${invite.number('maxUses')} orang.'
+              : 'Bagikan kode ini kepada anggota yang ingin bergabung. Kode berlaku 7 hari dan sekali pakai.',
           style: gl(13, w400, 0, GLTheme.secondary, 3),
         ),
       ],
@@ -642,7 +694,9 @@ class _GroupsState extends _WorkspaceState<GroupsScreen>
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: store,
     builder: (context, _) {
-      final groups = store.groups.where((g) => _member(store, g)).toList();
+      final groups = store.groups
+          .where((g) => _member(store, g) && _plainGroup(store, g))
+          .toList();
       return Scaffold(
         backgroundColor: GLTheme.background,
         body: SafeArea(
@@ -684,7 +738,8 @@ class _GroupsState extends _WorkspaceState<GroupsScreen>
                     ),
                   ],
                 ),
-                if (groups.isEmpty) ...[
+                ..._orgSection(this, groupsFollow: groups.isNotEmpty),
+                if (groups.isEmpty && store.organizations.isEmpty) ...[
                   SizedBox(height: 16),
                   GLEmptyState(
                     title: 'Belum ada grup',
@@ -703,29 +758,17 @@ class _GroupsState extends _WorkspaceState<GroupsScreen>
                   ),
                 ],
                 SizedBox(height: 16),
-                GLTap(
-                  onTap: () => _sheet(joining: true),
-                  child: CustomPaint(
-                    painter: _DashedBorder(),
-                    child: SizedBox(
-                      height: 56,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          GLIcon('key', size: 20),
-                          SizedBox(width: 8),
-                          Flexible(
-                            child: Text(
-                              'Gabung dengan kode undangan',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: gl(15, w600),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+                _grDashed(
+                  'key',
+                  'Gabung dengan kode undangan',
+                  () => _sheet(joining: true),
+                ),
+                SizedBox(height: 10),
+                _grDashed(
+                  'building.2',
+                  'Buat organisasi (BEM/HIMA/UKM)',
+                  () => _createOrganization(this),
+                  key: Key('org-create'),
                 ),
               ],
             ),
@@ -938,6 +981,7 @@ class _GroupState extends _WorkspaceState<GroupScreen>
         .length;
     final unread = _grUnread(store, groupID);
     final members = group.ids('memberIDs');
+    final org = store.organization(group.text('organizationID'));
 
     return detailPage(
       title: 'Grup',
@@ -973,6 +1017,27 @@ class _GroupState extends _WorkspaceState<GroupScreen>
                           group.text('course'),
                           style: gl(14, w400, 0, GLTheme.secondary),
                         ),
+                        if (org != null)
+                          _grButton(
+                            key: Key('group-org-chip'),
+                            label: 'Divisi dari ${org.text('name')}',
+                            onTap: () => open(
+                              OrganizationScreen(
+                                store: store,
+                                orgID: org.text('id'),
+                              ),
+                            ),
+                            child: Container(
+                              constraints: BoxConstraints(minHeight: 44),
+                              alignment: Alignment.centerLeft,
+                              child: GLChip(
+                                label: org.text('name'),
+                                icon: 'building.2',
+                                background: GLTheme.lavender,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
                       ],
                     ),
                   ),
@@ -1080,7 +1145,7 @@ class _GroupState extends _WorkspaceState<GroupScreen>
                     children: [
                       Text('Anggota', style: gl(21, w700, -0.02)),
                       Text(
-                        '${members.length} dari 8 anggota',
+                        _grCapacity(store, group),
                         style: gl(13, w400, 0, GLTheme.secondary),
                       ),
                     ],
@@ -1472,7 +1537,7 @@ class _GroupMembersState extends _WorkspaceState<_GroupMembersScreen>
             children: [
               Expanded(
                 child: Text(
-                  '${members.length} dari 8 anggota',
+                  _grCapacity(store, group),
                   style: gl(15, w400, 0, GLTheme.text3),
                 ),
               ),

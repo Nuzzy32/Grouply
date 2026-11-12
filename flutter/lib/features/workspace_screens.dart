@@ -10,6 +10,7 @@ import '../ui/gl.dart';
 import 'chat_screens.dart';
 
 part 'groups_screens.dart';
+part 'org_screens.dart';
 part 'project_screens.dart';
 part 'task_screens.dart';
 
