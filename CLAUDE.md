@@ -6,6 +6,12 @@
 - Pertahankan source Swift, test native, dan migration Supabase yang sudah ada; jangan hapus atau menganggap Flutter sudah menggantikan rilis native sepenuhnya. Backend/RPC dipakai bersama, bukan disalin ke database baru.
 - Jalankan Flutter dari `flutter/`; baca `flutter/README.md` dan `docs/FLUTTER_MIGRATION.md` untuk konfigurasi, perintah, bukti pengujian, dan gap. Jangan klaim build/test lokal sebagai bukti cloud, perangkat fisik, atau rilis store. Daftar akun dan atur ulang sandi lewat kode email tersedia di Flutter (teruji localhost); login Apple, push, dan migrasi otomatis data Swift belum tersedia.
 
+## Perubahan scope eksplisit: Organization Plan, 12 November 2026
+
+- Pengguna menyetujui paket organisasi berbayar Tahap 1 (ORG-01..06): organisasi → divisi (grup biasa dengan `organization_id`), jabatan Ketua/BPH/Pembina (Kadiv = coordinator grup), kursi per orang unik, undangan multi-pakai, Dashboard (`grouply_org_overview`), aktivasi manual operator (`scripts/billing_local.py`, tanpa payment gateway). Ini pengecualian khusus untuk larangan "pricing" di bawah. Spesifikasi dan keputusan: `docs/PRD-organization-plan.md`, `docs/DESIGN-org-tahap1.md`.
+- Fitur baru hanya untuk client Flutter; SwiftUI tidak diperbarui dan tidak mengenal organisasi. Tahap 2–3 (kepanitiaan, persetujuan berjenjang, rapat, arsip periode, dll.) belum disetujui untuk dibangun.
+- Urutan kunci wajib di semua jalur: profil → grup (urut id) → organisasi (urut id, `FOR NO KEY UPDATE`) → `user_sync_state` (urut user_id). Trigger `group_members_org_guard` menjaga setiap pemegang jabatan tetap anggota divisi; jangan melemahkannya tanpa menjalankan `python3 scripts/billing_local.py check-locks`.
+
 ## Sumber dan platform
 
 - Native iPhone iOS 17+, SwiftUI; Bahasa Indonesia, desain Soft Future.

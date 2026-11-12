@@ -62,7 +62,7 @@ Per 17 Oktober 2026 tersedia demo dan **server Supabase lokal** dengan Auth, RLS
 | `overdue` (computed) | Coral + outline | Overdue | `exclamationmark.circle` |
 | `review_stale` (computed) | Lavender + outline | Review pending | `clock.badge.exclamationmark` |
 
-`overdue` adalah indikator turunan deadline, **bukan** status database. Begitu juga `review_stale`: muncul bila task `in_review` lebih dari 48 jam.
+`overdue` adalah indikator turunan deadline, **bukan** status database. Begitu juga `review_stale`: muncul bila task `in_review` lebih dari 48 jam, dan `task_idle` (chip butter outlined, ikon hourglass, "Tanpa kabar N hari"): task terbuka tanpa aktivitas tercatat 48 jam.
 
 ## 3. Typography
 

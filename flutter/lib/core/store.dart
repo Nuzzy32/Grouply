@@ -1,11 +1,15 @@
 import 'dart:async';
 
 import 'package:flutter/widgets.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' show AuthException;
+import 'package:supabase_flutter/supabase_flutter.dart'
+    show AuthException, PostgrestException;
 
 import 'backend.dart';
 
 typedef JsonMap = Map<String, dynamic>;
+
+/// Hours without recorded activity before an open task counts as stalled ("tanpa kabar").
+const idleNudgeHours = 48;
 
 extension Fields on JsonMap {
   String text(String key) => this[key] is String ? this[key] as String : '';
@@ -78,6 +82,36 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
   JsonMap? project(String id) => _find(projects, id);
   JsonMap? task(String id) => _find(tasks, id);
 
+  /// Latest recorded activity on an open task: a submission or any message in its thread
+  /// (the server logs create/edit/reassign/submit/review there). Null when done/in review.
+  DateTime? lastActivity(JsonMap task) {
+    if (![
+      'todo',
+      'in_progress',
+      'needs_revision',
+    ].contains(task.text('status'))) {
+      return null;
+    }
+    final id = task.text('id');
+    DateTime? last;
+    for (final d in [
+      for (final s in (task['submissions'] as List? ?? []).whereType<JsonMap>())
+        s.date('createdAt'),
+      for (final m in messages)
+        if (m.text('taskID') == id) m.date('createdAt'),
+    ]) {
+      if (d != null && (last == null || d.isAfter(last))) last = d;
+    }
+    return last;
+  }
+
+  /// Whole hours an open task has gone without recorded activity.
+  /// See [idleNudgeHours] for the "mandek" threshold.
+  int? idleHours(JsonMap task, DateTime now) {
+    final last = lastActivity(task);
+    return last == null ? null : now.difference(last).inHours;
+  }
+
   void _notify() {
     if (!_disposed) notifyListeners();
   }
@@ -90,6 +124,7 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
     messages = [];
     invites = [];
     reports = [];
+    organizations = [];
     currentUserID = '';
     _blocks = {};
     _reads = {};
@@ -342,21 +377,19 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
       _notify();
       return result;
     } catch (failure) {
+      final message = failure is GrouplyException
+          ? failure.message
+          : serverMessage(failure, action) ??
+                'Perubahan belum terkonfirmasi. Muat ulang sebelum mencoba lagi.';
       if (generation == _generation) {
         if (_backend.currentUserID == null) {
           ++_generation;
           _clear();
         }
-        error = failure is GrouplyException
-            ? failure.message
-            : 'Perubahan belum terkonfirmasi. Muat ulang sebelum mencoba lagi.';
+        error = message;
         _notify();
       }
-      throw GrouplyException(
-        failure is GrouplyException
-            ? failure.message
-            : 'Perubahan belum terkonfirmasi. Muat ulang sebelum mencoba lagi.',
-      );
+      throw GrouplyException(message);
     } finally {
       _mutating = false;
     }
@@ -367,6 +400,141 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
       'groupID': groupID,
       'messageIDs': messageIDs,
     });
+  }
+
+  // MARK: - Organization Plan (ORG-01..06, docs/DESIGN-org-tahap1.md §4–5)
+
+  /// Organizations the user belongs to; `[]` on a server without the plan.
+  List<JsonMap> organizations = [];
+  JsonMap? organization(String id) => _find(organizations, id);
+
+  /// `ketua`, `bph` or `pembina`; '' for a Kadiv, staff or non-member.
+  String orgRole(String orgID) => organization(orgID)?.text('myRole') ?? '';
+
+  /// A division is an ordinary group linked to an organization.
+  bool isDivision(JsonMap? group) =>
+      (group?.text('organizationID') ?? '').isNotEmpty;
+
+  /// Dashboard summary (`grouply_org_overview`). Not cached: callers reload
+  /// it on open, pull to refresh and resume.
+  Future<JsonMap> orgOverview(String id) async {
+    if (!authenticated) throw const GrouplyException('Masuk terlebih dahulu.');
+    try {
+      final value = await _backend.orgOverview(id);
+      List<JsonMap> rows(Object? list) => [
+        for (final item in list as List) Map<String, dynamic>.from(item as Map),
+      ];
+      final divisions = rows(value['divisions']);
+      for (final division in divisions) {
+        division['projects'] = rows(division['projects']);
+      }
+      return {
+        ...value,
+        'divisions': divisions,
+        'attention': rows(value['attention']),
+        'users': rows(value['users']),
+      };
+    } catch (failure) {
+      throw GrouplyException(
+        serverMessage(failure) ??
+            'Dashboard belum dapat dimuat. Periksa koneksi lalu coba lagi.',
+      );
+    }
+  }
+
+  /// Indonesian text for an error the server raised on purpose
+  /// (`raise exception '<code>'`, SQLSTATE P0001). Null for anything else,
+  /// such as a network failure where the change may already be saved.
+  static String? serverMessage(Object failure, [String action = '']) {
+    if (failure is! PostgrestException || failure.code != 'P0001') return null;
+    return switch (failure.message) {
+      'org_full' =>
+        'Kursi organisasi sudah penuh. Minta ketua menambah kursi paket.',
+      'plan_inactive' =>
+        'Paket organisasi belum aktif. Hubungi tim Grouply dengan kode organisasi.',
+      'ketua_transfer_required' =>
+        'Ketua harus menyerahkan jabatannya dulu sebelum meninggalkan divisi terakhirnya.',
+      'org_role_holder' =>
+        'Anggota ini memegang jabatan organisasi. Ketua harus mencabut jabatannya dulu.',
+      'group_full' => 'Grup sudah mencapai batas anggota.',
+      'invite_full' =>
+        'Kode undangan sudah mencapai batas pemakaian. Minta kode baru.',
+      'invite_expired' => 'Kode undangan sudah kedaluwarsa. Minta kode baru.',
+      'active_assignment' =>
+        'Alihkan tugas aktif dan selesaikan review yang tertunda terlebih dahulu.',
+      'coordinator_transfer_required' =>
+        'Serahkan peran koordinator ke anggota lain terlebih dahulu.',
+      'stale_version' =>
+        'Data sudah diubah orang lain. Muat ulang lalu coba lagi.',
+      'project_read_only' =>
+        'Proyek selesai atau diarsipkan hanya dapat dibaca.',
+      'already_reviewed' => 'Hasil kerja ini sudah direview.',
+      'rate_limited'
+          when action == 'createOrganization' || action == 'transferKetua' =>
+        'Satu orang maksimal menjadi ketua di 3 organisasi.',
+      'rate_limited' => 'Terlalu banyak permintaan. Coba lagi sebentar.',
+      'forbidden' => 'Kamu tidak punya izin untuk tindakan ini.',
+      'invalid_input' => 'Data tidak valid. Periksa isian lalu coba lagi.',
+      'unauthorized' => 'Sesi berakhir. Masuk kembali untuk melanjutkan.',
+      _ => null,
+    };
+  }
+
+  /// Validates `organizations` like the other snapshot keys, but a missing
+  /// key is `[]` so this build still runs against an unmigrated database.
+  static List<JsonMap> _decodeOrganizations(Object? raw, List<JsonMap> groups) {
+    if (groups.any(
+      (row) =>
+          row['organizationID'] != null && row['organizationID'] is! String,
+    )) {
+      throw const FormatException('Invalid division');
+    }
+    if (raw == null) return [];
+    if (raw is! List) throw const FormatException('Invalid organizations');
+    const roles = ['ketua', 'bph', 'pembina'];
+    List<JsonMap> rows(Object? value) => value is List
+        ? [for (final item in value) Map<String, dynamic>.from(item as Map)]
+        : throw const FormatException('Invalid organization');
+    final result = <JsonMap>[];
+    for (final item in raw) {
+      final org = Map<String, dynamic>.from(item as Map);
+      final myRole = org['myRole'] ?? '';
+      final officers = rows(org['roles']);
+      final divisions = rows(org['divisions']);
+      if (org.text('id').isEmpty ||
+          [
+            'name',
+            'description',
+            'periodLabel',
+          ].any((field) => org[field] is! String) ||
+          org['planActive'] is! bool ||
+          (org['planExpiresAt'] != null && org.date('planExpiresAt') == null) ||
+          org['seatLimit'] is! int ||
+          org['seatsUsed'] is! int ||
+          !['', ...roles].contains(myRole) ||
+          officers.any(
+            (row) =>
+                row.text('userID').isEmpty ||
+                row['name'] is! String ||
+                !roles.contains(row['role']),
+          ) ||
+          divisions.any(
+            (row) =>
+                row.text('id').isEmpty ||
+                row['name'] is! String ||
+                row['memberCount'] is! int ||
+                row['isMember'] is! bool,
+          )) {
+        throw const FormatException('Invalid organization');
+      }
+      result.add({
+        ...org,
+        'myRole': myRole,
+        'roles': officers,
+        'divisions': divisions,
+      });
+    }
+    return result;
   }
 
   Future<void> _connect() async {
@@ -543,6 +711,10 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
     }
     final blocks = (value['blockedUserIDs'] as List).cast<String>().toList();
     final reads = (value['readMessageIDs'] as List).cast<String>().toList();
+    final orgs = _decodeOrganizations(
+      value['organizations'],
+      decoded['groups']!,
+    );
     final codes = {
       for (final invite in invites)
         if (invite.text('code').isNotEmpty)
@@ -565,6 +737,7 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
     messages = decoded['messages']!;
     invites = decoded['invites']!;
     reports = decoded['reports']!;
+    organizations = orgs;
     currentUserID = actor;
     _blocks = {actor: blocks};
     _reads = {actor: reads};

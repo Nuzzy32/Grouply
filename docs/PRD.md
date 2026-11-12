@@ -17,6 +17,10 @@ Aturan bisnis baru:
 - Reviewer hanya bisa menyetujui/meminta revisi bila ditunjuk, tugas *Menunggu review*, kiriman masih pending, bukan penulis kiriman, dan proyek Aktif. Pelaksana hanya bisa mengirim bila ditugaskan, status mengizinkan, dan proyek Aktif.
 
 
+## Perubahan scope 12 November 2026: Organization Plan
+
+Disetujui pengguna: paket berbayar untuk organisasi mahasiswa (BEM, HIMA, UKM). Tahap 1 (ORG-01..06) mencakup organisasi berisi divisi (divisi = grup biasa), jabatan Ketua/BPH/Pembina, kursi per orang unik, undangan multi-pakai, Dashboard Organisasi, dan status paket. Ini mengecualikan larangan "pricing" di v1.3 **hanya** untuk paket ini. Aktivasinya manual oleh operator, tanpa payment gateway dan tanpa pembelian di aplikasi. Paket berakhir mengembalikan organisasi ke batas gratis; data tidak dihapus. Larangan lain tetap berlaku: scoring/rapor anggota, AI, DM, dan web. Spesifikasi: [PRD Organization Plan](PRD-organization-plan.md) · [Desain Tahap 1](DESIGN-org-tahap1.md). Tahap 2–3 belum disetujui untuk dibangun.
+
 ## Status implementasi dan batas verifikasi
 
 Per 17 Oktober 2026 tersedia demo dan **server Supabase lokal** dengan Auth, RLS, RPC transactional serta SwiftUI async. Workflow tiga akun dan Group Chat Realtime/unread/reconnect/revoke membership teruji lintas client native pada satu simulator + localhost. Milestone E menambahkan antrean laporan/CLI operator lokal, block lintas sesi, dan hapus akun password server dengan histori bersama dipertahankan tanpa referensi identitas. Deployment cloud, provider/pencabutan token Apple, dua perangkat fisik/jaringan nyata, APNs, Universal Links, moderasi production dan kebijakan retensi belum diverifikasi/tersedia. Lihat [Backend Setup](BACKEND_SETUP.md); bagian lain mendeskripsikan target produk P0.
@@ -120,7 +124,7 @@ AI, scoring kontribusi anggota, leaderboard, streak, DM personal, reaction emoji
 | DISC-02 | System events di thread task | P0 | Submit/approve/revision muncul sebagai item sistem di Task Discussion terkait |
 | DISC-03 | Sending / sent / failed | P0 | Retry aman tanpa duplikat komentar |
 | NOTIF-01 | Push notification | P0 | Assign/reassign, submission baru (ke reviewer), keputusan review (ke assignee), komentar baru (ke assignee & reviewer) |
-| NOTIF-02 | Pengingat deadline lokal | P0 | Local notification H-1 untuk task milik sendiri, dijadwalkan ulang saat app dibuka |
+| NOTIF-02 | Pengingat deadline lokal | P0 | Local notification H-3 dan H-1 untuk task milik sendiri, plus satu nudge "Belum ada kabar 2 hari" setelah 48 jam tanpa aktivitas tercatat; dijadwalkan ulang saat app dibuka atau data berubah |
 | SHARE-01 | Bagikan ke WhatsApp | P0 | iOS Share Sheet berisi ringkasan event + Universal Link ke task |
 | SAFE-01 | Report & block | P0 (sebelum TestFlight eksternal) | Report komentar/user, block user, kanal laporan ke pengembang |
 | PULSE-01 | Group Pulse sederhana | P0 | Ringkasan hitungan status task, progress %, deadline, penanda review pending |
@@ -145,6 +149,7 @@ AI, scoring kontribusi anggota, leaderboard, streak, DM personal, reaction emoji
 - Edit dan pengalihan assignee maupun reviewer dikunci saat `in_review` dan `done`, serta saat proyek selesai/arsip.
 - Pengalihan di `needs_revision` memerlukan konfirmasi dan mempertahankan status `needs_revision`; penulis dan riwayat submission lama tidak berubah. Pengalihan di `todo`/`in_progress` kembali ke `todo`.
 - Task `in_review` lebih dari 48 jam ditandai **Review pending** di Home coordinator, supaya ia bisa mengingatkan reviewer; pengalihan tetap terkunci selama review.
+- Task `todo`/`in_progress`/`needs_revision` tanpa aktivitas tercatat (submission atau pesan apa pun di thread task, termasuk event sistem buat/ubah/alihkan/review) selama 48 jam diberi chip **Tanpa kabar N hari** di kartu dan detail task, serta dihitung di Group Pulse untuk coordinator. Ini penanda per task, bukan skor anggota. `startTask` belum menulis event thread, jadi tidak menghitung sebagai aktivitas.
 - Ketika tidak ada task, progress menampilkan `Belum ada task`, bukan 100%.
 
 **Submission dan review**

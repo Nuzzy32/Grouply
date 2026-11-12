@@ -4,6 +4,7 @@ import 'dart:math';
 
 import 'package:grouply/core/backend.dart';
 import 'package:grouply/core/store.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show PostgrestException;
 
 /// Swift `profilePersonas` (prototype `PERSONAS`).
 const demoPersonas = [
@@ -33,7 +34,8 @@ class DemoBackend implements GrouplyBackend {
       tasks = [],
       messages = [],
       invites = [],
-      reports = [];
+      reports = [],
+      organizations = [];
   String _actor = '';
   Map<String, List<String>> _blocks = {}, _reads = {};
 
@@ -103,6 +105,7 @@ class DemoBackend implements GrouplyBackend {
     'messages': _copy(messages),
     'invites': _copy(invites),
     'reports': _copy(reports),
+    'organizations': _snapshotOrganizations(),
     'blockedUserIDs': [...?_blocks[_actor]],
     'readMessageIDs': [...?_reads[_actor]],
   };
@@ -122,6 +125,7 @@ class DemoBackend implements GrouplyBackend {
       'messages': messages,
       'invites': invites,
       'reports': reports,
+      'organizations': organizations,
       'blocks': _blocks,
       'reads': _reads,
     });
@@ -142,6 +146,7 @@ class DemoBackend implements GrouplyBackend {
       messages = rows('messages');
       invites = rows('invites');
       reports = rows('reports');
+      organizations = rows('organizations');
       Map<String, List<String>> lists(String key) => (saved[key] as Map).map(
         (id, value) => MapEntry(id as String, (value as List).cast<String>()),
       );
@@ -1158,7 +1163,12 @@ class DemoBackend implements GrouplyBackend {
         return {};
       case 'generateInvite':
         final groupID = payload.text('groupID');
-        _demoMember(groupID, coordinator: true);
+        final active = _activeOrg(_demoMember(groupID, coordinator: true));
+        final uses = payload['maxUses'];
+        if (uses != null &&
+            (uses is! int || uses < 1 || uses > (active ? 200 : 1))) {
+          throw _code('invalid_input');
+        }
         if (invites
                 .where(
                   (row) =>
@@ -1181,7 +1191,7 @@ class DemoBackend implements GrouplyBackend {
           'code': '${_demoID()}${_demoID()}'.replaceAll('-', '').toUpperCase(),
           'createdAt': stamp,
           'expiresAt': now.add(const Duration(days: 7)).toIso8601String(),
-          'maxUses': 1,
+          'maxUses': uses ?? 1,
           'useCount': 0,
           'revoked': false,
         };
@@ -1207,10 +1217,21 @@ class DemoBackend implements GrouplyBackend {
         if (team == null) _demoFail('Grup tidak ditemukan.');
         final members = team.ids('memberIDs');
         if (members.contains(actor)) return {'id': team.text('id')};
-        if (invite.number('useCount') >= invite.number('maxUses')) {
+        final active = _activeOrg(team);
+        // Multi-use codes count as single-use once the plan has lapsed.
+        if (invite.number('useCount') >=
+            (active ? invite.number('maxUses') : 1)) {
           _demoFail('Undangan sudah digunakan.');
         }
-        if (members.length >= 8) {
+        if (active) {
+          final org = _find(organizations, team.text('organizationID'))!;
+          final seats = _orgMembers(org.text('id'));
+          if (!seats.contains(actor) &&
+              seats.length >= org.number('seatLimit')) {
+            throw _code('org_full');
+          }
+          if (members.length >= 200) throw _code('group_full');
+        } else if (members.length >= 8) {
           _demoFail('Grup sudah mencapai batas 8 anggota.');
         }
         team['memberIDs'] = [...members, actor];
@@ -1365,8 +1386,350 @@ class DemoBackend implements GrouplyBackend {
         }
         _actor = '';
         return {'deleted': true};
+      case 'createOrganization':
+      case 'updateOrganization':
+      case 'createDivision':
+      case 'setOrgRole':
+      case 'transferKetua':
+        return _orgMutate(action, payload);
       default:
         _demoFail('Tindakan tidak dikenal: $action.');
     }
   }
+
+  // MARK: - Organization Plan (docs/DESIGN-org-tahap1.md §4)
+  // Rows: {id, name, description, periodLabel, seatLimit, planExpiresAt,
+  // roles: {userID: ketua|bph|pembina}}. Server codes surface as P0001.
+
+  static PostgrestException _code(String code) =>
+      PostgrestException(message: code, code: 'P0001');
+
+  List<JsonMap> _divisions(String orgID) => groups
+      .where(
+        (row) =>
+            row.text('organizationID') == orgID &&
+            row.ids('memberIDs').isNotEmpty,
+      )
+      .toList();
+
+  Set<String> _orgMembers(String orgID) => {
+    for (final row in _divisions(orgID)) ...row.ids('memberIDs'),
+  };
+
+  Map<String, String> _roles(JsonMap org) =>
+      (org['roles'] as Map).cast<String, String>();
+
+  bool _planActive(JsonMap org) =>
+      org.date('planExpiresAt')?.isAfter(_clock()) ?? false;
+
+  bool _activeOrg(JsonMap group) {
+    final org = _find(organizations, group.text('organizationID'));
+    return org != null && _planActive(org);
+  }
+
+  /// Operator activation (`grouply_billing activatePlan`).
+  void activatePlan(String orgID, {int seats = 150, DateTime? until}) {
+    _find(organizations, orgID)!
+      ..['seatLimit'] = seats
+      ..['planExpiresAt'] = (until ?? _clock().add(const Duration(days: 300)))
+          .toUtc()
+          .toIso8601String();
+  }
+
+  /// Test fixture: the seed groups become divisions of "BEM FST" (u1 ketua,
+  /// u3 BPH, u7 pembina). g3, which u1 is not in, gets an overdue task.
+  void seedOrganization({bool active = true}) {
+    organizations.add({
+      'id': 'o1',
+      'name': 'BEM FST',
+      'description': 'Badan Eksekutif Mahasiswa Fakultas Sains dan Teknologi.',
+      'periodLabel': '2026/2027',
+      'seatLimit': 0,
+      'planExpiresAt': null,
+      'roles': {'u1': 'ketua', 'u3': 'bph', 'u7': 'pembina'},
+    });
+    if (active) activatePlan('o1', seats: 120);
+    for (final row in groups) {
+      row['organizationID'] = 'o1';
+    }
+    final due = _clock().subtract(const Duration(days: 2)).toUtc();
+    projects.add({
+      'id': 'p9',
+      'groupID': 'g3',
+      'title': 'Survei Kebiasaan Belajar',
+      'description': 'Survei 100 responden.',
+      'dueAt': due.add(const Duration(days: 30)).toIso8601String(),
+      'status': 'active',
+    });
+    tasks.add({
+      'id': 't90',
+      'projectID': 'p9',
+      'title': 'Sebar kuesioner',
+      'description': 'Sebar ke 100 responden.',
+      'assigneeID': 'u7',
+      'reviewerID': 'u6',
+      'dueAt': due.toIso8601String(),
+      'status': 'in_progress',
+      'version': 1,
+      'submissions': <JsonMap>[],
+    });
+  }
+
+  List<JsonMap> _snapshotOrganizations() => [
+    for (final org in organizations)
+      if (_orgMembers(org.text('id')).contains(_actor))
+        {
+          'id': org['id'],
+          'name': org['name'],
+          'description': org['description'],
+          'periodLabel': org['periodLabel'],
+          'planActive': _planActive(org),
+          'planExpiresAt': org['planExpiresAt'],
+          'seatLimit': org['seatLimit'],
+          'seatsUsed': _orgMembers(org.text('id')).length,
+          'myRole': _roles(org)[_actor],
+          'roles': [
+            for (final MapEntry(key: id, value: role) in _roles(org).entries)
+              {
+                'userID': id,
+                'name': user(id)?.text('name') ?? 'Anggota',
+                'role': role,
+              },
+          ],
+          'divisions': [
+            for (final row in _divisions(org.text('id')))
+              {
+                'id': row['id'],
+                'name': row['name'],
+                'memberCount': row.ids('memberIDs').length,
+                'isMember': row.ids('memberIDs').contains(_actor),
+              },
+          ],
+        },
+  ];
+
+  JsonMap _division(String orgID, String name) {
+    final id = _demoID();
+    groups.add({
+      'id': id,
+      'name': name,
+      'description': '',
+      'course': '',
+      'memberIDs': [_actor],
+      'coordinatorID': _actor,
+      'tint': '#DED2FF',
+      'icon': 'person.3',
+      'organizationID': orgID,
+    });
+    return {'id': id};
+  }
+
+  JsonMap _orgMutate(String action, JsonMap payload) {
+    final actor = _actor;
+    int ketuaCount(String id) =>
+        organizations.where((org) => _roles(org)[id] == 'ketua').length;
+    if (action == 'createOrganization') {
+      if (ketuaCount(actor) >= 3) throw _code('rate_limited');
+      final id = _demoID();
+      organizations.add({
+        'id': id,
+        'name': _demoText(payload, 'name', 80),
+        'description': _demoText(payload, 'description', 1000, required: false),
+        'periodLabel': _demoText(payload, 'periodLabel', 40, required: false),
+        'seatLimit': 0,
+        'planExpiresAt': null,
+        'roles': {actor: 'ketua'},
+      });
+      final division = payload.text('divisionName').trim();
+      return {
+        'id': id,
+        'groupID': _division(
+          id,
+          division.isEmpty ? 'BPH Inti' : division,
+        )['id'],
+      };
+    }
+    final orgID = payload.text(
+      action == 'updateOrganization' ? 'id' : 'organizationID',
+    );
+    final org = _find(organizations, orgID);
+    if (org == null || !_orgMembers(orgID).contains(actor)) {
+      throw _code('forbidden');
+    }
+    final roles = _roles(org);
+    final allowed = action == 'createDivision'
+        ? ['ketua', 'bph'].contains(roles[actor])
+        : roles[actor] == 'ketua';
+    if (!allowed) throw _code('forbidden');
+    switch (action) {
+      case 'updateOrganization':
+        org.addAll({
+          'name': _demoText(payload, 'name', 80),
+          'description': _demoText(
+            payload,
+            'description',
+            1000,
+            required: false,
+          ),
+          'periodLabel': _demoText(payload, 'periodLabel', 40, required: false),
+        });
+        return {};
+      case 'createDivision':
+        if (!_planActive(org)) throw _code('plan_inactive');
+        if (_divisions(orgID).length >= 30) throw _code('invalid_input');
+        return _division(orgID, _demoText(payload, 'name', 80));
+      default: // setOrgRole, transferKetua
+        final target = payload.text('userID');
+        final role = payload['role'];
+        if (target == actor ||
+            !_orgMembers(orgID).contains(target) ||
+            (action == 'setOrgRole' &&
+                role != null &&
+                role != 'bph' &&
+                role != 'pembina')) {
+          throw _code('invalid_input');
+        }
+        if (action == 'transferKetua') {
+          if (ketuaCount(target) >= 3) throw _code('rate_limited');
+          roles[actor] = 'bph';
+          roles[target] = 'ketua';
+        } else if (role == null) {
+          roles.remove(target);
+        } else {
+          roles[target] = role as String;
+        }
+        return {};
+    }
+  }
+
+  /// Port of `grouply_org_overview` (design §4.5) over the local rows.
+  @override
+  Future<JsonMap> orgOverview(String id) async {
+    final org = _find(organizations, id);
+    if (org == null ||
+        !_orgMembers(id).contains(_actor) ||
+        _roles(org)[_actor] == null) {
+      throw _code('forbidden');
+    }
+    if (!_planActive(org)) throw _code('plan_inactive');
+    final now = _clock();
+    const stale = Duration(hours: 48);
+    final attention = <(int, DateTime, JsonMap)>[];
+    final people = <String>{};
+    JsonMap row(JsonMap task, JsonMap division, String reason, Duration age) {
+      people.add(task.text('assigneeID'));
+      return {
+        'taskID': task['id'],
+        'title': task['title'],
+        'divisionID': division['id'],
+        'projectID': task['projectID'],
+        'assigneeID': task['assigneeID'],
+        'status': task['status'],
+        'dueAt': task['dueAt'],
+        'reason': reason,
+        'hours': age.inHours,
+      };
+    }
+
+    final divisions = [
+      for (final division in _divisions(id))
+        {
+          'id': division['id'],
+          'name': division['name'],
+          'coordinatorID': division.text('coordinatorID'),
+          'memberCount': division.ids('memberIDs').length,
+          'projects': [
+            for (final project in projects.where(
+              (p) => p['groupID'] == division['id'] && p['status'] == 'active',
+            ))
+              () {
+                final list = tasks
+                    .where((t) => t['projectID'] == project['id'])
+                    .toList();
+                var overdue = 0, idle = 0, pending = 0;
+                for (final task in list) {
+                  final status = task.text('status');
+                  final due = task.date('dueAt');
+                  final submitted = _submissions(task).lastOrNull;
+                  final last =
+                      [
+                        for (final s in _submissions(task)) s.date('createdAt'),
+                        for (final m in messages)
+                          if (m['taskID'] == task['id']) m.date('createdAt'),
+                      ].nonNulls.fold<DateTime?>(
+                        null,
+                        (a, b) => a == null || b.isAfter(a) ? b : a,
+                      );
+                  final late = status != 'done' && due!.isBefore(now);
+                  final review =
+                      status == 'in_review' &&
+                      submitted != null &&
+                      now.difference(submitted.date('createdAt')!) > stale;
+                  final quiet =
+                      [
+                        'todo',
+                        'in_progress',
+                        'needs_revision',
+                      ].contains(status) &&
+                      last != null &&
+                      now.difference(last) > stale;
+                  if (late) overdue++;
+                  if (review) pending++;
+                  if (quiet) idle++;
+                  // One row per task, by priority: overdue, review, idle.
+                  if (late) {
+                    attention.add((
+                      0,
+                      due,
+                      row(task, division, 'overdue', now.difference(due)),
+                    ));
+                  } else if (review) {
+                    final at = submitted.date('createdAt')!;
+                    attention.add((
+                      1,
+                      at,
+                      row(task, division, 'review_pending', now.difference(at)),
+                    ));
+                  } else if (quiet) {
+                    attention.add((
+                      2,
+                      last,
+                      row(task, division, 'idle', now.difference(last)),
+                    ));
+                  }
+                }
+                return {
+                  'id': project['id'],
+                  'title': project['title'],
+                  'dueAt': project['dueAt'],
+                  'total': list.length,
+                  'done': list.where((t) => t['status'] == 'done').length,
+                  'inReview': list
+                      .where((t) => t['status'] == 'in_review')
+                      .length,
+                  'overdue': overdue,
+                  'idle': idle,
+                  'reviewPending': pending,
+                };
+              }(),
+          ],
+        },
+    ];
+    attention.sort((a, b) => a.$1 != b.$1 ? a.$1 - b.$1 : a.$2.compareTo(b.$2));
+    people.addAll(divisions.map((d) => d['coordinatorID'] as String));
+    return _copy({
+          'generatedAt': now.toUtc().toIso8601String(),
+          'divisions': divisions,
+          'attention': [for (final item in attention.take(50)) item.$3],
+          'users': [
+            for (final id in people)
+              if (user(id) case final person?)
+                {'id': id, 'name': person['name'], 'tint': person['tint']},
+          ],
+        })
+        as JsonMap;
+  }
+
+  static List<JsonMap> _submissions(JsonMap task) =>
+      (task['submissions'] as List).cast<JsonMap>();
 }

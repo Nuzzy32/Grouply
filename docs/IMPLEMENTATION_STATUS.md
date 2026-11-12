@@ -79,6 +79,36 @@ Review tambahan menutup pesan gagal yang terlihat lintas persona, koordinator de
 - Lima interleaving dua worker direproduksi sebagai deadlock pada `050000`, lalu **5/5 lulus** pada `060000`: assignment/member mutation dan deletion/moderation dismissed/removed bagi pelapor aktif/mantan anggota. Actor memakai `FOR NO KEY UPDATE`; deletion mengunci konten sebelum sync/trigger membership/blokir. Ini regresi kasus terarah, bukan uji beban atau bukti bebas seluruh deadlock. Fresh database replay tidak dijalankan.
 - Tes HTTP lokal **5 skenario lulus** setelah memperbaiki serialization `reviews.reviewer_id` nullable menjadi string kosong pada migration additive `070000`; semua fixture terhapus (`cleanup_failures: 0`). Offline self-check script juga lulus. `070000` diterapkan incrementally setelah suite SQL 54 checks, workflow 40 notices, dan race 5/5 dijalankan; lint tidak menemukan schema errors.
 
+## Reminder bertahap dan penanda tugas mandek — 12 November 2026
+
+- Flutter saja (client SwiftUI tetap H-1 dan tidak diubah): local notification H-3 dan H-1 untuk tugas milik sendiri, plus nudge "Belum ada kabar 2 hari" 48 jam setelah aktivitas terakhir task (submission atau pesan di thread task). Chip **Tanpa kabar N hari** di kartu/detail task dan hitungan di Group Pulse coordinator. Tanpa perubahan schema atau migration.
+- Verifikasi: `flutter analyze` bersih dan **131 tes Flutter lulus**. Notifikasi di perangkat/emulator nyata belum diuji. Nudge hanya sampai ke perangkat assignee sendiri karena push server belum ada.
+
+## Organization Plan Tahap 1 — backend lokal, 12 November 2026
+
+- Migration `20261112071535_organizations.sql`: tabel `organizations`/`organization_roles` (tanpa akses langsung), `groups.organization_id`, aksi `createOrganization`/`updateOrganization`/`createDivision`/`setOrgRole`/`transferKetua`, kursi per orang unik pada `joinGroup`, undangan multi-pakai (`maxUses` 1–200) hanya untuk divisi organisasi aktif, trigger `group_members_org_guard`, snapshot `organizations[]` + `groups[].organizationID`, RPC `grouply_org_overview`, dan RPC operator `grouply_billing` (service_role saja). `private.mutate` dan `mutate_workflow` didefinisikan ulang dari salinan persis versi sebelumnya; hanya blok yang dicatat di header migration yang berubah.
+- Verifikasi lokal:
+  - Suite SQL: `workflow` **40 PASS**, `milestone_e` **54 PASS** (sama dengan sebelum migration), dan `organization` **66 PASS**, semuanya rollback.
+  - Uji kunci: `moderation_local.py check-locks` 5/5 dan `billing_local.py check-locks` 6/6. Keenamnya mencakup kursi terakhir, dua Kadiv mengeluarkan ketua, `setOrgRole` vs keluar divisi, dan tiga interleaving `deleteAccount`.
+  - Uji mutasi: menghapus kunci organisasi di trigger membuat 2 dari 6 uji kunci gagal; setelah dipulihkan, semuanya lulus lagi.
+  - `backend_local.py smoke` HTTP tiga akun lulus. Advisors (warn) dan lint bersih.
+- Client Flutter (branch `claude/happy-moser-cf5b16`, commit `f97c0c7`):
+  - Bagian Organisasi di tab Grup, layar Organisasi, Dashboard, atur jabatan, dan banner paket tidak aktif.
+  - Pilihan undangan 1/10/30/100 untuk divisi aktif.
+  - Peta kode error server (P0001) ke pesan Indonesia.
+- Verifikasi Flutter: `flutter analyze` bersih; `flutter test` **141 lulus** dengan 3 tes opt-in localhost dilewati. Dengan `GROUPLY_LOCAL_INTEGRATION=1`, ketiganya lulus terhadap backend lokal yang sudah dimigrasi, dua kali berturut-turut. Tes organisasi baru mencakup:
+  - pendiri baru per run;
+  - batas paket tidak aktif;
+  - aktivasi lewat RPC operator;
+  - divisi, undangan multi-pakai, dan hitungan kursi;
+  - jabatan dan penolakan non-ketua;
+  - Dashboard dan penolakan staf;
+  - tugas selesai;
+  - jabatan hilang saat keluar sendiri;
+  - hapus akun pendiri tunggal.
+- Batas yang diketahui: picker "Atur jabatan" hanya menampilkan orang yang satu divisi dengan Ketua, karena `users` di snapshot dibatasi `profile_visible`. Client SwiftUI tidak mengenal organisasi.
+- Belum ada bukti cloud, perangkat nyata, atau uji beban. Fresh database replay tidak dijalankan; migration diterapkan incremental pada database lokal yang ada.
+
 ## Target cloud dan rilis yang belum tersedia
 
 Belum tersedia/terverifikasi: deployment cloud, provider Apple nyata dan pencabutan token Apple, Realtime Group Chat lintas perangkat fisik, APNs/pengingat lokal, domain/AASA/Universal Links, operator moderasi production dan kebijakan retention. Penghapusan akun password server dan CLI moderasi tersedia lokal, bukan bukti readiness Apple/App Review. Source migration aktual ada di `supabase/migrations`; DDL dokumen produk mencakup target yang lebih luas. Tidak ada proyek cloud atau database production yang diubah. Gate cloud/TestFlight tetap belum dicentang.
