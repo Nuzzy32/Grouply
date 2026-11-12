@@ -276,6 +276,28 @@ void main() {
   );
 
   test(
+    'an overtaken refresh resolves only after the newer state applies',
+    () async {
+      backend.actor = 'u1';
+      await store.initialize();
+      final older = Completer<JsonMap>(), newer = Completer<JsonMap>();
+      backend.read = () => older.future;
+      final first = store.refresh();
+      backend.read = () => newer.future;
+      final second = store.refresh();
+      var resolved = false;
+      unawaited(first.then((_) => resolved = true));
+      older.complete(cloudSnapshot('u1', name: 'Old'));
+      await Future<void>.delayed(Duration.zero);
+      expect(resolved, isFalse);
+      newer.complete(cloudSnapshot('u1', name: 'New'));
+      await first;
+      expect(store.user('u1')!.text('name'), 'New');
+      await second;
+    },
+  );
+
+  test(
     'sign-out invalidates in-flight snapshots across account boundaries',
     () async {
       backend.actor = 'u1';

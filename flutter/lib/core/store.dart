@@ -55,6 +55,8 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
   Timer? _refreshTimer;
   int _generation = 0;
   int _snapshotOrder = 0;
+  // Completes when the newest explicit or realtime refresh has finished.
+  Future<void>? _newestRefresh;
   bool _disposed = false,
       _initialized = false,
       _active = true,
@@ -292,12 +294,22 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
     }
     final generation = _generation, order = ++_snapshotOrder;
     final actor = _backend.currentUserID;
+    final done = Completer<void>();
+    _newestRefresh = done.future;
     try {
       final snapshot = await _backend.snapshot();
       if (_disposed ||
           generation != _generation ||
           order != _snapshotOrder ||
           actor != _backend.currentUserID) {
+        // Overtaken by a newer refresh: resolve only once its state is applied,
+        // so callers never read data older than when they asked.
+        final newer = _newestRefresh;
+        if (order != _snapshotOrder &&
+            newer != null &&
+            !identical(newer, done.future)) {
+          await newer;
+        }
         return;
       }
       if (snapshot['currentUserID'] != actor) {
@@ -316,6 +328,8 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
         _notify();
       }
       rethrow;
+    } finally {
+      done.complete();
     }
   }
 
