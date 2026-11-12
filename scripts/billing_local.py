@@ -22,22 +22,30 @@ def attempt(action, payload):
 
 def check_locks():
     run = uuid.uuid4().hex[:8]
-    k, c1, c2, x, y, m, d, z, w = users = [str(uuid.uuid4()) for _ in range(9)]
-    org_a, org_b, org_c, org_e = orgs = [str(uuid.uuid4()) for _ in range(4)]
-    a1, a2, b1, b2, cg, e1, e2 = groups = [str(uuid.uuid4()) for _ in range(7)]
+    k, c1, c2, x, y, m, d, z, w, fk, fc, fr, fd, fb, fl, fq = users = [str(uuid.uuid4()) for _ in range(16)]
+    org_a, org_b, org_c, org_e, org_f = orgs = [str(uuid.uuid4()) for _ in range(5)]
+    a1, a2, b1, b2, cg, e1, e2, f1 = groups = [str(uuid.uuid4()) for _ in range(8)]
+    ap1, ap2, ap3, proj = [str(uuid.uuid4()) for _ in range(4)]
     listed = lambda ids: ",".join("'" + i + "'" for i in ids)
     setup = f"""
       BEGIN;
       INSERT INTO auth.users(id,raw_user_meta_data) SELECT id::uuid,'{{"name":"Billing lock fixture"}}' FROM unnest(ARRAY[{listed(users)}]) id;
       INSERT INTO public.organizations(id,name,seat_limit,plan_expires_at) VALUES
-        ('{org_a}','Lock A',4,now()+interval '1 day'),('{org_b}','Lock B',0,NULL),('{org_c}','Lock C',0,NULL),('{org_e}','Lock E',0,NULL);
+        ('{org_a}','Lock A',4,now()+interval '1 day'),('{org_b}','Lock B',0,NULL),('{org_c}','Lock C',0,NULL),('{org_e}','Lock E',0,NULL),
+        ('{org_f}','Lock F',50,now()+interval '1 day');
       INSERT INTO public.groups(id,name,coordinator_id,organization_id) VALUES
         ('{a1}','A1','{c1}','{org_a}'),('{a2}','A2','{c2}','{org_a}'),('{b1}','B1','{c1}','{org_b}'),('{b2}','B2','{c2}','{org_b}'),
-        ('{cg}','C1','{k}','{org_c}'),('{e1}','E1','{k}','{org_e}'),('{e2}','E2','{c1}','{org_e}');
+        ('{cg}','C1','{k}','{org_c}'),('{e1}','E1','{k}','{org_e}'),('{e2}','E2','{c1}','{org_e}'),('{f1}','F1','{fc}','{org_f}');
       INSERT INTO public.group_members VALUES
         ('{a1}','{c1}'),('{a1}','{k}'),('{a2}','{c2}'),('{b1}','{c1}'),('{b1}','{k}'),('{b2}','{c2}'),('{b2}','{k}'),
-        ('{cg}','{k}'),('{cg}','{m}'),('{e1}','{k}'),('{e1}','{d}'),('{e1}','{z}'),('{e2}','{c1}'),('{e2}','{d}'),('{e2}','{w}');
-      INSERT INTO public.organization_roles SELECT id::uuid,'{k}','ketua' FROM unnest(ARRAY[{listed(orgs)}]) id;
+        ('{cg}','{k}'),('{cg}','{m}'),('{e1}','{k}'),('{e1}','{d}'),('{e1}','{z}'),('{e2}','{c1}'),('{e2}','{d}'),('{e2}','{w}'),
+        ('{f1}','{fk}'),('{f1}','{fc}'),('{f1}','{fr}'),('{f1}','{fd}'),('{f1}','{fb}'),('{f1}','{fl}'),('{f1}','{fq}');
+      INSERT INTO public.organization_roles SELECT id::uuid,'{k}','ketua' FROM unnest(ARRAY[{listed(orgs[:4])}]) id;
+      INSERT INTO public.organization_roles VALUES ('{org_f}','{fk}','ketua'),('{org_f}','{fb}','bph');
+      INSERT INTO public.projects(id,group_id,title,due_at,lead_id) VALUES ('{proj}','{f1}','Sie lock',now()+interval '30 days','{fl}');
+      INSERT INTO public.approvals(id,organization_id,group_id,requester_id,title,note) VALUES
+        ('{ap1}','{org_f}','{f1}','{fr}','Lock 1','x'),('{ap2}','{org_f}','{f1}','{fd}','Lock 2','x'),('{ap3}','{org_f}','{f1}','{fq}','Lock 3','x');
+      INSERT INTO public.approval_steps(approval_id,position,approver_id) VALUES ('{ap1}',1,'{fk}'),('{ap2}',1,'{fk}'),('{ap3}',1,'{fb}');
       INSERT INTO private.invitations(group_id,token_hash,max_uses) VALUES
         ('{a1}',extensions.digest('lock-{run}-a1','sha256'),5),('{a2}',extensions.digest('lock-{run}-a2','sha256'),5);
       COMMIT;
@@ -47,6 +55,9 @@ def check_locks():
       DELETE FROM public.organization_roles WHERE organization_id IN ({listed(orgs)});
       DELETE FROM public.chat_messages WHERE group_id IN ({listed(groups)});
       DELETE FROM public.activity_events WHERE group_id IN ({listed(groups)});
+      DELETE FROM public.approvals WHERE organization_id IN ({listed(orgs)});
+      DELETE FROM public.tasks WHERE project_id IN (SELECT id FROM public.projects WHERE group_id IN ({listed(groups)}));
+      DELETE FROM public.projects WHERE group_id IN ({listed(groups)});
       DELETE FROM private.invitations WHERE group_id IN ({listed(groups)});
       DELETE FROM public.group_members WHERE group_id IN ({listed(groups)});
       DELETE FROM public.groups WHERE id IN ({listed(groups)});
@@ -73,6 +84,20 @@ def check_locks():
          d, ("deleteAccount", {}), "COMMIT;", '"deleted": true', None),
         ("deleteAccount then setOrgRole in the same organization", d, ("deleteAccount", {}), '"deleted": true',
          k, ("setOrgRole", {"organizationID": org_e, "userID": w, "role": "pembina"}), "ROLLBACK;", "{}", None),
+        # Tahap 2: approvals and project leads.
+        ("coordinator removes the requester while an approver decides", fc, ("removeMember", {"groupID": f1, "userID": fr}), "{}",
+         fk, ("decideApproval", {"id": ap1, "approve": True}), "COMMIT;", "error:approval_closed",
+         f"SELECT status='lapsed' FROM public.approvals WHERE id='{ap1}';"),
+        ("requester deletes the account while an approver decides", fd, ("deleteAccount", {}), '"deleted": true',
+         fk, ("decideApproval", {"id": ap2, "approve": True}), "COMMIT;", "error:approval_closed",
+         f"SELECT status='lapsed' AND requester_id IS NULL FROM public.approvals WHERE id='{ap2}';"),
+        ("ketua revokes an approver's role while they decide", fk, ("setOrgRole", {"organizationID": org_f, "userID": fb, "role": None}), "{}",
+         fb, ("decideApproval", {"id": ap3, "approve": True}), "COMMIT;", "error:forbidden",
+         f"SELECT a.status='pending' AND s.decision IS NULL FROM public.approvals a JOIN public.approval_steps s ON s.approval_id=a.id WHERE a.id='{ap3}';"),
+        ("project lead creates a task while being removed", fc, ("removeMember", {"groupID": f1, "userID": fl}), "{}",
+         fl, ("createTask", {"projectID": proj, "title": "Telat", "assigneeID": fq, "reviewerID": fc, "dueAt": "2030-01-01T00:00:00Z"}),
+         "COMMIT;", "error:forbidden",
+         f"SELECT NOT EXISTS(SELECT 1 FROM public.tasks WHERE project_id='{proj}') AND (SELECT lead_id IS NULL FROM public.projects WHERE id='{proj}');"),
     ]
     sql(setup)
     failures = []

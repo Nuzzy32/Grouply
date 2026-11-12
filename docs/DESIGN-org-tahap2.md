@@ -1,6 +1,6 @@
 # Desain Teknis — Organization Plan Tahap 2 (Kerja harian organisasi)
 
-Status: **disetujui 12 November 2026** (kesembilan rekomendasi di bagian 8). Acuan produk: [PRD-organization-plan.md](PRD-organization-plan.md) (ORG-07 s.d. ORG-11). Dibangun di atas [Tahap 1](DESIGN-org-tahap1.md). Client: Flutter saja. Backend: Supabase lokal yang sama.
+Status: **disetujui 12 November 2026** (kesembilan rekomendasi di bagian 8). Backend diimplementasikan di `supabase/migrations/20261112133033_org_work.sql` dan teruji di localhost (`supabase/tests/organization_work.sql`, `scripts/billing_local.py check-locks`). Acuan produk: [PRD-organization-plan.md](PRD-organization-plan.md) (ORG-07 s.d. ORG-11). Dibangun di atas [Tahap 1](DESIGN-org-tahap1.md). Client: Flutter saja. Backend: Supabase lokal yang sama.
 
 > PRD bagian 8 meminta wawancara 5–8 pengurus sebelum Tahap 2 dibangun, dan itu belum dilakukan. Semua aturan di bawah masih dugaan terbaik, jadi dibuat sesederhana mungkin supaya murah diubah setelah pilot.
 
@@ -119,7 +119,8 @@ create index announcement_reads_user on public.announcement_reads(user_id);
 - Tidak ada lampiran. Pengajuan memakai tautan HTTPS (maks 5) dengan `private.valid_links`, sama seperti submission.
 - Hapus akun: kolom pelaku di-`SET NULL`; baris kehadiran dan tanda baca milik akun itu ikut terhapus. Tidak ada FK baru yang menghalangi `deleteAccount`.
 - Grup yang kosong setelah hapus akun tetap menyimpan rapat dan pengumumannya. Tidak ada yang bisa melihatnya; tidak dibersihkan.
-- Aksi baru tidak menulis `activity_events`.
+- Aksi rapat dan `setProjectLead` menulis `activity_events` (dipakai juga untuk batas 30 tulisan rapat per jam per grup). Aksi persetujuan dan pengumuman tidak.
+- Nama di daftar tingkat organisasi (`requesterName`, `steps[].name`, `authorName`): id kosong dan nama "Anggota terhapus" untuk akun yang dihapus; "Anggota" untuk orang yang diblokir pelihat.
 
 ## 3. Hak akses
 
@@ -255,8 +256,8 @@ Tetap satu urutan: **profil → grup (urut `id`) → organisasi (urut `id`, `FOR
 | Jalur | Urutan |
 |---|---|
 | Rapat, `setProjectLead`, pengumuman grup | profil → grup (`FOR UPDATE`) → [pengumuman: sync] |
-| Pengumuman organisasi, `cancelApproval` | profil → organisasi → sync |
-| `requestApproval`, `decideApproval` | profil → grup asal → organisasi → sync |
+| Pengumuman organisasi | profil → organisasi → sync |
+| `requestApproval`, `decideApproval`, `cancelApproval` | profil → grup asal → organisasi → sync |
 | Keluar/dikeluarkan/hapus akun | tidak berubah; `lapsed` terjadi di bawah kunci organisasi yang sudah diambil trigger |
 
 - Semua aksi persetujuan dalam satu organisasi berurutan di kunci organisasi, jadi baris `approvals` tidak dikunci sendiri. (Penyederhanaan: kunci per pengajuan baru diperlukan kalau throughput jadi masalah.)
