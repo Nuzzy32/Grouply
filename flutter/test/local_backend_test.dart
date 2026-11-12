@@ -797,4 +797,329 @@ void main() {
         : false,
     timeout: const Timeout(Duration(minutes: 2)),
   );
+
+  test(
+    'local organization plan tahap 2: committee, lead, meeting, approval, announcement',
+    () async {
+      var stage = 'private local configuration';
+      final stores = <GrouplyStore>[];
+      final backends = <SupabaseGrouplyBackend>[];
+      addTearDown(() async {
+        for (final backend in backends) {
+          await backend.disconnect().timeout(const Duration(seconds: 5));
+        }
+        for (final store in stores) {
+          store.dispose();
+        }
+      });
+      try {
+        final environment = Platform.environment;
+        final path =
+            environment['GROUPLY_LOCAL_ACCOUNTS_PATH'] ??
+            '${environment['HOME']}/Library/Application Support/'
+                'GrouplyDevelopment/accounts.json';
+        final fixture = jsonDecode(await File(path).readAsString()) as JsonMap;
+        final url = fixture['url'] as String;
+        final key = fixture['publishableKey'] as String;
+        _check(
+          url == 'http://127.0.0.1:55321' || url == 'http://localhost:55321',
+          'Only loopback HTTP port 55321 is allowed.',
+        );
+        SharedPreferences.setMockInitialValues({});
+        GrouplyStore open() {
+          final backend = SupabaseGrouplyBackend(
+            url: url,
+            anonKey: key,
+            client: SupabaseClient(
+              url,
+              key,
+              authOptions: AuthClientOptions(pkceAsyncStorage: _MemoryPKCE()),
+            ),
+            sessionStorage: _MemorySession(),
+          );
+          backends.add(backend);
+          final store = GrouplyStore(backend: backend);
+          stores.add(store);
+          return store;
+        }
+
+        stage = 'fresh founder sign-up and two existing accounts';
+        final founder = open(), alex = open(), raka = open();
+        for (final store in stores) {
+          await store.initialize();
+        }
+        final label = 'Kerja lokal ${DateTime.now().microsecondsSinceEpoch}';
+        _check(
+          await founder.signUp(
+            'Uji Kerja',
+            'flutter-work-${DateTime.now().microsecondsSinceEpoch}@example.test',
+            'Org-${_messageID()}',
+          ),
+          'Founder sign-up failed.',
+        );
+        final accounts = fixture['accounts'] as JsonMap;
+        for (final (store, name) in [(alex, 'alex'), (raka, 'raka')]) {
+          final account = accounts[name] as JsonMap;
+          await store.signIn(
+            account['email'] as String,
+            account['password'] as String,
+          );
+        }
+        final org = (await founder.mutate('createOrganization', {
+          'name': label,
+        })).text('id');
+
+        stage = 'operator plan activation';
+        final status = await Process.run('supabase', [
+          'status',
+          '-o',
+          'json',
+        ], workingDirectory: '..');
+        _check(status.exitCode == 0, 'Local Supabase status is unavailable.');
+        final local = jsonDecode(status.stdout as String) as JsonMap;
+        _check(
+          Uri.parse(local['API_URL'] as String).port == 55321,
+          'Only the Grouply local stack may be activated.',
+        );
+        final service = local['SERVICE_ROLE_KEY'] as String;
+        final http = HttpClient();
+        addTearDown(() => http.close(force: true));
+        final request = await http.postUrl(
+          Uri.parse('$url/rest/v1/rpc/grouply_billing'),
+        );
+        request.headers
+          ..set('apikey', service)
+          ..set('Authorization', 'Bearer $service')
+          ..contentType = ContentType.json;
+        request.write(
+          jsonEncode({
+            'action': 'activatePlan',
+            'payload': {
+              'organizationID': org,
+              'seatLimit': 5,
+              'expiresAt': DateTime.now()
+                  .toUtc()
+                  .add(const Duration(days: 30))
+                  .toIso8601String(),
+            },
+          }),
+        );
+        final response = await request.close();
+        await response.drain<void>();
+        _check(response.statusCode == 200, 'Plan activation was rejected.');
+        await founder.refresh();
+
+        // The founder leads the committee so the persistent accounts can leave
+        // afterwards and the founder can delete the account as the last member.
+        stage = 'committee across divisions';
+        final committee = (await founder.mutate('createDivision', {
+          'organizationID': org,
+          'name': 'Panitia Seminar',
+          'committee': true,
+        })).text('id');
+        final invite = await founder.mutate('generateInvite', {
+          'groupID': committee,
+          'maxUses': 10,
+        });
+        for (final store in [alex, raka]) {
+          await store.mutate('joinGroup', {
+            'code': (invite['invite'] as JsonMap).text('code'),
+          });
+        }
+        await founder.mutate('setOrgRole', {
+          'organizationID': org,
+          'userID': raka.currentUserID,
+          'role': 'bph',
+        });
+        _check(
+          alex.isCommittee(alex.group(committee)) &&
+              (alex.organization(org)?['divisions'] as List).any(
+                (row) =>
+                    (row as Map)['id'] == committee &&
+                    row['isCommittee'] == true,
+              ),
+          'Committee flag is missing from the snapshot.',
+        );
+
+        stage = 'project lead';
+        final due = DateTime.now()
+            .toUtc()
+            .add(const Duration(days: 7))
+            .toIso8601String();
+        final sie = (await founder.mutate('createProject', {
+          'groupID': committee,
+          'title': 'Sie Publikasi',
+          'dueAt': due,
+        })).text('id');
+        await founder.mutate('setProjectLead', {
+          'projectID': sie,
+          'userID': alex.currentUserID,
+        });
+        await alex.refresh();
+        _check(
+          alex.canManageTasks(alex.project(sie)),
+          'Project lead cannot manage tasks.',
+        );
+        final first = (await alex.mutate('createTask', {
+          'projectID': sie,
+          'title': 'Poster',
+          'description': '',
+          'assigneeID': raka.currentUserID,
+          'reviewerID': alex.currentUserID,
+          'dueAt': due,
+        })).text('id');
+
+        stage = 'meeting minutes, attendance and a task from the meeting';
+        final meeting = (await founder.mutate('createMeeting', {
+          'groupID': committee,
+          'title': 'Rapat perdana',
+          'startsAt': DateTime.now()
+              .toUtc()
+              .subtract(const Duration(hours: 1))
+              .toIso8601String(),
+          'place': 'Sekre',
+          'agenda': 'Pembagian sie',
+          'noteTakerID': alex.currentUserID,
+        })).text('id');
+        await alex.refresh();
+        await alex.mutate('recordMeeting', {
+          'id': meeting,
+          'expectedVersion': 1,
+          'minutes': 'Poster dikerjakan Raka.',
+          'attendance': [
+            {'userID': alex.currentUserID, 'status': 'hadir'},
+            {'userID': raka.currentUserID, 'status': 'izin'},
+            {'userID': founder.currentUserID, 'status': 'hadir'},
+          ],
+        });
+        final detail = await alex.meetingDetail(meeting);
+        _check(
+          detail.text('minutes') == 'Poster dikerjakan Raka.' &&
+              (detail['attendance'] as List).length == 3,
+          'Meeting detail does not match the recorded minutes.',
+        );
+        final second = (await alex.mutate('createTask', {
+          'projectID': sie,
+          'title': 'Banner',
+          'description': '',
+          'assigneeID': raka.currentUserID,
+          'reviewerID': alex.currentUserID,
+          'dueAt': due,
+          'meetingID': meeting,
+        })).text('id');
+        await founder.refresh();
+        final listed = founder.meetings.firstWhere(
+          (row) => row.text('id') == meeting,
+        );
+        _check(
+          listed['status'] == 'done' &&
+              listed.number('present') == 2 &&
+              (listed['taskIDs'] as List).contains(second),
+          'Meeting summary is not in the snapshot.',
+        );
+
+        stage = 'two-step approval';
+        final approval = (await alex.mutate('requestApproval', {
+          'groupID': committee,
+          'title': 'Dana publikasi',
+          'note': 'Cetak poster dan banner.',
+          'amount': 500000,
+          'links': ['https://example.org/rab'],
+          'approverIDs': [raka.currentUserID, founder.currentUserID],
+        })).text('id');
+        await raka.refresh();
+        _check(
+          raka.pendingForMe(org).any((row) => row.text('id') == approval),
+          'First approver does not see the request.',
+        );
+        await raka.mutate('decideApproval', {
+          'id': approval,
+          'approve': true,
+          'note': '',
+        });
+        await founder.refresh();
+        await founder.mutate('decideApproval', {
+          'id': approval,
+          'approve': true,
+          'note': '',
+        });
+        await expectLater(
+          raka.mutate('decideApproval', {
+            'id': approval,
+            'approve': true,
+            'note': '',
+          }),
+          throwsA(
+            isA<GrouplyException>().having(
+              (e) => e.message,
+              'message',
+              contains('Pengajuan ini sudah diputuskan'),
+            ),
+          ),
+        );
+        await alex.refresh();
+        final decided = (alex.organization(org)?['approvals'] as List)
+            .cast<JsonMap>()
+            .firstWhere((row) => row.text('id') == approval);
+        _check(
+          decided['status'] == 'approved' && decided.number('amount') == 500000,
+          'Approval did not close as approved.',
+        );
+
+        stage = 'announcement read receipts';
+        final post = (await founder.mutate('postAnnouncement', {
+          'organizationID': org,
+          'title': 'Rapat pleno',
+          'body': 'Semua hadir Sabtu.',
+        })).text('id');
+        await alex.refresh();
+        _check(
+          alex.unreadAnnouncements(org).any((row) => row.text('id') == post),
+          'Announcement is not unread for a member.',
+        );
+        await alex.mutate('markAnnouncementRead', {'id': post});
+        await founder.refresh();
+        final sent = (founder.organization(org)?['announcements'] as List)
+            .cast<JsonMap>()
+            .firstWhere((row) => row.text('id') == post);
+        _check(
+          sent.number('readCount') == 2 && sent.number('audienceCount') == 3,
+          'Read counts do not match.',
+        );
+
+        // Finish both tasks so the persistent accounts hold no assignments.
+        stage = 'cleanup';
+        for (final task in [first, second]) {
+          await raka.mutate('startTask', {'id': task, 'expectedVersion': 1});
+          await raka.mutate('submitWork', {
+            'taskID': task,
+            'note': 'Selesai',
+            'links': <String>[],
+            'expectedVersion': 2,
+          });
+          await alex.mutate('review', {
+            'taskID': task,
+            'approve': true,
+            'feedback': 'Oke',
+            'expectedVersion': 3,
+          });
+        }
+        await alex.mutate('leaveGroup', {'id': committee});
+        await raka.mutate('leaveGroup', {'id': committee});
+        await founder.mutate('deleteAccount', {});
+        _check(!founder.authenticated, 'Founder account was not removed.');
+        debugPrint(
+          'PASS: committee; project lead tasks; meeting minutes, attendance, '
+          'meeting task; two-step approval + closed mapping; announcement '
+          'read counts; cleanup.',
+        );
+      } catch (_) {
+        fail('Local tahap 2 flow failed during $stage; details suppressed.');
+      }
+    },
+    skip: Platform.environment['GROUPLY_LOCAL_INTEGRATION'] != '1'
+        ? 'Opt in with GROUPLY_LOCAL_INTEGRATION=1; existing localhost backend only.'
+        : false,
+    timeout: const Timeout(Duration(minutes: 2)),
+  );
 }

@@ -1177,6 +1177,14 @@ class _ProjectState extends _WorkspaceState<ProjectScreen> {
           'Mengerti',
           info: true,
         );
+      case 'completed' when !_coordinator(store, group):
+        // Reopening is a project action: coordinator only.
+        await _ask(
+          'Proyek sudah selesai',
+          'Proyek ini sudah selesai. Minta koordinator membuka kembali proyek untuk menambah tugas.',
+          'Mengerti',
+          info: true,
+        );
       case 'completed':
         if (await _ask(
               'Proyek sudah selesai',

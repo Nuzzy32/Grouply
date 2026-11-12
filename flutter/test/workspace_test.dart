@@ -941,9 +941,10 @@ void main() {
         expect(find.byKey(const Key('org-approvals')), findsOneWidget);
         expect(find.byKey(const Key('org-announcements')), findsOneWidget);
         await _show(tester, ApprovalsScreen(store: store, orgID: 'o1'));
+        // u1 also coordinates g1, so "Semua" stays even without a role.
         expect(
           find.byKey(const Key('approvals-tab-all')),
-          shown(role.isNotEmpty),
+          findsOneWidget,
           reason: role,
         );
         await _show(tester, AnnouncementsScreen(store: store, orgID: 'o1'));
@@ -1398,8 +1399,8 @@ void main() {
       expect(find.text('Rapat pleno ditiadakan'), findsOneWidget);
       expect(find.text('Belum dibaca'), findsOneWidget);
       await _tap(tester, 'Rapat pleno ditiadakan');
-      // Ketua sees counts: 7 recipients minus the author, Raka has read.
-      expect(find.text('1 dari 6 sudah baca'), findsOneWidget);
+      // Ketua sees counts over all 7 recipients; author Nadia and Raka read.
+      expect(find.text('2 dari 7 sudah baca'), findsOneWidget);
       // Unread names only for people sharing a group with Alex (g1, g2).
       expect(find.text('Dimas'), findsOneWidget);
       expect(find.text('Sinta'), findsOneWidget);
@@ -1409,7 +1410,7 @@ void main() {
       expect(store.calls.last.action, 'markAnnouncementRead');
       expect(store.calls.last.payload, {'id': 'n1'});
       expect(find.text('Sudah kamu baca.'), findsOneWidget);
-      expect(find.text('2 dari 6 sudah baca'), findsOneWidget);
+      expect(find.text('3 dari 7 sudah baca'), findsOneWidget);
       // Ketua may withdraw an org-wide announcement.
       expect(find.byKey(const Key('announcement-delete')), findsOneWidget);
       await _settleToasts(tester);
@@ -1464,6 +1465,197 @@ void main() {
       expect(find.byType(AnnouncementScreen), findsNothing);
       expect(find.text('Libur rapat'), findsNothing);
       await _settleToasts(tester);
+    });
+
+    testWidgets('meeting edit waits for its detail and adopts newer versions', (
+      tester,
+    ) async {
+      await seed();
+      tester.view.physicalSize = const Size(800, 1800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      store.demo.meetingGate = Completer<void>();
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: GLTheme.data,
+          home: MeetingScreen(store: store, meetingID: 'm1'),
+        ),
+      );
+      await tester.pump();
+      // pumpAndSettle would spin forever on the loading indicator.
+      Future<void> step() async {
+        for (var i = 0; i < 10; i++) {
+          await tester.pump(const Duration(milliseconds: 100));
+        }
+      }
+
+      await tester.tap(_labelled('Aksi rapat'));
+      await step();
+      await tester.tap(find.byKey(const Key('meeting-edit')));
+      await step();
+      // Detail not loaded yet: no sheet, so no empty agenda can be sent.
+      expect(find.byKey(const Key('meeting-title')), findsNothing);
+      expect(store.calls, isEmpty);
+      store.demo.meetingGate!.complete();
+      store.demo.meetingGate = null;
+      await tester.pumpAndSettle();
+      final agenda = find.descendant(
+        of: find.byKey(const Key('meeting-agenda')),
+        matching: find.byType(EditableText),
+      );
+      expect(
+        tester.widget<EditableText>(agenda).controller.text,
+        'Evaluasi ERD',
+      );
+
+      // Someone else saves first: the save is refused, typing is kept.
+      store.demo.meetings.first['version'] = 2;
+      await _fill(tester, find.byKey(const Key('meeting-agenda')), 'Baru');
+      await _tapOn(tester, find.byKey(const Key('meeting-save')));
+      expect(store.calls.last.payload['expectedVersion'], 1);
+      expect(store.calls.last.payload['agenda'], 'Baru');
+      expect(find.textContaining('baru diubah orang lain'), findsOneWidget);
+      expect(tester.widget<EditableText>(agenda).controller.text, 'Baru');
+      // The second save uses the version read from grouply_meeting.
+      await _tapOn(tester, find.byKey(const Key('meeting-save')));
+      expect(store.calls.last.action, 'updateMeeting');
+      expect(store.calls.last.payload['expectedVersion'], 2);
+      expect(find.byKey(const Key('meeting-title')), findsNothing);
+      await _settleToasts(tester);
+      expect(find.text('Baru'), findsOneWidget);
+    });
+
+    testWidgets('a coordinator who is not an officer sees their approvals', (
+      tester,
+    ) async {
+      await seed();
+      // Laras (pembina) asks in g3, which Bima coordinates.
+      await signInAs(tester, 'u7');
+      await store.mutate('requestApproval', {
+        'groupID': 'g3',
+        'title': 'Sewa proyektor',
+        'note': 'Untuk presentasi survei.',
+        'approverIDs': ['u6'],
+      });
+      await signInAs(tester, 'u6');
+      expect(store.orgRole('o1'), '');
+      await _show(tester, ApprovalsScreen(store: store, orgID: 'o1'));
+      expect(find.text('Sewa proyektor'), findsOneWidget); // waits on Bima
+      await _tapOn(tester, find.byKey(const Key('approvals-tab-all')));
+      expect(find.text('Sewa proyektor'), findsOneWidget);
+      // Approvals of groups Bima does not lead stay hidden.
+      expect(find.text('Dana cetak poster'), findsNothing);
+      // Staff without a group to lead gets no "Semua" tab.
+      await signInAs(tester, 'u5');
+      await _show(tester, ApprovalsScreen(store: store, orgID: 'o1'));
+      expect(find.byKey(const Key('approvals-tab-all')), findsNothing);
+    });
+
+    testWidgets('form limits: committee cap and nominal format', (
+      tester,
+    ) async {
+      await seed();
+      for (var i = 0; i < 30; i++) {
+        store.demo.groups.add({
+          'id': 'k$i',
+          'name': 'Panitia $i',
+          'description': '',
+          'course': '',
+          'memberIDs': ['u7'],
+          'coordinatorID': 'u7',
+          'tint': '#DED2FF',
+          'icon': 'person.3',
+          'organizationID': 'o1',
+          'isCommittee': true,
+        });
+      }
+      await store.refresh();
+      await _show(tester, OrganizationScreen(store: store, orgID: 'o1'));
+      await _tapOn(tester, find.byKey(const Key('org-add-committee')));
+      await _fill(tester, find.byKey(const Key('division-name')), 'Panitia X');
+      await _tapOn(tester, find.byKey(const Key('org-save')));
+      expect(
+        find.textContaining('maksimal punya 30 kepanitiaan'),
+        findsOneWidget,
+      );
+      await _settleToasts(tester);
+
+      store.calls.clear();
+      await _show(tester, GroupScreen(store: store, groupID: 'g1'));
+      await _tapOn(tester, find.byKey(const Key('approval-request')));
+      await _fill(tester, find.byKey(const Key('approval-title')), 'Dana');
+      await _fill(tester, find.byKey(const Key('approval-note')), 'Konsumsi.');
+      await _tapOn(tester, find.byKey(const Key('approver-u3')));
+      for (final bad in ['1,5 juta', '1.50.000', 'Rp 1000']) {
+        await _fill(tester, find.byKey(const Key('approval-amount')), bad);
+        await _tapOn(tester, find.byKey(const Key('approval-save')));
+        expect(
+          find.textContaining('Nominal hanya angka'),
+          findsOneWidget,
+          reason: bad,
+        );
+      }
+      expect(store.calls, isEmpty);
+      await _fill(
+        tester,
+        find.byKey(const Key('approval-amount')),
+        '1.500.000',
+      );
+      await _tapOn(tester, find.byKey(const Key('approval-save')));
+      expect(store.calls.single.payload['amount'], 1500000);
+      await _settleToasts(tester);
+    });
+
+    testWidgets('a koordinator sie is not offered project actions', (
+      tester,
+    ) async {
+      await seed();
+      store.demo.project('p3')!['leadID'] = 'u2'; // completed sie
+      await signInAs(tester, 'u2');
+      await _show(tester, ProjectScreen(store: store, projectID: 'p3'));
+      await _tapOn(tester, find.byKey(const ValueKey('add-task')));
+      expect(
+        find.textContaining('Minta koordinator membuka kembali'),
+        findsOneWidget,
+      );
+      expect(find.text('Buka kembali proyek'), findsNothing);
+      await _tap(tester, 'Mengerti');
+      expect(store.calls, isEmpty);
+    });
+
+    testWidgets('dashboard groups committees and counts pending approvals', (
+      tester,
+    ) async {
+      await seed();
+      await store.mutate('createDivision', {
+        'organizationID': 'o1',
+        'name': 'Panitia Dies',
+        'committee': true,
+      });
+      await _show(tester, OrgDashboardScreen(store: store, orgID: 'o1'));
+      expect(find.text('Kepanitiaan'), findsOneWidget);
+      expect(find.text('Panitia Dies'), findsOneWidget);
+      expect(find.text('Ketua pelaksana: Alex'), findsOneWidget);
+      expect(find.text('1 pengajuan tertahan'), findsOneWidget);
+      expect(find.text('Terlama menunggu 3 hari'), findsOneWidget);
+      await _tapOn(tester, find.byKey(const Key('dashboard-approvals')));
+      expect(find.byType(ApprovalsScreen), findsOneWidget);
+    });
+
+    testWidgets('a held but unrecorded meeting is not the next meeting', (
+      tester,
+    ) async {
+      await seed();
+      store.demo.meetings.first['startsAt'] = DateTime.now()
+          .subtract(const Duration(hours: 2))
+          .toUtc()
+          .toIso8601String();
+      await store.refresh();
+      await _show(tester, GroupScreen(store: store, groupID: 'g1'));
+      expect(find.text('Belum ada rapat terjadwal.'), findsOneWidget);
+      expect(find.text('Rapat mingguan'), findsOneWidget);
+      expect(find.text('Belum dinotulenkan'), findsOneWidget);
     });
 
     testWidgets('Tahap 2 screens render in dark mode', (tester) async {

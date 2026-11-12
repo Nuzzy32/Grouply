@@ -856,6 +856,50 @@ void main() {
       expect(backend.snapshots, before);
     });
 
+    test('rate limits name their own limit per action', () {
+      String text(String action) =>
+          GrouplyStore.codeText('rate_limited', action);
+      expect(
+        text('requestApproval'),
+        startsWith('Maksimal 5 pengajuan terbuka'),
+      );
+      expect(text('postAnnouncement'), contains('5 per jam'));
+      for (final action in [
+        'createMeeting',
+        'updateMeeting',
+        'cancelMeeting',
+        'recordMeeting',
+      ]) {
+        expect(text(action), contains('30 perubahan rapat'), reason: action);
+      }
+      expect(
+        text('sendMessage'),
+        'Terlalu banyak permintaan. Coba lagi sebentar.',
+      );
+    });
+
+    test('forbidden on a task action reloads; elsewhere it does not', () async {
+      backend.actor = 'u1';
+      await store.initialize();
+      backend.write = (_, _) async =>
+          throw const PostgrestException(message: 'forbidden', code: 'P0001');
+      for (final (action, reloads) in [
+        ('createTask', true),
+        ('updateTask', true),
+        ('reassignTask', true),
+        ('reopenTask', true),
+        ('updateProject', false),
+      ]) {
+        final before = backend.snapshots;
+        await expectLater(
+          store.mutate(action, {}),
+          throwsA(isA<GrouplyException>()),
+        );
+        await Future<void>.delayed(const Duration(milliseconds: 200));
+        expect(backend.snapshots, before + (reloads ? 1 : 0), reason: action);
+      }
+    });
+
     test('meeting detail decodes, maps codes and rejects bad shapes', () async {
       backend.actor = 'u1';
       await store.initialize();

@@ -1817,9 +1817,7 @@ class DemoBackend implements GrouplyBackend {
     final team = _demoMember(project.text('groupID'));
     if (team.text('coordinatorID') != _actor &&
         project.text('leadID') != _actor) {
-      _demoFail(
-        'Hanya koordinator atau koordinator sie yang dapat melakukan tindakan ini.',
-      );
+      throw _code('forbidden');
     }
     return team;
   }
@@ -1949,8 +1947,8 @@ class DemoBackend implements GrouplyBackend {
         () {
           final author = row.text('authorID');
           final reads = (row['reads'] as List).cast<String>();
-          // ponytail: the author is not counted as a recipient of their own post.
-          final audience = _audience(row)..remove(author);
+          // Like the server, the author is a recipient (and has read it).
+          final audience = _audience(row);
           final counts = author == _actor || _officer(org, _actor);
           return {
             'id': row['id'],
@@ -2016,8 +2014,12 @@ class DemoBackend implements GrouplyBackend {
     ];
   }
 
+  /// When set, `meetingDetail` waits for it (slow network in widget tests).
+  Completer<void>? meetingGate;
+
   @override
   Future<JsonMap> meetingDetail(String id) async {
+    await meetingGate?.future;
     final row = _find(meetings, id);
     if (row == null ||
         !(group(row.text('groupID'))?.ids('memberIDs').contains(_actor) ??
@@ -2342,7 +2344,7 @@ class DemoBackend implements GrouplyBackend {
           'title': _input(payload, 'title', 120),
           'body': _input(payload, 'body', 2000),
           'createdAt': stamp,
-          'reads': <String>[],
+          'reads': <String>[actor],
         });
         return {'id': id};
       case 'deleteAnnouncement':
@@ -2436,7 +2438,7 @@ class DemoBackend implements GrouplyBackend {
       'title': 'Rapat pleno ditiadakan',
       'body': 'Silakan rapat per divisi minggu ini.',
       'createdAt': at(const Duration(hours: -5)),
-      'reads': ['u2'],
+      'reads': ['u3', 'u2'],
     });
   }
 

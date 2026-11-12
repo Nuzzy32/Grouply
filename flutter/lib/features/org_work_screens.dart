@@ -158,13 +158,17 @@ List<Widget> _groupWorkSection(_WorkspaceState state, JsonMap group) {
   final groupID = group.text('id');
   final coord = _coordinator(store, group);
   final active = _activeDivision(store, group);
-  final next =
+  final scheduled =
       store.meetings
           .where(
             (m) => m.text('groupID') == groupID && m['status'] == 'scheduled',
           )
           .toList()
         ..sort((a, b) => a.text('startsAt').compareTo(b.text('startsAt')));
+  bool past(JsonMap m) => m.date('startsAt')!.isBefore(store.now);
+  final next = scheduled.where((m) => !past(m)).toList();
+  // Meetings already held but not yet recorded, newest first.
+  final unrecorded = scheduled.where(past).toList().reversed.take(3).toList();
   return [
     Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -201,6 +205,10 @@ List<Widget> _groupWorkSection(_WorkspaceState state, JsonMap group) {
           )
         else
           _workList([_meetingRow(state, next.first)]),
+        if (unrecorded.isNotEmpty) ...[
+          SizedBox(height: 10),
+          _workList([for (final m in unrecorded) _meetingRow(state, m)]),
+        ],
         SizedBox(height: 10),
         Row(
           children: [
@@ -379,7 +387,10 @@ Widget _meetingRow(_WorkspaceState state, JsonMap meeting) {
     title: meeting.text('title'),
     subtitle: '${_when(start)}${place.isEmpty ? '' : ' · $place'}',
     chips: [
-      _smallChip(_meetingStatus(status)),
+      if (status == 'scheduled' && start.isBefore(store.now))
+        _smallChip(('Belum dinotulenkan', GLTheme.butter))
+      else
+        _smallChip(_meetingStatus(status)),
       if (status == 'done')
         GLChip(
           label:
@@ -544,6 +555,22 @@ class _MeetingState extends _WorkspaceState<MeetingScreen>
     await _load();
   }
 
+  bool _current() =>
+      detail != null &&
+      detail!['version'] == store.meeting(widget.meetingID)?['version'];
+
+  /// Detail whose version matches the snapshot, so a sheet never mixes
+  /// stale agenda/minutes with a newer title or version. Reloads once.
+  Future<JsonMap?> _freshDetail() async {
+    if (!_current()) await reload();
+    if (mounted && _current()) return detail;
+    feedback(
+      'Detail rapat belum termuat. Coba lagi sebentar.',
+      kind: GLToastKind.err,
+    );
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: store,
@@ -655,7 +682,7 @@ class _MeetingState extends _WorkspaceState<MeetingScreen>
                 ? _orgPill(
                     detail.text('minutes').isEmpty ? 'Isi notulen' : 'Ubah',
                     start.isAfter(store.now) ? 'lock' : 'square.and.pencil',
-                    () => _record(meeting, group, detail),
+                    () => _record(meeting, group),
                     key: Key('meeting-record'),
                   )
                 : null,
@@ -764,13 +791,16 @@ class _MeetingState extends _WorkspaceState<MeetingScreen>
     ];
   }
 
-  Future<void> _record(JsonMap meeting, JsonMap group, JsonMap detail) async {
+  Future<void> _record(JsonMap meeting, JsonMap group) async {
     if (meeting.date('startsAt')!.isAfter(store.now)) {
       return feedback(
         'Notulen bisa diisi setelah rapat dimulai.',
         kind: GLToastKind.err,
       );
     }
+    final detail = await _freshDetail();
+    if (detail == null || !mounted) return;
+    meeting = store.meeting(widget.meetingID) ?? meeting;
     await showGLSheet<JsonMap>(
       context,
       title: 'Notulen',
@@ -838,7 +868,14 @@ class _MeetingState extends _WorkspaceState<MeetingScreen>
     if (!mounted || pick == null) return;
     final fresh = store.meeting(widget.meetingID) ?? meeting;
     if (pick == 'edit') {
-      await _scheduleMeeting(this, group, meeting: fresh, detail: detail);
+      final detail = await _freshDetail();
+      if (detail == null || !mounted) return;
+      await _scheduleMeeting(
+        this,
+        group,
+        meeting: store.meeting(widget.meetingID) ?? fresh,
+        detail: detail,
+      );
     } else if (await confirm(
           'Batalkan rapat?',
           '${fresh.text('title')} tidak bisa dijadwalkan ulang. Buat rapat baru bila perlu.',
@@ -852,6 +889,24 @@ class _MeetingState extends _WorkspaceState<MeetingScreen>
       }, success: 'Rapat dibatalkan');
     }
   }
+}
+
+/// Error text for a meeting sheet. After `stale_version` the sheet adopts
+/// the newest version (typed text stays) and says what happened, so a
+/// second save is a deliberate overwrite.
+Future<String> _staleText(
+  GrouplyStore store,
+  String meetingID,
+  Object failure,
+  void Function(int version) adopt,
+) async {
+  if ('$failure' != GrouplyStore.codeText('stale_version')) return '$failure';
+  try {
+    adopt((await store.meetingDetail(meetingID)).number('version').toInt());
+  } catch (_) {
+    return '$failure';
+  }
+  return 'Rapat ini baru diubah orang lain. Isianmu masih di sini: buka layar rapat untuk melihat versi terbarunya, atau simpan lagi untuk menimpanya.';
 }
 
 /// Create/edit sheet (§4.1 `createMeeting` / `updateMeeting`).
@@ -883,7 +938,8 @@ class _MeetingSheetState extends State<_MeetingSheet> {
       }();
   late String noteTaker = widget.meeting?.text('noteTakerID') ?? '';
   // Captured on open so a concurrent edit surfaces as stale_version.
-  late final int version = widget.meeting?.number('version').toInt() ?? 0;
+  // From `grouply_meeting`, the same read as the agenda shown here.
+  late int version = widget.detail?.number('version').toInt() ?? 0;
   String? error;
   bool saving = false;
 
@@ -975,7 +1031,12 @@ class _MeetingSheetState extends State<_MeetingSheet> {
       );
       Navigator.of(context).pop(result);
     } catch (e) {
-      if (mounted) setState(() => error = '$e');
+      final text = meeting == null
+          ? '$e'
+          : await _staleText(widget.store, meeting.text('id'), e, (v) {
+              version = v;
+            });
+      if (mounted) setState(() => error = text);
     } finally {
       if (mounted) setState(() => saving = false);
     }
@@ -1144,7 +1205,7 @@ class _MinutesSheetState extends State<_MinutesSheet> {
       if (widget.group.ids('memberIDs').contains(row.text('userID')))
         row.text('userID'): row.text('status'),
   };
-  late final int version = widget.meeting.number('version').toInt();
+  late int version = widget.detail.number('version').toInt();
   String? error;
   bool saving = false;
 
@@ -1174,7 +1235,13 @@ class _MinutesSheetState extends State<_MinutesSheet> {
       showGLToast(context, 'Notulen disimpan');
       Navigator.of(context).pop();
     } catch (e) {
-      if (mounted) setState(() => error = '$e');
+      final text = await _staleText(
+        widget.store,
+        widget.meeting.text('id'),
+        e,
+        (v) => version = v,
+      );
+      if (mounted) setState(() => error = text);
     } finally {
       if (mounted) setState(() => saving = false);
     }
@@ -1360,13 +1427,20 @@ class _ApprovalSheetState extends State<_ApprovalSheet> {
     void fail(String text) => setState(() => error = text);
     final name = title.text.trim();
     final body = note.text.trim();
-    final rawAmount = amount.text.replaceAll(RegExp(r'[^0-9]'), '');
+    final typed = amount.text.trim();
+    final rawAmount = typed.replaceAll('.', '');
     final urls = [
       for (final line in links.text.split('\n'))
         if (line.trim().isNotEmpty) line.trim(),
     ];
     if (name.isEmpty) return fail('Judul pengajuan wajib diisi.');
     if (body.isEmpty) return fail('Uraian wajib diisi.');
+    if (typed.isNotEmpty &&
+        !RegExp(r'^(\d+|\d{1,3}(\.\d{3})+)$').hasMatch(typed)) {
+      return fail(
+        'Nominal hanya angka, dengan titik sebagai pemisah ribuan (contoh 1.500.000).',
+      );
+    }
     if (rawAmount.length > 12) return fail('Nominal terlalu besar.');
     if (urls.length > 5 ||
         urls.any((u) => !u.toLowerCase().startsWith('https://'))) {
@@ -1517,7 +1591,15 @@ class _ApprovalsState extends _WorkspaceState<ApprovalsScreen>
       if (org == null) {
         return GLAccessDenied(text: 'Kamu bukan anggota organisasi ini.');
       }
-      final officer = store.orgRole(widget.orgID).isNotEmpty;
+      // Officers see every approval; a coordinator gets those of the groups
+      // they lead (the server already filters what it sends).
+      final officer =
+          store.orgRole(widget.orgID).isNotEmpty ||
+          store.groups.any(
+            (g) =>
+                g.text('organizationID') == widget.orgID &&
+                _coordinator(store, g),
+          );
       final all = store.approvals(widget.orgID);
       final tabs = [
         ('mine', 'Menunggu saya', store.pendingForMe(widget.orgID)),

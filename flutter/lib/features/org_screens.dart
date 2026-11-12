@@ -240,10 +240,14 @@ class _OrgFormSheet extends StatefulWidget {
     required this.submit,
     required this.success,
     this.note,
+    this.failureText,
   });
   final GrouplyStore store;
   final String action, submit, success;
   final String? note;
+
+  /// Rewrites the store's error text for this form, e.g. to name a limit.
+  final String Function(String message)? failureText;
   final List<_OrgInput> inputs;
   final JsonMap Function(List<String> values) payload;
   @override
@@ -289,7 +293,10 @@ class _OrgFormSheetState extends State<_OrgFormSheet> {
       showGLToast(context, widget.success);
       Navigator.of(context).pop(result);
     } catch (e) {
-      if (mounted) setState(() => error = e.toString());
+      final text = e.toString();
+      if (mounted) {
+        setState(() => error = widget.failureText?.call(text) ?? text);
+      }
     } finally {
       if (mounted) setState(() => saving = false);
     }
@@ -799,6 +806,11 @@ class _OrgState extends _WorkspaceState<OrganizationScreen>
         note: committee
             ? 'Kamu jadi koordinator kepanitiaan ini. Undang panitia dari divisi mana pun, lalu serahkan peran koordinator ke ketua pelaksana. Proyek di kepanitiaan tampil sebagai Sie.'
             : 'Kamu jadi koordinator divisi ini. Undang anggotanya, lalu serahkan peran koordinator ke Kadiv lewat menu anggota.',
+        failureText: committee
+            ? (text) => text == GrouplyStore.codeText('invalid_input')
+                  ? 'Kepanitiaan belum dapat dibuat. Nama 3–40 karakter, dan satu organisasi maksimal punya 30 kepanitiaan.'
+                  : text
+            : null,
         submit: committee ? 'Buat kepanitiaan' : 'Buat divisi',
         success: '$kind dibuat',
       ),
@@ -1186,8 +1198,17 @@ class _OrgDashboardState extends _WorkspaceState<OrgDashboardScreen>
           ),
         ],
       ),
-      GLSectionHeading(title: 'Divisi'),
-      for (final division in divisions) _divisionCard(division, data),
+      ..._dashboardApprovals(),
+      for (final (title, committee) in [
+        ('Divisi', false),
+        ('Kepanitiaan', true),
+      ])
+        if (divisions.any((d) => (d['isCommittee'] == true) == committee)) ...[
+          GLSectionHeading(title: title),
+          for (final division in divisions)
+            if ((division['isCommittee'] == true) == committee)
+              _divisionCard(division, data),
+        ],
       GLSectionHeading(title: 'Perlu perhatian'),
       if (attention.isEmpty)
         GLNotice(
@@ -1205,6 +1226,33 @@ class _OrgDashboardState extends _WorkspaceState<OrgDashboardScreen>
             ],
           ),
         ),
+    ];
+  }
+
+  /// Pending approvals come from the snapshot, not the overview (§4.7).
+  List<Widget> _dashboardApprovals() {
+    final pending = [
+      for (final a in store.approvals(widget.orgID))
+        if (a['status'] == 'pending') a,
+    ];
+    if (pending.isEmpty) return [];
+    final oldest = pending
+        .map((a) => a.date('createdAt')!)
+        .reduce((a, b) => a.isBefore(b) ? a : b);
+    final days = store.now.difference(oldest).inDays;
+    return [
+      _workList([
+        _workRow(
+          key: Key('dashboard-approvals'),
+          icon: 'checkmark.seal',
+          tint: GLTheme.butter,
+          title: '${pending.length} pengajuan tertahan',
+          subtitle: days > 0
+              ? 'Terlama menunggu $days hari'
+              : 'Semua diajukan hari ini',
+          onTap: () => open(ApprovalsScreen(store: store, orgID: widget.orgID)),
+        ),
+      ]),
     ];
   }
 
@@ -1229,7 +1277,7 @@ class _OrgDashboardState extends _WorkspaceState<OrgDashboardScreen>
           ),
           SizedBox(height: 2),
           Text(
-            'Kadiv: ${kadiv.isEmpty ? 'belum ada' : _person(data, kadiv)}',
+            '${division['isCommittee'] == true ? 'Ketua pelaksana' : 'Kadiv'}: ${kadiv.isEmpty ? 'belum ada' : _person(data, kadiv)}',
             style: gl(13, w400, 0, GLTheme.text3),
           ),
           if (projects.isEmpty) ...[

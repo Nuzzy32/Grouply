@@ -385,13 +385,22 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
       if (generation == _generation) {
         // A closed approval/meeting or a stale version means the card on
         // screen is out of date: reload so it disappears (Tahap 2 §5.1).
+        // A koordinator sie who was just revoked gets `forbidden` on task
+        // actions; reloading hides the task buttons they no longer have.
         if (failure is PostgrestException &&
             failure.code == 'P0001' &&
-            const [
-              'approval_closed',
-              'meeting_closed',
-              'stale_version',
-            ].contains(failure.message)) {
+            (const [
+                  'approval_closed',
+                  'meeting_closed',
+                  'stale_version',
+                ].contains(failure.message) ||
+                (failure.message == 'forbidden' &&
+                    const [
+                      'createTask',
+                      'updateTask',
+                      'reassignTask',
+                      'reopenTask',
+                    ].contains(action)))) {
           _scheduleRefresh();
         }
         if (_backend.currentUserID == null) {
@@ -532,6 +541,10 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
+  /// [serverMessage] for a bare server code, so screens can recognise it.
+  static String codeText(String code, [String action = '']) =>
+      serverMessage(PostgrestException(message: code, code: 'P0001'), action)!;
+
   /// Indonesian text for an error the server raised on purpose
   /// (`raise exception '<code>'`, SQLSTATE P0001). Null for anything else,
   /// such as a network failure where the change may already be saved.
@@ -566,6 +579,18 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
       'rate_limited'
           when action == 'createOrganization' || action == 'transferKetua' =>
         'Satu orang maksimal menjadi ketua di 3 organisasi.',
+      'rate_limited' when action == 'requestApproval' =>
+        'Maksimal 5 pengajuan terbuka. Batalkan atau tunggu keputusan pengajuan sebelumnya.',
+      'rate_limited' when action == 'postAnnouncement' =>
+        'Batas pengumuman tercapai: 5 per jam untuk seluruh organisasi, 10 per jam per grup. Coba lagi nanti.',
+      'rate_limited'
+          when const [
+            'createMeeting',
+            'updateMeeting',
+            'cancelMeeting',
+            'recordMeeting',
+          ].contains(action) =>
+        'Batas 30 perubahan rapat per jam untuk grup ini tercapai. Coba lagi nanti.',
       'rate_limited' => 'Terlalu banyak permintaan. Coba lagi sebentar.',
       'forbidden' => 'Kamu tidak punya izin untuk tindakan ini.',
       'invalid_input' => 'Data tidak valid. Periksa isian lalu coba lagi.',
