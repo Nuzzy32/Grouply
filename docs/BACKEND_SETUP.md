@@ -45,11 +45,27 @@ Tes integrasi native membaca path akun lokal melalui scheme environment `GROUPLY
 Migration canonical ada di `supabase/migrations/`. Jangan menyalin contoh DDL dari dokumen produk sebagai migration kedua.
 
 ```sh
-docker exec -i supabase_db_Grouply psql -U postgres -d postgres \
-  -v ON_ERROR_STOP=1 < supabase/tests/workflow.sql
+for suite in workflow milestone_e organization; do
+  docker exec -i supabase_db_Grouply psql -U postgres -d postgres \
+    -v ON_ERROR_STOP=1 < supabase/tests/$suite.sql
+done
+python3 scripts/moderation_local.py check-locks
+python3 scripts/billing_local.py check-locks
 supabase db advisors --local --type all --level warn --fail-on warn
 supabase db lint --local
 ```
+
+### Organization Plan (lokal)
+
+Paket organisasi diaktifkan manual oleh operator; tidak ada payment gateway. Skrip hanya untuk localhost dan tidak mencetak kredensial:
+
+```sh
+python3 scripts/billing_local.py list
+python3 scripts/billing_local.py activate <organization-id> --seats 150 --until 2027-08-31
+python3 scripts/billing_local.py deactivate <organization-id>
+```
+
+`--until` berarti akhir hari itu (23:59 WIB). Paket berakhir mengembalikan organisasi ke batas gratis (8 anggota per divisi, tanpa Dashboard dan divisi baru); data dan pekerjaan berjalan tidak dihapus. Desain lengkap: `docs/DESIGN-org-tahap1.md`.
 
 Suite SQL memakai transaksi rollback untuk fixture. `supabase db reset --local --no-seed` hanya untuk database lokal Grouply yang datanya boleh dihapus; reset akan menghapus akun dan grup pengujian lokal. Setelah reset jalankan `setup` lagi.
 

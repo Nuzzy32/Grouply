@@ -13,87 +13,94 @@ import uuid
 from backend_local import local_status, request
 
 
-def check_locks():
-    root = Path(__file__).resolve().parents[1]
-    command = ["docker", "exec", "-i", "supabase_db_Grouply", "psql", "-U", "postgres", "-d", "postgres",
-               "-X", "-A", "-t", "-q", "-v", "ON_ERROR_STOP=1"]
+# Two-session helpers for deterministic local lock tests (also used by billing_local.py).
+ROOT_DIR = Path(__file__).resolve().parents[1]
+COMMAND = ["docker", "exec", "-i", "supabase_db_Grouply", "psql", "-U", "postgres", "-d", "postgres",
+           "-X", "-A", "-t", "-q", "-v", "ON_ERROR_STOP=1"]
 
-    def sql(statement):
-        result = subprocess.run(command, input=statement, cwd=root, capture_output=True, text=True, timeout=12)
-        if result.returncode:
-            raise RuntimeError("Local lock-test SQL failed: " + result.stderr.strip())
-        return result.stdout.strip()
 
-    class Session:
-        def __init__(self):
-            self.process = subprocess.Popen(command, cwd=root, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                            stderr=subprocess.STDOUT, text=True, bufsize=1)
-            self.lines = Queue()
+def sql(statement):
+    result = subprocess.run(COMMAND, input=statement, cwd=ROOT_DIR, capture_output=True, text=True, timeout=12)
+    if result.returncode:
+        raise RuntimeError("Local lock-test SQL failed: " + result.stderr.strip())
+    return result.stdout.strip()
 
-            def collect():
-                for line in self.process.stdout:
-                    self.lines.put(line.rstrip())
-                self.lines.put(None)
 
-            self.reader = Thread(target=collect, daemon=True)
-            self.reader.start()
-            self.pid = int(self.run("BEGIN; SET LOCAL statement_timeout='4s'; SET LOCAL deadlock_timeout='100ms'; SELECT pg_backend_pid();")[-1])
+class Session:
+    def __init__(self):
+        self.process = subprocess.Popen(COMMAND, cwd=ROOT_DIR, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                        stderr=subprocess.STDOUT, text=True, bufsize=1)
+        self.lines = Queue()
 
-        def send(self, statement):
-            marker = "finished_" + uuid.uuid4().hex
-            self.process.stdin.write(statement + "\nSELECT '" + marker + "';\n")
-            self.process.stdin.flush()
-            return marker
+        def collect():
+            for line in self.process.stdout:
+                self.lines.put(line.rstrip())
+            self.lines.put(None)
 
-        def receive(self, marker):
-            output = []
-            deadline = time.monotonic() + 7
-            while time.monotonic() < deadline:
-                try:
-                    line = self.lines.get(timeout=max(0.01, deadline - time.monotonic()))
-                except Empty:
-                    break
-                if line == marker:
-                    return output
-                if line is None:
-                    raise RuntimeError("Lock-test session failed: " + " ".join(output))
-                if line:
-                    output.append(line)
-            raise RuntimeError("Lock-test session timed out")
+        self.reader = Thread(target=collect, daemon=True)
+        self.reader.start()
+        self.pid = int(self.run("BEGIN; SET LOCAL statement_timeout='4s'; SET LOCAL deadlock_timeout='100ms'; SELECT pg_backend_pid();")[-1])
 
-        def run(self, statement):
-            return self.receive(self.send(statement))
+    def send(self, statement):
+        marker = "finished_" + uuid.uuid4().hex
+        self.process.stdin.write(statement + "\nSELECT '" + marker + "';\n")
+        self.process.stdin.flush()
+        return marker
 
-        def close(self):
-            if self.process.poll() is None:
-                try:
-                    self.process.stdin.write("ROLLBACK;\n\\q\n")
-                    self.process.stdin.flush()
-                except (BrokenPipeError, OSError):
-                    pass
-                try:
-                    self.process.wait(timeout=8)
-                except subprocess.TimeoutExpired:
-                    self.process.kill()
-                    self.process.wait(timeout=3)
-            self.reader.join(timeout=1)
-
-    def blocked(waiter, holder):
-        deadline = time.monotonic() + 2
+    def receive(self, marker):
+        output = []
+        deadline = time.monotonic() + 7
         while time.monotonic() < deadline:
-            if sql(f"SELECT {holder.pid}=ANY(pg_blocking_pids({waiter.pid}));") == "t":
-                return
-            time.sleep(0.02)
-        raise RuntimeError("Expected lock interleaving was not reached")
+            try:
+                line = self.lines.get(timeout=max(0.01, deadline - time.monotonic()))
+            except Empty:
+                break
+            if line == marker:
+                return output
+            if line is None:
+                raise RuntimeError("Lock-test session failed: " + " ".join(output))
+            if line:
+                output.append(line)
+        raise RuntimeError("Lock-test session timed out")
 
+    def run(self, statement):
+        return self.receive(self.send(statement))
+
+    def close(self):
+        if self.process.poll() is None:
+            try:
+                self.process.stdin.write("ROLLBACK;\n\\q\n")
+                self.process.stdin.flush()
+            except (BrokenPipeError, OSError):
+                pass
+            try:
+                self.process.wait(timeout=8)
+            except subprocess.TimeoutExpired:
+                self.process.kill()
+                self.process.wait(timeout=3)
+        self.reader.join(timeout=1)
+
+
+def blocked(waiter, holder):
+    deadline = time.monotonic() + 2
+    while time.monotonic() < deadline:
+        if sql(f"SELECT {holder.pid}=ANY(pg_blocking_pids({waiter.pid}));") == "t":
+            return
+        time.sleep(0.02)
+    raise RuntimeError("Expected lock interleaving was not reached")
+
+
+def login(identity):
+    claims = json.dumps({"sub": identity, "role": "authenticated"})
+    return "SET LOCAL ROLE authenticated; SELECT set_config('request.jwt.claims','" + claims + "',true);"
+
+
+def mutate(action, payload):
+    return "SELECT public.grouply_mutate('" + action + "','" + json.dumps(payload) + "'::jsonb);"
+
+
+def check_locks():
     actor, coordinator, group, project, own_message, target_message, report = [str(uuid.uuid4()) for _ in range(7)]
-
-    def login(identity):
-        claims = json.dumps({"sub": identity, "role": "authenticated"})
-        return "SET LOCAL ROLE authenticated; SELECT set_config('request.jwt.claims','" + claims + "',true);"
-
-    def mutate(action, payload):
-        return "SELECT public.grouply_mutate('" + action + "','" + json.dumps(payload) + "'::jsonb);"
 
     setup = f"""
       BEGIN;
