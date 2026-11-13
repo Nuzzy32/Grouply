@@ -20,6 +20,11 @@ dependencies:
   share_plus: ^13.3.1
   flutter_local_notifications: ^22.3.2
   timezone: ^0.11.2
+  pdf: ^3.12.0
+  # Not used directly: pdf 3.12 caps archive below 4.1, but image 4.11.0 (the
+  # newest match) calls an archive 4.4 API and fails to compile. Drop once
+  # pdf allows archive >= 4.4 (pdf 3.13 needs Dart 3.12).
+  image: '>=4.1.0 <4.11.0'
 
 dev_dependencies:
   flutter_test:
@@ -30,3 +35,8 @@ flutter:
   uses-material-design: true
   assets:
     - assets/brand.png
+    # Noto Sans (SIL OFL 1.1, assets/fonts/OFL.txt) for on-device LPJ PDFs.
+    - assets/fonts/NotoSans-Regular.ttf
+    - assets/fonts/NotoSans-Bold.ttf
+    - assets/fonts/OFL.txt
+

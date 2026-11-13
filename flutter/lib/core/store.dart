@@ -407,7 +407,12 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
                   'approval_closed',
                   'meeting_closed',
                   'stale_version',
+                  'group_closed',
+                  'plan_item_used',
+                  'committee_busy',
                 ].contains(failure.message) ||
+                (failure.message == 'invalid_input' &&
+                    _handoverActions.contains(action)) ||
                 (failure.message == 'forbidden' &&
                     const [
                       'createTask',
@@ -559,6 +564,145 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
+  // MARK: - Organization Plan Tahap 3a (ORG-12..14, docs/DESIGN-org-tahap3.md §4–5)
+
+  /// A committee closed by its coordinator or the Ketua (§1.5): read-only
+  /// apart from chat, leaving, removing, handing over and reporting.
+  bool isClosed(JsonMap? group) => group?['closed'] == true;
+
+  /// Plan items of an active project not yet turned into tasks (§4.3).
+  List<JsonMap> planItems(JsonMap? project) =>
+      (project?['planItems'] as List? ?? []).cast<JsonMap>();
+
+  /// Closed periods of an organization, newest first.
+  List<JsonMap> periods(String orgID) =>
+      (organization(orgID)?['periods'] as List? ?? []).cast<JsonMap>();
+
+  /// Wraps a read-only RPC: server codes keep their text, anything else
+  /// (network, malformed reply) becomes [fallback].
+  Future<T> _read<T>(Future<T> Function() load, String fallback) async {
+    if (!authenticated) throw const GrouplyException('Masuk terlebih dahulu.');
+    try {
+      return await load();
+    } catch (failure) {
+      throw GrouplyException(serverMessage(failure) ?? fallback);
+    }
+  }
+
+  static List<JsonMap> _rows(Object? list) => [
+    for (final item in list as List) Map<String, dynamic>.from(item as Map),
+  ];
+
+  static JsonMap _checked(JsonMap row, bool valid) =>
+      valid ? row : throw const FormatException('Invalid row');
+
+  /// Template list (`grouply_templates`). Not cached.
+  Future<List<JsonMap>> templates(String orgID) => _read(() async {
+    return [
+      for (final row in await _backend.templates(orgID))
+        _checked(
+          Map<String, dynamic>.from(row),
+          row['id'] is String &&
+              row['name'] is String &&
+              row['builtIn'] is bool &&
+              row['sectionCount'] is int &&
+              row['itemCount'] is int,
+        ),
+    ];
+  }, 'Template belum dapat dimuat. Periksa koneksi lalu coba lagi.');
+
+  /// One template with sections and items (`grouply_template`). Not cached.
+  Future<JsonMap> template(String id) => _read(() async {
+    final value = await _backend.template(id);
+    final sections = _rows(value['sections']);
+    for (final section in sections) {
+      section['items'] = _rows(section['items']);
+      if (section['title'] is! String ||
+          section['offsetDays'] is! int ||
+          (section['items'] as List<JsonMap>).any(
+            (item) => item['title'] is! String || item['offsetDays'] is! int,
+          )) {
+        throw const FormatException('Invalid template');
+      }
+    }
+    if (value['name'] is! String || value['builtIn'] is! bool) {
+      throw const FormatException('Invalid template');
+    }
+    return {...value, 'sections': sections};
+  }, 'Template belum dapat dimuat. Periksa koneksi lalu coba lagi.');
+
+  /// Ketua-only list of every org group and its members
+  /// (`grouply_org_members`). Not cached.
+  Future<List<JsonMap>> orgMembers(String orgID) => _read(
+    () async {
+      return [
+        for (final raw in await _backend.orgMembers(orgID))
+          () {
+            final row = Map<String, dynamic>.from(raw);
+            final members = _rows(row['members']);
+            return _checked(
+              {...row, 'members': members},
+              row.text('groupID').isNotEmpty &&
+                  row['name'] is String &&
+                  row['isCommittee'] is bool &&
+                  row['closed'] is bool &&
+                  row['coordinatorID'] is String &&
+                  members.every(
+                    (m) => m.text('id').isNotEmpty && m['name'] is String,
+                  ),
+            );
+          }(),
+      ];
+    },
+    'Daftar anggota organisasi belum dapat dimuat. Periksa koneksi lalu coba lagi.',
+  );
+
+  /// Closed periods for officers (`grouply_org_archive`). Not cached.
+  Future<JsonMap> orgArchive(String orgID) => _read(() async {
+    final value = await _backend.orgArchive(orgID);
+    final periods = _rows(value['periods']);
+    for (final period in periods) {
+      period['projects'] = _rows(period['projects']);
+      period['committees'] = _rows(period['committees']);
+      if (period['label'] is! String || period.date('closedAt') == null) {
+        throw const FormatException('Invalid period');
+      }
+    }
+    return {...value, 'periods': periods};
+  }, 'Arsip belum dapat dimuat. Periksa koneksi lalu coba lagi.');
+
+  /// LPJ data (`grouply_report`); null [periodID] = current period, null
+  /// [projectIDs] = every project of it. Not cached.
+  Future<JsonMap> report(
+    String groupID, {
+    String? periodID,
+    List<String>? projectIDs,
+  }) => _read(() async {
+    final value = await _backend.report(
+      groupID,
+      periodID: periodID,
+      projectIDs: projectIDs,
+    );
+    final projects = _rows(value['projects']);
+    for (final project in projects) {
+      project['tasks'] = _rows(project['tasks']);
+    }
+    final approvals = value['approvals'] == null
+        ? <JsonMap>[]
+        : _rows(value['approvals']);
+    if (value['group'] is! Map || value['totals'] is! Map) {
+      throw const FormatException('Invalid report');
+    }
+    return {
+      ...value,
+      'group': Map<String, dynamic>.from(value['group'] as Map),
+      'totals': Map<String, dynamic>.from(value['totals'] as Map),
+      'projects': projects,
+      'meetings': _rows(value['meetings'] ?? []),
+      'approvals': approvals,
+    };
+  }, 'Rekap belum dapat dimuat. Periksa koneksi lalu coba lagi.');
+
   /// [serverMessage] for a bare server code, so screens can recognise it.
   static String codeText(String code, [String action = '']) =>
       serverMessage(PostgrestException(message: code, code: 'P0001'), action)!;
@@ -601,6 +745,26 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
         'Maksimal 5 pengajuan terbuka. Batalkan atau tunggu keputusan pengajuan sebelumnya.',
       'rate_limited' when action == 'postAnnouncement' =>
         'Batas pengumuman tercapai: 5 per jam untuk seluruh organisasi, 10 per jam per grup. Coba lagi nanti.',
+      'group_closed' =>
+        'Kepanitiaan ini sudah ditutup. Hanya chat, keluar, dan serah koordinator yang masih bisa.',
+      'committee_busy' =>
+        'Kepanitiaan belum bisa ditutup: masih ada tugas yang belum selesai (termasuk di sie arsip), sie aktif, atau pengajuan yang menunggu. Sie yang sudah selesai tidak perlu diarsipkan.',
+      'invalid_input' when action == 'reopenCommittee' =>
+        'Kepanitiaan belum bisa dibuka kembali: organisasi sudah punya 30 kepanitiaan aktif.',
+      'invalid_input' when action == 'setCoordinator' =>
+        'Orang itu sudah tidak menjadi anggota grup ini atau sudah menjadi koordinatornya. Daftar dimuat ulang.',
+      'invalid_input' when action == 'closePeriod' =>
+        'Label periode sekarang belum diisi, atau label periode baru kosong atau sama dengan yang sekarang.',
+      'invalid_input' when action == 'removeClosedMember' =>
+        'Orang itu sudah keluar, atau kepanitiaannya sudah dibuka kembali. Daftar dimuat ulang.',
+      'plan_item_used' =>
+        'Butir rencana ini sudah dijadikan tugas. Data dimuat ulang.',
+      'period_exists' =>
+        'Label periode itu sudah pernah ditutup. Pakai label lain.',
+      'rate_limited' when action == 'applyTemplate' =>
+        'Template paling banyak dipakai 5 kali per jam untuk satu grup. Coba lagi nanti.',
+      'rate_limited' when action == 'createTemplate' =>
+        'Organisasi ini sudah punya 50 template. Hapus template lama dulu.',
       'rate_limited'
           when const [
             'createMeeting',
@@ -616,6 +780,14 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
       _ => null,
     };
   }
+
+  /// Handover actions whose `invalid_input` means the screen is stale.
+  static const _handoverActions = [
+    'reopenCommittee',
+    'setCoordinator',
+    'closePeriod',
+    'removeClosedMember',
+  ];
 
   static const _approvalStatuses = [
     'pending',
@@ -677,6 +849,9 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
       for (final approval in approvals) {
         approval['steps'] = rows(approval['steps']);
       }
+      final periods = org['periods'] == null
+          ? <JsonMap>[]
+          : rows(org['periods']);
       if (org.text('id').isEmpty ||
           [
             'name',
@@ -700,7 +875,15 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
                 row['name'] is! String ||
                 row['memberCount'] is! int ||
                 row['isMember'] is! bool ||
-                (row['isCommittee'] != null && row['isCommittee'] is! bool),
+                (row['isCommittee'] != null && row['isCommittee'] is! bool) ||
+                (row['closed'] != null && row['closed'] is! bool),
+          ) ||
+          periods.any(
+            (row) =>
+                row.text('id').isEmpty ||
+                row['label'] is! String ||
+                (row['startedAt'] != null && row.date('startedAt') == null) ||
+                row.date('closedAt') == null,
           ) ||
           approvals.any(
             (row) =>
@@ -739,6 +922,7 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
         'divisions': divisions,
         'approvals': approvals,
         'announcements': announcements,
+        'periods': periods,
       });
     }
     return result;
@@ -882,8 +1066,36 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
         if (key == 'groups' &&
             (row['memberIDs'] is! List ||
                 (row['isCommittee'] != null && row['isCommittee'] is! bool) ||
+                (row['closed'] != null && row['closed'] is! bool) ||
                 (row['memberIDs'] as List).any((id) => id is! String))) {
           throw const FormatException('Invalid membership');
+        }
+        if (key == 'projects') {
+          // Tahap 3a keys: missing = current period, no plan items.
+          if (row['periodLabel'] != null && row['periodLabel'] is! String) {
+            throw const FormatException('Invalid project');
+          }
+          final raw = row['planItems'] ?? [];
+          if (raw is! List) throw const FormatException('Invalid plan items');
+          final items = [
+            for (final item in raw) Map<String, dynamic>.from(item as Map),
+          ];
+          if (items.any(
+            (item) =>
+                item.text('id').isEmpty ||
+                item['position'] is! int ||
+                item['title'] is! String ||
+                (item['description'] != null &&
+                    item['description'] is! String) ||
+                item.date('dueAt') == null,
+          )) {
+            throw const FormatException('Invalid plan item');
+          }
+          row['planItems'] = items
+            ..sort(
+              (a, b) => a.number('position').compareTo(b.number('position')),
+            );
+          row['periodLabel'] ??= '';
         }
         if (key == 'projects' &&
             (!['active', 'completed', 'archived'].contains(row['status']) ||
