@@ -1436,7 +1436,20 @@ void main() {
 
         // Closed committees still let members leave; the founder is then alone.
         stage = 'cleanup';
-        await alex.mutate('leaveGroup', {'id': committee});
+        // Handover tools reach the closed committee: list it, free alex's seat.
+        final members = await founder.orgMembers(org);
+        final row = members.firstWhere((g) => g['groupID'] == committee);
+        _check(
+          row['closed'] == true &&
+              (row['members'] as List).any(
+                (m) => (m as Map)['id'] == alex.currentUserID,
+              ),
+          'Handover member list misses the closed committee.',
+        );
+        await founder.mutate('removeClosedMember', {
+          'groupID': committee,
+          'userID': alex.currentUserID,
+        });
         await raka.mutate('leaveGroup', {'id': committee});
         await founder.mutate('deleteAccount', {});
         _check(!founder.authenticated, 'Founder account was not removed.');
