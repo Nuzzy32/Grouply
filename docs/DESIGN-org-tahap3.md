@@ -1,6 +1,6 @@
 # Desain Teknis — Organization Plan Tahap 3 (Alasan berlangganan tiap tahun)
 
-Status: **disetujui 13 November 2026** (kesepuluh rekomendasi di bagian 9), **belum dibangun**. Pembangunan Tahap 3a menunggu pilot berjalan; Tahap 3b (lampiran) ditunda dan butuh persetujuan terpisah. Acuan produk: [PRD-organization-plan.md](PRD-organization-plan.md) (ORG-12 s.d. ORG-15). Dibangun di atas [Tahap 1](DESIGN-org-tahap1.md) dan [Tahap 2](DESIGN-org-tahap2.md). Client: Flutter saja. Backend: Supabase yang sama.
+Status: **disetujui 13 November 2026** (kesepuluh rekomendasi di bagian 9). Pengguna meminta Tahap 3a dibangun sekarang, sebelum pilot. Tahap 3b (lampiran) ditunda dan butuh persetujuan terpisah. Acuan produk: [PRD-organization-plan.md](PRD-organization-plan.md) (ORG-12 s.d. ORG-15). Dibangun di atas [Tahap 1](DESIGN-org-tahap1.md) dan [Tahap 2](DESIGN-org-tahap2.md). Client: Flutter saja. Backend: Supabase yang sama.
 
 > PRD bagian 9 menjadwalkan Tahap 3 menjelang akhir periode kepengurusan pilot, saat serah terima dan LPJ benar-benar dibutuhkan. Pilot belum berjalan, jadi semua aturan di bawah masih dugaan. Desain ini disiapkan lebih awal supaya keputusan bisa diambil, bukan sebagai tanda untuk langsung membangun.
 
@@ -137,7 +137,18 @@ Perubahan pada aksi yang sudah ada:
 Aditif:
 - `projects[]` + `periodLabel` (`''` untuk periode berjalan) dan `planItems[]` (hanya untuk proyek aktif yang belum diarsipkan, hanya butir yang belum menjadi tugas: id, position, title, description, dueAt).
 - `groups[]` + `closed` (bool).
-- `organizations[]` + `divisions[].closed`. Kepanitiaan tertutup tidak muncul di Dashboard (`grouply_org_overview`).
+- `organizations[]` + `divisions[].closed` dan `periods[]` (periode yang sudah ditutup: id, label, startedAt, closedAt; urut terbaru dulu), supaya coordinator bisa memilih periode rekap. Kepanitiaan tertutup tidak muncul di Dashboard (`grouply_org_overview`).
+
+### 4.5 Bentuk data (kontrak untuk client)
+
+- `grouply_templates(org_id uuid)` → `[{id, name, description, builtIn, sectionCount, itemCount, createdAt, mine}]`; `mine` = dibuat pelihat.
+- `grouply_template(template_id uuid)` → `{id, name, description, builtIn, sections: [{title, description, offsetDays, items: [{title, description, offsetDays}]}]}`.
+- `sections` untuk `createTemplate`: 1–20 sie; tiap sie `title` 3–120, `description` ≤2.000 (opsional), `offsetDays` bilangan bulat −365..365, `items` 0–40; tiap butir `title` 3–120, `description` ≤2.000, `offsetDays` −365..365; total butir ≤200. Key lain → `invalid_input`.
+- `applyTemplate` → `{projectIDs: [...]}` berurutan sesuai sie.
+- `closePeriod` → `{periodID, archived}` (`archived` = jumlah proyek yang diberi label periode).
+- `grouply_org_archive(org_id uuid)` → `{periods: [{id, label, startedAt, closedAt, projects: [{id, groupID, groupName, title, dueAt, total, done}], committees: [{id, name, closedAt}]}]}`.
+- `grouply_report(group_id uuid, period_id uuid default null, project_ids uuid[] default null)` → bentuk di 4.2; `project_ids` null = semua proyek grup di periode itu (maks 20 diambil terbaru menurut deadline).
+- Kode error baru: `group_closed`, `committee_busy`, `plan_item_used`, `period_exists`.
 
 ### 4.4 Urutan kunci
 
