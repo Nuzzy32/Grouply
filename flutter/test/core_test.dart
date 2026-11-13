@@ -119,6 +119,13 @@ class FakeBackend implements GrouplyBackend {
     return templateDetail(id);
   }
 
+  Future<List<JsonMap>> Function(String id) members = (_) async => [];
+  @override
+  Future<List<JsonMap>> orgMembers(String orgID) {
+    reads.add('members:$orgID');
+    return members(orgID);
+  }
+
   Future<JsonMap> Function(String id) archive = (_) async => {};
   @override
   Future<JsonMap> orgArchive(String orgID) {
@@ -1177,7 +1184,7 @@ void main() {
       for (final (code, reloads) in [
         ('group_closed', true),
         ('plan_item_used', true),
-        ('committee_busy', false),
+        ('committee_busy', true),
         ('period_exists', false),
       ]) {
         final before = backend.snapshots;
@@ -1308,6 +1315,89 @@ void main() {
           ),
         ),
       );
+    });
+
+    test('handover invalid_input names its cause and reloads', () async {
+      for (final (action, text) in [
+        ('reopenCommittee', '30 kepanitiaan aktif'),
+        ('setCoordinator', 'sudah tidak menjadi anggota'),
+        ('closePeriod', 'label periode baru kosong'),
+        ('removeClosedMember', 'sudah keluar'),
+      ]) {
+        expect(
+          GrouplyStore.codeText('invalid_input', action),
+          contains(text),
+          reason: action,
+        );
+      }
+      expect(
+        GrouplyStore.codeText('committee_busy'),
+        contains('Sie yang sudah selesai tidak perlu diarsipkan'),
+      );
+      backend.actor = 'u1';
+      await store.initialize();
+      backend.write = (_, _) async => throw const PostgrestException(
+        message: 'invalid_input',
+        code: 'P0001',
+      );
+      for (final (action, reloads) in [
+        ('reopenCommittee', true),
+        ('setCoordinator', true),
+        ('closePeriod', true),
+        ('removeClosedMember', true),
+        ('createTask', false),
+      ]) {
+        final before = backend.snapshots;
+        await expectLater(
+          store.mutate(action, {}),
+          throwsA(isA<GrouplyException>()),
+        );
+        await Future<void>.delayed(const Duration(milliseconds: 200));
+        expect(backend.snapshots, before + (reloads ? 1 : 0), reason: action);
+      }
+    });
+
+    test('org members decode every group and reject bad shapes', () async {
+      backend.actor = 'u1';
+      await store.initialize();
+      JsonMap row({Object? closed = false, Object? members}) => {
+        'groupID': 'g9',
+        'name': 'Panitia Lama',
+        'isCommittee': true,
+        'closed': closed,
+        'coordinatorID': '',
+        'members':
+            members ??
+            [
+              {'id': 'u5', 'name': 'Sinta'},
+            ],
+      };
+      backend.members = (_) async => [row(closed: true)];
+      final rows = await store.orgMembers('o1');
+      expect(rows.single['closed'], isTrue);
+      expect((rows.single['members'] as List).single['name'], 'Sinta');
+      expect(backend.reads.last, 'members:o1');
+      for (final bad in [
+        row(closed: 'ya'),
+        row(members: 'u5'),
+        row(
+          members: [
+            {'id': 'u5'},
+          ],
+        ),
+      ]) {
+        backend.members = (_) async => [bad];
+        await expectLater(
+          store.orgMembers('o1'),
+          throwsA(
+            isA<GrouplyException>().having(
+              (e) => e.message,
+              'message',
+              startsWith('Daftar anggota organisasi belum dapat dimuat'),
+            ),
+          ),
+        );
+      }
     });
   });
 }

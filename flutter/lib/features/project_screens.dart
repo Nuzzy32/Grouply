@@ -227,12 +227,15 @@ class _ProjectState extends _WorkspaceState<ProjectScreen> {
         .length;
     return GLDetailScaffold(
       title: store.isCommittee(group) ? 'Sie' : 'Proyek',
-      trailing: GLCircleButton(
-        icon: 'ellipsis',
-        label: 'Aksi proyek',
-        iconSize: 24,
-        onTap: () => _actionsSheet(p, group),
-      ),
+      // Every project action is refused in a closed committee.
+      trailing: store.isClosed(group)
+          ? null
+          : GLCircleButton(
+              icon: 'ellipsis',
+              label: 'Aksi proyek',
+              iconSize: 24,
+              onTap: () => _actionsSheet(p, group),
+            ),
       onRefresh: () async {
         try {
           await store.refresh();
@@ -387,6 +390,11 @@ class _ProjectState extends _WorkspaceState<ProjectScreen> {
 
   // MARK: Banners & hero
 
+  /// A project labelled by a closed period stays in that archive (Tahap 3
+  /// §4.1), so it offers no restore.
+  bool _restorable(JsonMap p, JsonMap group) =>
+      p.text('periodLabel').isEmpty && !store.isClosed(group);
+
   Widget _archivedBanner(JsonMap p, JsonMap group) => Container(
     padding: EdgeInsets.symmetric(vertical: 12, horizontal: 14),
     decoration: glBox(GLTheme.chip, 18),
@@ -396,53 +404,62 @@ class _ProjectState extends _WorkspaceState<ProjectScreen> {
         GLIcon('archivebox', size: 20),
         Expanded(
           child: Text(
-            'Proyek ini telah diarsipkan. Informasi dan riwayatnya tetap dapat dilihat.',
+            p.text('periodLabel').isEmpty
+                ? 'Proyek ini telah diarsipkan. Informasi dan riwayatnya tetap dapat dilihat.'
+                : 'Proyek ini masuk arsip periode ${p.text('periodLabel')}. Informasi dan riwayatnya tetap dapat dilihat.',
             style: gl(14, w400, 0, null, 2),
           ),
         ),
         // Flexible only guards huge text sizes; normally sized like `.fixedSize()`.
-        Flexible(
-          child: GLTap(
-            onTap: () => _archive(p, group),
-            child: Container(
-              height: 44,
-              padding: EdgeInsets.symmetric(horizontal: 14),
-              alignment: Alignment.center,
-              decoration: _pjOutline,
-              child: Text(
-                'Pulihkan Proyek',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: gl(13, w600),
+        if (_restorable(p, group))
+          Flexible(
+            child: GLTap(
+              onTap: () => _archive(p, group),
+              child: Container(
+                height: 44,
+                padding: EdgeInsets.symmetric(horizontal: 14),
+                alignment: Alignment.center,
+                decoration: _pjOutline,
+                child: Text(
+                  'Pulihkan Proyek',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: gl(13, w600),
+                ),
               ),
             ),
           ),
-        ),
       ],
     ),
   );
 
   Widget _doneBanner(JsonMap p, JsonMap group, bool isCoord) {
     final text = Text(
-      'Proyek ini sudah selesai. Buka kembali proyek untuk mengubah tugas.',
+      store.isClosed(group)
+          ? 'Proyek ini sudah selesai.'
+          : 'Proyek ini sudah selesai. Buka kembali proyek untuk mengubah tugas.',
       style: gl(14, w400, 0, null, 2),
     );
-    final button = GLTap(
-      onTap: () => _reopen(p, group),
-      child: Container(
-        height: 44,
-        padding: EdgeInsets.only(left: 10, right: 14),
-        decoration: _pjOutline,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          spacing: 4,
-          children: [
-            GLIcon(isCoord ? 'arrow.counterclockwise' : 'lock', size: 17),
-            Flexible(child: Text('Buka Kembali Proyek', style: gl(13, w600))),
-          ],
-        ),
-      ),
-    );
+    final button = store.isClosed(group)
+        ? SizedBox.shrink()
+        : GLTap(
+            onTap: () => _reopen(p, group),
+            child: Container(
+              height: 44,
+              padding: EdgeInsets.only(left: 10, right: 14),
+              decoration: _pjOutline,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                spacing: 4,
+                children: [
+                  GLIcon(isCoord ? 'arrow.counterclockwise' : 'lock', size: 17),
+                  Flexible(
+                    child: Text('Buka Kembali Proyek', style: gl(13, w600)),
+                  ),
+                ],
+              ),
+            ),
+          );
     return Container(
       width: double.infinity,
       padding: EdgeInsets.symmetric(vertical: 12, horizontal: 14),
@@ -1083,17 +1100,18 @@ class _ProjectState extends _WorkspaceState<ProjectScreen> {
                             : 'checkmark.circle')
                       : 'lock',
                 ),
-                row(
-                  ctx,
-                  'archive',
-                  archived ? 'Pulihkan proyek' : 'Arsipkan proyek',
-                  archived
-                      ? 'Kembalikan ke daftar proyek'
-                      : 'Riwayat tetap tersimpan',
-                  coord
-                      ? (archived ? 'tray.and.arrow.up' : 'archivebox')
-                      : 'lock',
-                ),
+                if (!archived || _restorable(p, group))
+                  row(
+                    ctx,
+                    'archive',
+                    archived ? 'Pulihkan proyek' : 'Arsipkan proyek',
+                    archived
+                        ? 'Kembalikan ke daftar proyek'
+                        : 'Riwayat tetap tersimpan',
+                    coord
+                        ? (archived ? 'tray.and.arrow.up' : 'archivebox')
+                        : 'lock',
+                  ),
               ],
             ),
           ),

@@ -86,11 +86,12 @@ String lpjFileName(JsonMap report, String ext) {
 
 // MARK: - CSV
 
-/// One CSV cell. A leading `= + - @` gets a `'` so spreadsheets do not run
-/// it as a formula; commas, quotes and newlines are quoted.
+/// One CSV cell. A leading `= + - @`, tab or carriage return gets a `'` so
+/// spreadsheets do not run it as a formula; commas, quotes and newlines are
+/// quoted.
 String csvCell(Object? value) {
   var text = value?.toString() ?? '';
-  if (text.isNotEmpty && '=+-@'.contains(text[0])) text = "'$text";
+  if (text.isNotEmpty && '=+-@\t\r'.contains(text[0])) text = "'$text";
   if (RegExp(r'[",\r\n]').hasMatch(text)) {
     text = '"${text.replaceAll('"', '""')}"';
   }
@@ -248,7 +249,11 @@ Future<Uint8List> buildLpjPdf(LpjPdfInput input) {
           style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold),
         ),
         pw.SizedBox(height: 4),
-        pw.Text(t('${report['organization']} · Periode ${report['period']}')),
+        pw.Text(
+          t(
+            '${report['organization']}${'${report['period'] ?? ''}'.isEmpty ? '' : ' · Periode ${report['period']}'}',
+          ),
+        ),
         pw.Text(
           t(
             '${group['isCommittee'] == true ? 'Kepanitiaan' : 'Divisi'} ${group['name']} · Koordinator ${group['coordinator']}',
@@ -320,6 +325,9 @@ Future<Uint8List> buildLpjPdf(LpjPdfInput input) {
                     '${meeting['minutes']}${meeting['minutesTruncated'] == true ? ' [notulen dipotong]' : ''}',
                   ),
                   style: small,
+                  // Long minutes continue on the next page instead of
+                  // failing the whole document.
+                  overflow: pw.TextOverflow.span,
                 ),
               ),
           ],

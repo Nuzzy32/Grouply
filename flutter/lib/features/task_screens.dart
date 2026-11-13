@@ -1983,7 +1983,8 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
   Future<void> _actions(JsonMap task, JsonMap project, JsonMap group) async {
     final coord = store.canManageTasks(project);
     final status = task.text('status');
-    final active = project.text('status') == 'active';
+    // A closed committee has no active work (Tahap 3 §4.1 daftar izin).
+    final active = project.text('status') == 'active' && !store.isClosed(group);
     final lock = _taskEditLock(store, task);
     final reassignOpen =
         coord && status != 'in_review' && status != 'done' && active;

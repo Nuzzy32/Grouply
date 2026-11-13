@@ -182,6 +182,12 @@ mixin _GroupActions<T extends _WorkspaceScreen> on _WorkspaceState<T> {
         kind: GLToastKind.err,
       );
     }
+    if (store.isClosed(group)) {
+      return feedback(
+        GrouplyStore.codeText('group_closed'),
+        kind: GLToastKind.err,
+      );
+    }
     final division = _activeDivision(store, group);
     if (!division && group!.ids('memberIDs').length >= _maxMembers) {
       return feedback(
@@ -987,11 +993,15 @@ class _GroupState extends _WorkspaceState<GroupScreen>
 
     return detailPage(
       title: 'Grup',
-      trailing: GLCircleButton(
-        icon: 'gearshape',
-        label: 'Pengaturan grup',
-        onTap: _settings,
-      ),
+      // Editing, inviting and archive filters are closed with the committee;
+      // leaving stays on the members screen.
+      trailing: closed
+          ? null
+          : GLCircleButton(
+              icon: 'gearshape',
+              label: 'Pengaturan grup',
+              onTap: _settings,
+            ),
       children: [
         // Group card
         Container(

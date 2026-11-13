@@ -409,7 +409,10 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
                   'stale_version',
                   'group_closed',
                   'plan_item_used',
+                  'committee_busy',
                 ].contains(failure.message) ||
+                (failure.message == 'invalid_input' &&
+                    _handoverActions.contains(action)) ||
                 (failure.message == 'forbidden' &&
                     const [
                       'createTask',
@@ -628,6 +631,32 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
     return {...value, 'sections': sections};
   }, 'Template belum dapat dimuat. Periksa koneksi lalu coba lagi.');
 
+  /// Ketua-only list of every org group and its members
+  /// (`grouply_org_members`). Not cached.
+  Future<List<JsonMap>> orgMembers(String orgID) => _read(
+    () async {
+      return [
+        for (final raw in await _backend.orgMembers(orgID))
+          () {
+            final row = Map<String, dynamic>.from(raw);
+            final members = _rows(row['members']);
+            return _checked(
+              {...row, 'members': members},
+              row.text('groupID').isNotEmpty &&
+                  row['name'] is String &&
+                  row['isCommittee'] is bool &&
+                  row['closed'] is bool &&
+                  row['coordinatorID'] is String &&
+                  members.every(
+                    (m) => m.text('id').isNotEmpty && m['name'] is String,
+                  ),
+            );
+          }(),
+      ];
+    },
+    'Daftar anggota organisasi belum dapat dimuat. Periksa koneksi lalu coba lagi.',
+  );
+
   /// Closed periods for officers (`grouply_org_archive`). Not cached.
   Future<JsonMap> orgArchive(String orgID) => _read(() async {
     final value = await _backend.orgArchive(orgID);
@@ -719,7 +748,15 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
       'group_closed' =>
         'Kepanitiaan ini sudah ditutup. Hanya chat, keluar, dan serah koordinator yang masih bisa.',
       'committee_busy' =>
-        'Kepanitiaan belum bisa ditutup: masih ada tugas yang belum selesai, sie yang belum diarsipkan, atau pengajuan yang menunggu.',
+        'Kepanitiaan belum bisa ditutup: masih ada tugas yang belum selesai (termasuk di sie arsip), sie aktif, atau pengajuan yang menunggu. Sie yang sudah selesai tidak perlu diarsipkan.',
+      'invalid_input' when action == 'reopenCommittee' =>
+        'Kepanitiaan belum bisa dibuka kembali: organisasi sudah punya 30 kepanitiaan aktif.',
+      'invalid_input' when action == 'setCoordinator' =>
+        'Orang itu sudah tidak menjadi anggota grup ini atau sudah menjadi koordinatornya. Daftar dimuat ulang.',
+      'invalid_input' when action == 'closePeriod' =>
+        'Label periode sekarang belum diisi, atau label periode baru kosong atau sama dengan yang sekarang.',
+      'invalid_input' when action == 'removeClosedMember' =>
+        'Orang itu sudah keluar, atau kepanitiaannya sudah dibuka kembali. Daftar dimuat ulang.',
       'plan_item_used' =>
         'Butir rencana ini sudah dijadikan tugas. Data dimuat ulang.',
       'period_exists' =>
@@ -743,6 +780,14 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
       _ => null,
     };
   }
+
+  /// Handover actions whose `invalid_input` means the screen is stale.
+  static const _handoverActions = [
+    'reopenCommittee',
+    'setCoordinator',
+    'closePeriod',
+    'removeClosedMember',
+  ];
 
   static const _approvalStatuses = [
     'pending',

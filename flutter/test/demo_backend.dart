@@ -1519,6 +1519,7 @@ class DemoBackend implements GrouplyBackend {
       case 'closeCommittee':
       case 'reopenCommittee':
       case 'setCoordinator':
+      case 'removeClosedMember':
       case 'closePeriod':
         return _planMutate(action, payload);
       default:
@@ -2585,6 +2586,7 @@ class DemoBackend implements GrouplyBackend {
     'removeMember',
     'transferCoordinator',
     'setCoordinator',
+    'removeClosedMember',
     'markAnnouncementRead',
     'deleteAnnouncement',
     'reopenCommittee',
@@ -2601,8 +2603,7 @@ class DemoBackend implements GrouplyBackend {
       'createMeeting' ||
       'requestApproval' ||
       'postAnnouncement' ||
-      'applyTemplate' ||
-      'closeCommittee' => payload.text('groupID'),
+      'applyTemplate' => payload.text('groupID'),
       'updateProject' ||
       'completeProject' ||
       'reopenProject' ||
@@ -2899,6 +2900,7 @@ class DemoBackend implements GrouplyBackend {
       case 'closeCommittee':
       case 'reopenCommittee':
       case 'setCoordinator':
+      case 'removeClosedMember':
         final team = group(payload.text('groupID'));
         if (team == null) throw _code('forbidden');
         final org = _orgOf(team);
@@ -2908,10 +2910,28 @@ class DemoBackend implements GrouplyBackend {
         if (action == 'setCoordinator') {
           if (!ketua) throw _code('forbidden');
           final target = payload.text('userID');
-          if (!team.ids('memberIDs').contains(target)) {
+          if (!team.ids('memberIDs').contains(target) ||
+              team['coordinatorID'] == target) {
             throw _code('invalid_input');
           }
           team['coordinatorID'] = target;
+          return {};
+        }
+        if (action == 'removeClosedMember') {
+          if (!ketua) throw _code('forbidden');
+          final target = payload.text('userID');
+          if (team['closedAt'] == null ||
+              !team.ids('memberIDs').contains(target)) {
+            throw _code('invalid_input');
+          }
+          if (team['coordinatorID'] == target) {
+            throw _code('coordinator_transfer_required');
+          }
+          team['memberIDs'] = [
+            for (final id in team.ids('memberIDs'))
+              if (id != target) id,
+          ];
+          _afterLeave(target, team);
           return {};
         }
         if (team['isCommittee'] != true) throw _code('invalid_input');
@@ -2936,6 +2956,7 @@ class DemoBackend implements GrouplyBackend {
                 team.ids('memberIDs').contains(actor))) {
           throw _code('forbidden');
         }
+        if (team['closedAt'] != null) throw _code('invalid_input');
         final own = projects.where((row) => row['groupID'] == team['id']);
         final ownIDs = own.map((row) => row['id']).toSet();
         if (own.any((row) => row['status'] == 'active') ||
@@ -3041,6 +3062,34 @@ class DemoBackend implements GrouplyBackend {
   }
 
   @override
+  Future<List<JsonMap>> orgMembers(String orgID) async {
+    final org = _find(organizations, orgID);
+    if (org == null || _roles(org)[_actor] != 'ketua') throw _code('forbidden');
+    final rows = groups.where((row) => row['organizationID'] == orgID).toList()
+      ..sort(
+        (a, b) =>
+            (a['isCommittee'] == true ? 1 : 0) !=
+                (b['isCommittee'] == true ? 1 : 0)
+            ? (a['isCommittee'] == true ? 1 : -1)
+            : a.text('name').compareTo(b.text('name')),
+      );
+    return [
+      for (final row in rows)
+        {
+          'groupID': row['id'],
+          'name': row['name'],
+          'isCommittee': row['isCommittee'] == true,
+          'closed': row['closedAt'] != null,
+          'coordinatorID': row.text('coordinatorID'),
+          'members': [
+            for (final id in row.ids('memberIDs'))
+              {'id': id, 'name': _name(id)},
+          ],
+        },
+    ];
+  }
+
+  @override
   Future<JsonMap> template(String id) async {
     final row = _visibleTemplate(id);
     return _copy({
@@ -3123,16 +3172,10 @@ class DemoBackend implements GrouplyBackend {
     if (team == null) throw _code('forbidden');
     final org = _orgOf(team);
     final member = team.ids('memberIDs').contains(_actor);
-    final officer = _orgOfficer(org);
+    // Any org role has full access (private.report), member or not.
+    final officer = _roles(org)[_actor] != null;
     final coordinator = member && team['coordinatorID'] == _actor;
     final leadOnly = !officer && !coordinator;
-    if (leadOnly &&
-        !(member &&
-            projects.any(
-              (row) => row['groupID'] == groupID && row['leadID'] == _actor,
-            ))) {
-      throw _code('forbidden');
-    }
     final period = periodID == null ? null : _find(periods, periodID);
     if (periodID != null &&
         (period == null || period['organizationID'] != org['id'])) {
@@ -3151,14 +3194,16 @@ class DemoBackend implements GrouplyBackend {
           (row) =>
               row['groupID'] == groupID &&
               row['periodID'] == periodID &&
-              (!leadOnly || row['leadID'] == _actor),
+              (!leadOnly || (member && row['leadID'] == _actor)),
         )
         .toList();
+    // A koordinator sie without a sie in this period has no access.
+    if (leadOnly && candidates.isEmpty) throw _code('forbidden');
     final List<JsonMap> picked;
     if (projectIDs != null) {
       if (projectIDs.length > 20 ||
           projectIDs.any((id) => !candidates.any((row) => row['id'] == id))) {
-        throw _code('invalid_input');
+        throw _code('forbidden');
       }
       picked = candidates
           .where((row) => projectIDs.contains(row['id']))
@@ -3174,11 +3219,10 @@ class DemoBackend implements GrouplyBackend {
     final reportProjects = [
       for (final row in picked)
         {
+          'id': row['id'],
           'title': row['title'],
           'dueAt': row['dueAt'],
-          'status': row['status'] == 'archived'
-              ? row['previousStatus'] ?? 'active'
-              : row['status'],
+          'status': row['status'],
           'lead': row.text('leadID').isEmpty ? '' : _name(row.text('leadID')),
           'tasks': [
             for (final t in tasks.where((t) => t['projectID'] == row['id']))
@@ -3197,9 +3241,8 @@ class DemoBackend implements GrouplyBackend {
                   'doneAt': t['status'] == 'done'
                       ? (approved?['createdAt'])
                       : null,
-                  'revisions': submissions
-                      .where((s) => s['decision'] == 'changes_requested')
-                      .length,
+                  // Sends after the first one (private.report).
+                  'revisions': max(submissions.length - 1, 0),
                   'links': submissions.lastOrNull?['links'] ?? <String>[],
                 };
               }(),
@@ -3212,7 +3255,8 @@ class DemoBackend implements GrouplyBackend {
               .where(
                 (row) =>
                     row['groupID'] == groupID &&
-                    inWindow(row.text('createdAt')),
+                    ['approved', 'rejected'].contains(row['status']) &&
+                    inWindow(row.text('closedAt')),
               )
               .toList();
     return _copy({
@@ -3245,24 +3289,23 @@ class DemoBackend implements GrouplyBackend {
                   };
                 }(),
           ].take(100).toList(),
-          if (!leadOnly)
-            'approvals': [
-              for (final row in groupApprovals)
-                {
-                  'title': row['title'],
-                  'amount': row['amount'],
-                  'status': row['status'],
-                  'closedAt': row['closedAt'],
-                  'chain': [
-                    for (final step in _steps(row))
-                      '${_name(step.text('approverID'))} (${switch (step['decision']) {
-                        'approved' => 'disetujui',
-                        'rejected' => 'ditolak',
-                        _ => 'menunggu',
-                      }})',
-                  ],
-                },
-            ],
+          'approvals': [
+            for (final row in groupApprovals)
+              {
+                'title': row['title'],
+                'amount': row['amount'],
+                'status': row['status'],
+                'closedAt': row['closedAt'],
+                'chain': [
+                  for (final step in _steps(row))
+                    '${_name(step.text('approverID'))} (${switch (step['decision']) {
+                      'approved' => 'disetujui',
+                      'rejected' => 'ditolak',
+                      _ => 'menunggu',
+                    }})',
+                ],
+              },
+          ],
           'totals': {
             'tasks': taskRows.length,
             'done': taskRows.where((t) => t['status'] == 'done').length,

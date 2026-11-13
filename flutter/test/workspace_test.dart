@@ -2035,6 +2035,35 @@ void main() {
         expect(find.byKey(Key(key)), findsNothing, reason: key);
       }
       expect(find.text('Undang'), findsNothing);
+      expect(_labelled('Pengaturan grup'), findsNothing);
+      await _show(tester, ProjectScreen(store: store, projectID: 'p40'));
+      expect(_labelled('Aksi proyek'), findsNothing);
+      expect(find.text('Pulihkan Proyek'), findsNothing);
+      // A held but unrecorded meeting cannot be recorded any more.
+      store.demo.meetings.add({
+        'id': 'm40',
+        'groupID': 'g4',
+        'createdBy': 'u1',
+        'noteTakerID': 'u1',
+        'title': 'Rapat evaluasi',
+        'startsAt': DateTime.now()
+            .subtract(const Duration(days: 1))
+            .toUtc()
+            .toIso8601String(),
+        'place': '',
+        'agenda': '',
+        'minutes': '',
+        'status': 'scheduled',
+        'version': 1,
+        'attendance': <String, String>{},
+        'createdAt': DateTime.now().toUtc().toIso8601String(),
+      });
+      await store.refresh();
+      await _show(tester, MeetingScreen(store: store, meetingID: 'm40'));
+      expect(find.byKey(const Key('meeting-record')), findsNothing);
+      expect(_labelled('Aksi rapat'), findsNothing);
+      await _show(tester, GroupScreen(store: store, groupID: 'g4'));
+      expect(find.text('Rapat evaluasi'), findsNothing);
       expect(find.byKey(const Key('group-report')), findsOneWidget);
       // Server allowlist: chat still works, creating does not.
       await expectLater(
@@ -2100,9 +2129,15 @@ void main() {
     ) async {
       await seed();
       await _show(tester, HandoverScreen(store: store, orgID: 'o1'));
-      expect(find.text('Proposal Topik · diarsipkan'), findsOneWidget);
+      expect(find.text('Proposal Topik'), findsOneWidget);
+      expect(find.text('Diarsipkan'), findsOneWidget);
+      expect(find.text('Sistem Informasi Perpustakaan'), findsOneWidget);
+      // g3 is a division u1 is not in: listed from grouply_org_members.
       expect(
-        find.text('Sistem Informasi Perpustakaan · dibawa (masih berjalan)'),
+        find.descendant(
+          of: find.byKey(const Key('handover-division-g3')),
+          matching: find.text('Bima'),
+        ),
         findsOneWidget,
       );
       expect(find.byKey(const Key('handover-committee-g4')), findsOneWidget);
@@ -2156,6 +2191,18 @@ void main() {
         ),
       );
 
+      // The labelled project offers no restore, and its recap asks for the
+      // closed period (a null period would be refused).
+      await _show(tester, ProjectScreen(store: store, projectID: 'p3'));
+      expect(find.textContaining('arsip periode 2026/2027'), findsOneWidget);
+      expect(find.text('Pulihkan Proyek'), findsNothing);
+      await _tapOn(tester, _labelled('Aksi proyek'));
+      expect(find.text('Pulihkan proyek'), findsNothing);
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+      await _tapOn(tester, find.byKey(const Key('project-report')));
+      expect(find.byKey(const Key('report-preview')), findsOneWidget);
+
       await _show(tester, ArchiveScreen(store: store, orgID: 'o1'));
       expect(find.text('Periode 2026/2027'), findsOneWidget);
       await _tapOn(tester, find.byKey(const Key('archive-project-p3')));
@@ -2206,9 +2253,26 @@ void main() {
       expect(find.text('Sistem Informasi Perpustakaan'), findsOneWidget);
       expect(find.text('Proposal Topik'), findsNWidgets(2));
 
+      // "Revisi" = sends after the first one (private.report).
+      final report = await store.report('g1');
+      final sent = {
+        for (final t in store.tasks)
+          t.text('title'): (t['submissions'] as List).length,
+      };
+      for (final p in (report['projects'] as List).cast<JsonMap>()) {
+        for (final t in (p['tasks'] as List).cast<JsonMap>()) {
+          final n = sent[t['title']]!;
+          expect(t['revisions'], n > 1 ? n - 1 : 0, reason: '${t['title']}');
+        }
+      }
+
       // u2 leads p1 (koordinator sie) but is not coordinator or officer.
       store.demo.project('p1')!['leadID'] = 'u2';
       await signInAs(tester, 'u2');
+      await _show(tester, ProjectScreen(store: store, projectID: 'p1'));
+      expect(find.byKey(const Key('project-report')), findsOneWidget);
+      await _show(tester, ProjectScreen(store: store, projectID: 'p3'));
+      expect(find.byKey(const Key('project-report')), findsNothing);
       await _show(tester, GroupScreen(store: store, groupID: 'g1'));
       await _tapOn(tester, find.byKey(const Key('group-report')));
       expect(find.byKey(const Key('report-pick-p1')), findsOneWidget);
@@ -2218,6 +2282,79 @@ void main() {
       await signInAs(tester, 'u4');
       await _show(tester, GroupScreen(store: store, groupID: 'g1'));
       expect(find.byKey(const Key('group-report')), findsNothing);
+    });
+
+    testWidgets('handover reaches every group: seats, reopen, roles', (
+      tester,
+    ) async {
+      await seed();
+      // u8 is only in g4, which is closed: a stranded seat.
+      store.demo.users.add({
+        'id': 'u8',
+        'name': 'Wulan',
+        'email': 'wulan@student.ac.id',
+        'tint': '#DED2FF',
+      });
+      store.demo.group('g4')!
+        ..['memberIDs'] = ['u1', 'u2', 'u5', 'u8']
+        ..['closedAt'] = DateTime.now().toUtc().toIso8601String();
+      store.demo.project('p40')!['status'] = 'archived';
+      await store.refresh();
+      await _show(tester, OrganizationScreen(store: store, orgID: 'o1'));
+      await _tapOn(tester, find.byKey(const Key('org-handover')));
+      // g3 (u1 not a member) gets a new coordinator from the full list.
+      await _tapOn(tester, find.byKey(const Key('handover-coordinator-g3')));
+      await _tapOn(tester, find.byKey(const Key('coordinator-pick-u7')));
+      expect(store.calls.last.action, 'setCoordinator');
+      expect(store.calls.last.payload, {'groupID': 'g3', 'userID': 'u7'});
+      expect(store.demo.group('g3')!['coordinatorID'], 'u7');
+      await _settleToasts(tester);
+      expect(find.byKey(const Key('handover-seat-u8')), findsOneWidget);
+      expect(find.byKey(const Key('handover-seat-u2')), findsNothing);
+      await _tapOn(tester, find.byKey(const Key('handover-remove-u8')));
+      await _tap(tester, 'Keluarkan');
+      expect(store.calls.last.action, 'removeClosedMember');
+      expect(store.calls.last.payload, {'groupID': 'g4', 'userID': 'u8'});
+      expect(find.byKey(const Key('handover-seat-u8')), findsNothing);
+      await _settleToasts(tester);
+      await _tapOn(tester, find.byKey(const Key('handover-reopen-g4')));
+      await _tap(tester, 'Buka kembali');
+      expect(store.calls.last.action, 'reopenCommittee');
+      expect(store.calls.last.payload, {'groupID': 'g4'});
+      expect(find.byKey(const Key('handover-close-g4')), findsOneWidget);
+      await _settleToasts(tester);
+      // "Atur jabatan" returns to the organization's role sheet.
+      await _tapOn(tester, find.byKey(const Key('handover-roles')));
+      expect(find.byType(HandoverScreen), findsNothing);
+      expect(
+        find.text(
+          'Pilih anggota untuk dijadikan BPH atau Pembina, atau serahkan jabatan Ketua.',
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('Ketua reopens a closed committee from the archive', (
+      tester,
+    ) async {
+      await seed();
+      store.demo.group('g4')!['closedAt'] = DateTime.now()
+          .toUtc()
+          .toIso8601String();
+      await store.refresh();
+      await _show(tester, ArchiveScreen(store: store, orgID: 'o1'));
+      await _tapOn(tester, find.byKey(const Key('archive-reopen-g4')));
+      await _tap(tester, 'Buka kembali');
+      expect(store.calls.last.action, 'reopenCommittee');
+      expect(store.isClosed(store.group('g4')), isFalse);
+      await _settleToasts(tester);
+      await signInAs(tester, 'u3');
+      store.demo.group('g4')!['closedAt'] = DateTime.now()
+          .toUtc()
+          .toIso8601String();
+      await tester.runAsync(store.refresh);
+      await _show(tester, ArchiveScreen(store: store, orgID: 'o1'));
+      expect(find.byKey(const Key('archive-reopen-g4')), findsNothing);
     });
 
     testWidgets('Tahap 3a screens render in dark mode', (tester) async {

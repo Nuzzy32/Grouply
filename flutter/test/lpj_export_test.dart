@@ -75,6 +75,8 @@ void main() {
     expect(csvCell('+62 812'), "'+62 812");
     expect(csvCell('-5'), "'-5");
     expect(csvCell('@user'), "'@user");
+    expect(csvCell('\t=1+1'), "'\t=1+1");
+    expect(csvCell('\r=1+1'), "\"'\r=1+1\"");
     expect(csvCell('a,b'), '"a,b"');
     expect(csvCell('say "hi"'), '"say ""hi"""');
     expect(csvCell('two\nlines'), '"two\nlines"');
@@ -116,8 +118,9 @@ void main() {
     expect(lpjFileName(report, 'csv'), 'Rekap LPJ - Sie A-B - 2026-2027.csv');
   });
 
+  Uint8List font(String name) => File('assets/fonts/$name').readAsBytesSync();
+
   test('pdf builds with the bundled Noto Sans and non-Latin text', () async {
-    Uint8List font(String name) => File('assets/fonts/$name').readAsBytesSync();
     final bytes = await buildLpjPdf((
       report: _report(),
       regular: font('NotoSans-Regular.ttf'),
@@ -125,5 +128,31 @@ void main() {
     ));
     expect(ascii.decode(bytes.sublist(0, 5)), '%PDF-');
     expect(bytes.length, greaterThan(5000));
+  });
+
+  test('pdf spans minutes of 4,000 characters over many lines', () async {
+    final minutes = [
+      for (var i = 1; i <= 120; i++) 'Baris $i: keputusan rapat Γιώργος.',
+    ].join('\n');
+    expect(minutes.length, greaterThan(4000));
+    final report = _report()
+      ..['meetings'] = [
+        for (var m = 0; m < 3; m++)
+          {
+            'title': 'Rapat $m',
+            'startsAt': '2026-11-01T07:00:00Z',
+            'present': 10,
+            'excused': 0,
+            'minutes': minutes.substring(0, 4000),
+            'minutesTruncated': true,
+          },
+      ]
+      ..['period'] = '';
+    final bytes = await buildLpjPdf((
+      report: report,
+      regular: font('NotoSans-Regular.ttf'),
+      bold: font('NotoSans-Bold.ttf'),
+    ));
+    expect(ascii.decode(bytes.sublist(0, 5)), '%PDF-');
   });
 }

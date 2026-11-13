@@ -40,6 +40,10 @@ abstract class GrouplyBackend {
   /// Closed periods with their labelled projects (`grouply_org_archive`).
   Future<Map<String, dynamic>> orgArchive(String orgID);
 
+  /// Every group of the organization with its members, for the Ketua's
+  /// handover (`grouply_org_members`): the snapshot only has own groups.
+  Future<List<Map<String, dynamic>>> orgMembers(String orgID);
+
   /// LPJ data for one group and period (`grouply_report`); null = current
   /// period / every project of it.
   Future<Map<String, dynamic>> report(
@@ -360,6 +364,18 @@ class SupabaseGrouplyBackend implements GrouplyBackend {
   Future<List<Map<String, dynamic>>> templates(String orgID) async {
     final value = await _sdk.rpc(
       'grouply_templates',
+      params: {'org_id': orgID},
+    );
+    if (value is! List) {
+      throw const FormatException('Respons server tidak valid.');
+    }
+    return [for (final row in value) _object(row)];
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> orgMembers(String orgID) async {
+    final value = await _sdk.rpc(
+      'grouply_org_members',
       params: {'org_id': orgID},
     );
     if (value is! List) {

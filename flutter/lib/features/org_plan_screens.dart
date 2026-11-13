@@ -137,7 +137,17 @@ Widget _orgPlanLinks(_WorkspaceState state, JsonMap org) {
         subtitle: label.isEmpty
             ? 'Tutup periode kepengurusan'
             : 'Tutup periode $label',
-        onTap: () => state.open(HandoverScreen(store: store, orgID: orgID)),
+        onTap: () async {
+          final next = await Navigator.of(state.context).push<String>(
+            MaterialPageRoute(
+              builder: (_) => HandoverScreen(store: store, orgID: orgID),
+            ),
+          );
+          // "Atur jabatan" in the checklist reuses the org screen's sheet.
+          if (next == 'roles' && state is _OrgState && state.mounted) {
+            state._manageRoles();
+          }
+        },
       ),
   ]);
 }
@@ -202,7 +212,12 @@ List<Widget> _groupPlanSection(_WorkspaceState state, JsonMap group) {
                 icon: _activeDivision(store, group)
                     ? 'arrow.counterclockwise'
                     : 'lock',
-                onPressed: () => _reopenCommittee(state, group),
+                onPressed: () => _reopenCommittee(
+                  state,
+                  group.text('id'),
+                  group.text('name'),
+                  _activeDivision(store, group),
+                ),
               ),
           ],
         ),
@@ -259,29 +274,27 @@ Future<void> _closeCommittee(_WorkspaceState state, JsonMap group) async {
   }
 }
 
-Future<void> _reopenCommittee(_WorkspaceState state, JsonMap group) async {
-  if (!_activeDivision(state.store, group)) {
+Future<void> _reopenCommittee(
+  _WorkspaceState state,
+  String groupID,
+  String name,
+  bool planActive,
+) async {
+  if (!planActive) {
     return state.feedback(
       'Kepanitiaan bisa dibuka kembali saat paket organisasi aktif.',
       kind: GLToastKind.err,
     );
   }
   if (await state.confirm(
-        'Buka kembali ${group.text('name')}?',
+        'Buka kembali $name?',
         'Kepanitiaan kembali aktif dan dihitung di batas 30 kepanitiaan.',
         ok: 'Buka kembali',
       ) &&
       state.mounted) {
-    try {
-      await state.mutate(
-        'reopenCommittee',
-        {'groupID': group.text('id')},
-        inlineError: true,
-        success: 'Kepanitiaan dibuka kembali',
-      );
-    } catch (_) {
-      // The toast already said why; invalid_input here is the 30 cap.
-    }
+    await state.mutate('reopenCommittee', {
+      'groupID': groupID,
+    }, success: 'Kepanitiaan dibuka kembali');
   }
 }
 
@@ -301,6 +314,19 @@ List<Widget> _projectPlanSection(
       project['status'] == 'active' &&
       !store.isClosed(group);
   final label = store.isCommittee(group) ? 'sie' : 'proyek';
+  // Officers and the coordinator see every project; a koordinator sie only
+  // the sie they lead (§3).
+  final reportable =
+      _orgOfficer(store, orgID) ||
+      _coordinator(store, group) ||
+      (_member(store, group) && project.text('leadID') == store.currentUserID);
+  final periodLabel = project.text('periodLabel');
+  final period = periodLabel.isEmpty
+      ? null
+      : store
+            .periods(orgID)
+            .where((p) => p.text('label') == periodLabel)
+            .firstOrNull;
   return [
     if (items.isNotEmpty)
       Column(
@@ -324,7 +350,7 @@ List<Widget> _projectPlanSection(
           ),
         ],
       ),
-    if (_canSaveTemplate(store, orgID) || _canReport(store, group))
+    if (_canSaveTemplate(store, orgID) || reportable)
       Row(
         spacing: 8,
         children: [
@@ -352,7 +378,7 @@ List<Widget> _projectPlanSection(
                 },
               ),
             ),
-          if (_canReport(store, group))
+          if (reportable)
             Expanded(
               child: GLOutlineButton(
                 key: Key('project-report'),
@@ -362,6 +388,9 @@ List<Widget> _projectPlanSection(
                   ReportScreen(
                     store: store,
                     groupID: group.text('id'),
+                    // A labelled project lives in its closed period.
+                    periodID: period?.text('id'),
+                    periodLabel: period?.text('label'),
                     projectID: project.text('id'),
                   ),
                 ),
@@ -1328,12 +1357,47 @@ class HandoverScreen extends _WorkspaceScreen {
 class _HandoverState extends _WorkspaceState<HandoverScreen>
     with _GroupActions<HandoverScreen> {
   final next = TextEditingController();
-  String? error;
+  List<JsonMap>? groups;
+  String? error, failure;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
 
   @override
   void dispose() {
     next.dispose();
     super.dispose();
+  }
+
+  /// Every org group with members (`grouply_org_members`): the snapshot
+  /// only holds the groups the Ketua is in.
+  Future<void> _load() async {
+    try {
+      final value = await store.orgMembers(widget.orgID);
+      if (mounted) {
+        setState(() {
+          groups = value;
+          failure = null;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => failure = '$e');
+    }
+  }
+
+  @override
+  Future<void> reload() async {
+    await super.reload();
+    await _load();
+  }
+
+  /// Runs [action], then reloads the member list whatever the outcome.
+  Future<void> _act(String action, JsonMap payload, String success) async {
+    await mutate(action, payload, success: success);
+    if (mounted) await _load();
   }
 
   Widget _check(String title, String sub, List<Widget> body) => Column(
@@ -1345,18 +1409,32 @@ class _HandoverState extends _WorkspaceState<HandoverScreen>
     ],
   );
 
-  Widget _line(String text, {Widget? action, Key? key}) => Container(
-    key: key,
-    constraints: BoxConstraints(minHeight: 52),
-    padding: EdgeInsets.symmetric(vertical: 6),
-    decoration: _grHairline,
-    child: Row(
-      children: [
-        Expanded(child: Text(text, style: gl(15, w500))),
-        ?action,
-      ],
-    ),
-  );
+  Widget _line(String text, {String? sub, Widget? action, Key? key}) =>
+      Container(
+        key: key,
+        constraints: BoxConstraints(minHeight: 52),
+        padding: EdgeInsets.symmetric(vertical: 6),
+        decoration: _grHairline,
+        child: Row(
+          spacing: 8,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(text, style: gl(15, w500)),
+                  if (sub != null)
+                    Text(sub, style: gl(13, w400, 0, GLTheme.secondary)),
+                ],
+              ),
+            ),
+            ?action,
+          ],
+        ),
+      );
+
+  static List<JsonMap> _members(JsonMap group) =>
+      (group['members'] as List).cast<JsonMap>();
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
@@ -1368,7 +1446,7 @@ class _HandoverState extends _WorkspaceState<HandoverScreen>
       }
       final orgID = widget.orgID;
       final label = org.text('periodLabel');
-      final all = _orgRows(org, 'divisions');
+      final active = org['planActive'] == true;
       final ownGroups = [
         for (final g in store.groups)
           if (g.text('organizationID') == orgID) g,
@@ -1376,40 +1454,25 @@ class _HandoverState extends _WorkspaceState<HandoverScreen>
       final projects = [
         for (final g in ownGroups) ..._grProjects(store, g.text('id')),
       ];
-      final archiving = projects
-          .where((p) => p['status'] == 'completed')
-          .toList();
-      final labelling = projects
-          .where(
-            (p) => p['status'] == 'archived' && p.text('periodLabel') == '',
-          )
-          .toList();
-      final carried = projects.where((p) => p['status'] == 'active').toList();
-      final committees = [
-        for (final d in all)
-          if (d['isCommittee'] == true && d['closed'] != true) d,
+      final archiving = [
+        for (final p in projects)
+          if (p['status'] == 'completed' ||
+              (p['status'] == 'archived' && p.text('periodLabel').isEmpty))
+            p,
       ];
-      final divisions = [
-        for (final d in all)
-          if (d['isCommittee'] != true) d,
+      final carried = [
+        for (final p in projects)
+          if (p['status'] == 'active') p,
       ];
-      // People whose only visible org group is a closed committee.
-      final active = {
-        for (final g in ownGroups)
-          if (!store.isClosed(g)) ...g.ids('memberIDs'),
-      };
-      final stranded = <String, JsonMap>{
-        for (final g in ownGroups)
-          if (store.isClosed(g))
-            for (final id in g.ids('memberIDs'))
-              if (!active.contains(id)) id: g,
-      };
+      final groups = this.groups;
       final officers = _orgRows(org, 'roles');
       return detailPage(
         title: 'Serah terima',
         children: [
           Text(
-            'Daftar periksa sebelum menutup periode $label. Data yang tampil berasal dari divisi dan kepanitiaan yang kamu ikuti.',
+            label.isEmpty
+                ? 'Daftar periksa sebelum menutup periode kepengurusan.'
+                : 'Daftar periksa sebelum menutup periode $label.',
             style: gl(14, w400, 0, GLTheme.text3, 4),
           ),
           _check('1. Label periode', 'Sekarang: ${label.isEmpty ? '—' : label}', [
@@ -1431,97 +1494,48 @@ class _HandoverState extends _WorkspaceState<HandoverScreen>
           ]),
           _check(
             '2. Proker',
-            '${archiving.length + labelling.length} masuk arsip $label · ${carried.length} dibawa ke periode baru',
+            '${archiving.length} masuk arsip · ${carried.length} dibawa ke periode baru',
             [
               _workList([
-                for (final p in [...archiving, ...labelling])
-                  _line('${p.text('title')} · diarsipkan'),
+                for (final p in archiving)
+                  _line(p.text('title'), sub: 'Diarsipkan'),
                 for (final p in carried)
-                  _line('${p.text('title')} · dibawa (masih berjalan)'),
+                  _line(p.text('title'), sub: 'Dibawa (masih berjalan)'),
                 if (projects.isEmpty) _line('Belum ada proker.'),
               ]),
-            ],
-          ),
-          _check(
-            '3. Kepanitiaan',
-            committees.isEmpty
-                ? 'Tidak ada kepanitiaan aktif'
-                : 'Tutup yang pekerjaannya sudah selesai',
-            [
-              if (committees.isNotEmpty)
-                _workList([
-                  for (final c in committees)
-                    _line(
-                      c.text('name'),
-                      key: Key('handover-committee-${c.text('id')}'),
-                      action: _orgPill(
-                        'Tutup',
-                        'archivebox',
-                        () => _close(c),
-                        key: Key('handover-close-${c.text('id')}'),
-                      ),
-                    ),
-                ]),
-            ],
-          ),
-          _check('4. Pengurus', 'Ketua, BPH, dan Pembina periode baru', [
-            _workList([
-              for (final o in officers)
-                _line('${o.text('name')} · ${_orgRoleLabel(o.text('role'))}'),
-            ]),
-            Text(
-              'Ubah lewat "Atur jabatan" di layar Organisasi. Serahkan jabatan Ketua paling akhir, setelah periode ditutup.',
-              style: gl(13, w400, 0, GLTheme.secondary),
-            ),
-          ]),
-          _check('5. Koordinator divisi', 'Kadiv periode baru', [
-            _workList([
-              for (final d in divisions)
-                () {
-                  final g = store.group(d.text('id'));
-                  return _line(
-                    g == null
-                        ? '${d.text('name')} · kamu bukan anggotanya'
-                        : '${d.text('name')} · ${_personName(store, g.text('coordinatorID'))}',
-                    key: Key('handover-division-${d.text('id')}'),
-                    action: g == null
-                        ? null
-                        : _orgPill(
-                            'Ganti',
-                            'person.badge.shield.checkmark',
-                            () => _setCoordinator(g),
-                            key: Key('handover-coordinator-${d.text('id')}'),
-                          ),
-                  );
-                }(),
-            ]),
-          ]),
-          _check(
-            '6. Kursi',
-            '${stranded.length} orang hanya tersisa di kepanitiaan tertutup',
-            [
-              if (stranded.isNotEmpty)
-                _workList([
-                  for (final MapEntry(key: id, value: g) in stranded.entries)
-                    _workRow(
-                      icon: 'person.badge.minus',
-                      tint: GLTheme.muted,
-                      title: _personName(store, id),
-                      subtitle: '${g.text('name')} · buka untuk mengeluarkan',
-                      onTap: () => open(
-                        _GroupMembersScreen(
-                          store: store,
-                          groupID: g.text('id'),
-                        ),
-                      ),
-                    ),
-                ]),
               Text(
-                'Mereka tetap memakai kursi dan menerima pengumuman sampai dikeluarkan.',
+                'Daftar proker berasal dari divisi dan kepanitiaan yang kamu ikuti; penutupan periode tetap berlaku untuk semua grup.',
                 style: gl(13, w400, 0, GLTheme.secondary),
               ),
             ],
           ),
+          if (failure != null) ...[
+            GLFormError(failure!),
+            GLOutlineButton(
+              title: 'Coba lagi',
+              icon: 'arrow.clockwise',
+              onPressed: _load,
+            ),
+          ] else if (groups == null)
+            Center(child: CircularProgressIndicator.adaptive())
+          else
+            ..._groupChecks(groups, active),
+          _check('6. Pengurus', 'Ketua, BPH, dan Pembina periode baru', [
+            _workList([
+              for (final o in officers)
+                _line(o.text('name'), sub: _orgRoleLabel(o.text('role'))),
+            ]),
+            GLOutlineButton(
+              key: Key('handover-roles'),
+              title: 'Atur jabatan',
+              icon: 'person.badge.shield.checkmark',
+              onPressed: () => Navigator.of(context).pop('roles'),
+            ),
+            Text(
+              'Serahkan jabatan Ketua paling akhir, setelah periode ditutup.',
+              style: gl(13, w400, 0, GLTheme.secondary),
+            ),
+          ]),
           if (error != null) GLFormError(error!),
           GLSubmitButton(
             key: Key('handover-close-period'),
@@ -1534,41 +1548,186 @@ class _HandoverState extends _WorkspaceState<HandoverScreen>
     },
   );
 
+  /// Steps 3–5 from `grouply_org_members`.
+  List<Widget> _groupChecks(List<JsonMap> groups, bool active) {
+    String name(JsonMap group, String id) =>
+        _members(group).where((m) => m['id'] == id).firstOrNull?.text('name') ??
+        (id.isEmpty ? 'Belum ada' : 'Anggota');
+    final open = [
+      for (final g in groups)
+        if (g['isCommittee'] == true && g['closed'] != true) g,
+    ];
+    final closed = [
+      for (final g in groups)
+        if (g['closed'] == true) g,
+    ];
+    final divisions = [
+      for (final g in groups)
+        if (g['isCommittee'] != true) g,
+    ];
+    // Seats held by people left only in a closed committee (§10).
+    final seated = {
+      for (final g in groups)
+        if (g['closed'] != true)
+          for (final m in _members(g)) m.text('id'),
+    };
+    final stranded = [
+      for (final g in closed)
+        for (final m in _members(g))
+          if (!seated.contains(m.text('id'))) (g, m),
+    ];
+    return [
+      _check(
+        '3. Kepanitiaan',
+        open.isEmpty
+            ? 'Tidak ada kepanitiaan aktif'
+            : 'Tutup yang pekerjaannya sudah selesai',
+        [
+          if (open.isNotEmpty || closed.isNotEmpty)
+            _workList([
+              for (final c in open)
+                _line(
+                  c.text('name'),
+                  sub: 'Aktif',
+                  key: Key('handover-committee-${c.text('groupID')}'),
+                  action: _orgPill(
+                    'Tutup',
+                    'archivebox',
+                    () => _close(c),
+                    key: Key('handover-close-${c.text('groupID')}'),
+                  ),
+                ),
+              for (final c in closed)
+                _line(
+                  c.text('name'),
+                  sub: 'Ditutup',
+                  key: Key('handover-committee-${c.text('groupID')}'),
+                  action: _orgPill(
+                    'Buka',
+                    active ? 'arrow.counterclockwise' : 'lock',
+                    () async {
+                      await _reopenCommittee(
+                        this,
+                        c.text('groupID'),
+                        c.text('name'),
+                        active,
+                      );
+                      if (mounted) await _load();
+                    },
+                    key: Key('handover-reopen-${c.text('groupID')}'),
+                  ),
+                ),
+            ]),
+        ],
+      ),
+      _check('4. Koordinator divisi', 'Kadiv periode baru', [
+        _workList([
+          for (final d in divisions)
+            _line(
+              d.text('name'),
+              sub: name(d, d.text('coordinatorID')),
+              key: Key('handover-division-${d.text('groupID')}'),
+              action: _members(d).length < 2
+                  ? null
+                  : _orgPill(
+                      'Ganti',
+                      'person.badge.shield.checkmark',
+                      () => _setCoordinator(d),
+                      key: Key('handover-coordinator-${d.text('groupID')}'),
+                    ),
+            ),
+        ]),
+      ]),
+      _check(
+        '5. Kursi',
+        '${stranded.length} orang hanya tersisa di kepanitiaan tertutup',
+        [
+          if (stranded.isNotEmpty)
+            _workList([
+              for (final (g, m) in stranded)
+                _line(
+                  m.text('name'),
+                  sub: m['id'] == g['coordinatorID']
+                      ? '${g.text('name')} · koordinator; ganti dulu sebelum dikeluarkan'
+                      : g.text('name'),
+                  key: Key('handover-seat-${m.text('id')}'),
+                  action: m['id'] == g['coordinatorID']
+                      ? (_members(g).length < 2
+                            ? null
+                            : _orgPill(
+                                'Ganti',
+                                'person.badge.shield.checkmark',
+                                () => _setCoordinator(g),
+                              ))
+                      : _orgPill(
+                          'Keluarkan',
+                          'person.badge.minus',
+                          () => _removeClosed(g, m),
+                          key: Key('handover-remove-${m.text('id')}'),
+                        ),
+                ),
+            ]),
+          Text(
+            'Mereka tetap memakai kursi dan menerima pengumuman sampai dikeluarkan.',
+            style: gl(13, w400, 0, GLTheme.secondary),
+          ),
+        ],
+      ),
+    ];
+  }
+
   Future<void> _close(JsonMap committee) async {
     if (await confirm(
           'Tutup ${committee.text('name')}?',
-          'Bisa ditutup bila semua tugasnya selesai, sie sudah diarsipkan, dan tidak ada pengajuan yang menunggu.',
+          'Bisa ditutup bila semua tugasnya selesai, tidak ada sie aktif, dan tidak ada pengajuan yang menunggu.',
           ok: 'Tutup kepanitiaan',
           destructive: true,
         ) &&
         mounted) {
-      await mutate('closeCommittee', {
-        'groupID': committee.text('id'),
-      }, success: 'Kepanitiaan ditutup');
+      await _act('closeCommittee', {
+        'groupID': committee.text('groupID'),
+      }, 'Kepanitiaan ditutup');
+    }
+  }
+
+  Future<void> _removeClosed(JsonMap group, JsonMap member) async {
+    if (await confirm(
+          'Keluarkan ${member.text('name')}?',
+          '${member.text('name')} keluar dari ${group.text('name')} yang sudah ditutup, sehingga kursinya bebas. Riwayatnya tetap tersimpan.',
+          ok: 'Keluarkan',
+          destructive: true,
+        ) &&
+        mounted) {
+      await _act('removeClosedMember', {
+        'groupID': group.text('groupID'),
+        'userID': member.text('id'),
+      }, '${member.text('name')} dikeluarkan');
     }
   }
 
   Future<void> _setCoordinator(JsonMap group) async {
-    final picked = await showGLSheet<String>(
+    final picked = await showGLSheet<JsonMap>(
       context,
       title: 'Koordinator ${group.text('name')}',
-      subtitle: 'Pilih anggota divisi sebagai koordinator baru.',
+      subtitle: 'Pilih anggota grup sebagai koordinator baru.',
       builder: (sheet) => _workList([
-        for (final id in group.ids('memberIDs'))
-          if (id != group.text('coordinatorID'))
+        for (final m in _members(group))
+          if (m['id'] != group['coordinatorID'])
             GLTap(
-              key: Key('coordinator-pick-$id'),
-              onTap: () => Navigator.of(sheet).pop(id),
+              key: Key('coordinator-pick-${m.text('id')}'),
+              onTap: () => Navigator.of(sheet).pop(m),
               child: Container(
                 constraints: BoxConstraints(minHeight: 60),
                 decoration: _grHairline,
                 child: Row(
                   children: [
-                    GLAvatar(user: store.user(id), size: 40, fontSize: 13),
-                    SizedBox(width: 12),
-                    Expanded(
-                      child: Text(_personName(store, id), style: gl(16, w600)),
+                    GLAvatar(
+                      user: store.user(m.text('id')) ?? m,
+                      size: 40,
+                      fontSize: 13,
                     ),
+                    SizedBox(width: 12),
+                    Expanded(child: Text(m.text('name'), style: gl(16, w600))),
                   ],
                 ),
               ),
@@ -1576,11 +1735,10 @@ class _HandoverState extends _WorkspaceState<HandoverScreen>
       ]),
     );
     if (picked == null || !mounted) return;
-    await mutate(
+    await _act(
       'setCoordinator',
-      {'groupID': group.text('id'), 'userID': picked},
-      success:
-          '${_personName(store, picked)} menjadi koordinator ${group.text('name')}',
+      {'groupID': group.text('groupID'), 'userID': picked.text('id')},
+      '${picked.text('name')} menjadi koordinator ${group.text('name')}',
     );
   }
 
@@ -1604,28 +1762,27 @@ class _HandoverState extends _WorkspaceState<HandoverScreen>
           ok: 'Tutup periode',
           destructive: true,
         ) ||
-        !mounted) {
+        !mounted ||
+        busy ||
+        store.loading) {
       return;
     }
+    setState(() => busy = true);
     try {
-      final result = await mutate(
-        'closePeriod',
-        {
-          'organizationID': widget.orgID,
-          'currentLabel': current,
-          'nextLabel': label,
-        },
-        inlineError: true,
-        success: 'Periode $current ditutup',
+      final result = await store.mutate('closePeriod', {
+        'organizationID': widget.orgID,
+        'currentLabel': current,
+        'nextLabel': label,
+      });
+      if (!mounted) return;
+      feedback(
+        'Periode $current ditutup · ${result.number('archived')} proker diarsipkan',
       );
-      if (result != null && mounted) {
-        feedback(
-          'Periode $current ditutup · ${result.number('archived')} proker diarsipkan',
-        );
-        Navigator.of(context).maybePop();
-      }
+      Navigator.of(context).maybePop();
     } catch (e) {
       if (mounted) setState(() => error = '$e');
+    } finally {
+      if (mounted) setState(() => busy = false);
     }
   }
 }
@@ -1703,6 +1860,39 @@ class _ArchiveState extends _WorkspaceState<ArchiveScreen>
                     open(ReportScreen(store: store, groupID: d.text('id'))),
               ),
           ]),
+          if (store.orgRole(widget.orgID) == 'ketua' &&
+              groups.any((d) => d['closed'] == true))
+            _workList([
+              for (final d in groups)
+                if (d['closed'] == true)
+                  Container(
+                    constraints: BoxConstraints(minHeight: 56),
+                    decoration: _grHairline,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            '${d.text('name')} · ditutup',
+                            style: gl(15, w500),
+                          ),
+                        ),
+                        _orgPill(
+                          'Buka kembali',
+                          org['planActive'] == true
+                              ? 'arrow.counterclockwise'
+                              : 'lock',
+                          () => _reopenCommittee(
+                            this,
+                            d.text('id'),
+                            d.text('name'),
+                            org['planActive'] == true,
+                          ),
+                          key: Key('archive-reopen-${d.text('id')}'),
+                        ),
+                      ],
+                    ),
+                  ),
+            ]),
           if (failure != null) ...[
             GLFormError(failure!),
             GLOutlineButton(
@@ -1848,33 +2038,72 @@ class _ReportState extends _WorkspaceState<ReportScreen>
   void initState() {
     super.initState();
     if (widget.projectID != null) selected = {widget.projectID!};
+    // A koordinator sie without a sie this period starts at one they led.
+    final options = _periodOptions();
+    if (periodID == null &&
+        options.isNotEmpty &&
+        !options.any((o) => o.$1 == null)) {
+      periodID = options.first.$1;
+    }
     _load();
   }
 
-  /// Project choices: the archive's list, else the snapshot's projects of
-  /// this group in the chosen period (a koordinator sie sees only theirs).
-  List<JsonMap>? _choices() {
-    if (widget.candidates != null) return widget.candidates;
+  /// Member who is neither officer nor coordinator: sees own sie only.
+  bool _leadOnly(JsonMap group) =>
+      !_orgOfficer(store, group.text('organizationID')) &&
+      !_coordinator(store, group);
+
+  /// Periods to choose from (null id = current). Officers and the
+  /// coordinator get all; a koordinator sie only periods holding a sie of
+  /// theirs, since the server refuses the rest (§4.2).
+  List<(String?, String)> _periodOptions() {
     final group = store.group(widget.groupID);
-    if (!_member(store, group)) return null;
-    final label = periodID == null
-        ? ''
-        : store
-                  .periods(group!.text('organizationID'))
-                  .where((p) => p.text('id') == periodID)
-                  .firstOrNull
-                  ?.text('label') ??
-              widget.periodLabel ??
-              '';
-    final leadOnly =
-        !_orgOfficer(store, group!.text('organizationID')) &&
-        !_coordinator(store, group);
-    return [
-      for (final p in _grProjects(store, widget.groupID))
-        if (p.text('periodLabel') == label &&
-            (!leadOnly || p.text('leadID') == store.currentUserID))
-          p,
+    if (widget.periodID != null || !_member(store, group)) return [];
+    final periods = store.periods(group!.text('organizationID'));
+    final all = <(String?, String)>[
+      (null, 'Periode berjalan'),
+      for (final p in periods) (p.text('id'), p.text('label')),
     ];
+    if (!_leadOnly(group)) return all;
+    final labels = {
+      for (final p in _grProjects(store, widget.groupID))
+        if (p.text('leadID') == store.currentUserID) p.text('periodLabel'),
+    };
+    return [
+      for (final option in all)
+        if (labels.contains(option.$1 == null ? '' : option.$2)) option,
+    ];
+  }
+
+  /// Project choices, latest deadline first: the archive's list, else the
+  /// snapshot's projects of this group in the chosen period (a koordinator
+  /// sie sees only theirs).
+  List<JsonMap>? _choices() {
+    final group = store.group(widget.groupID);
+    final List<JsonMap> rows;
+    if (widget.candidates != null) {
+      rows = [...widget.candidates!];
+    } else if (!_member(store, group)) {
+      return null;
+    } else {
+      final label = periodID == null
+          ? ''
+          : store
+                    .periods(group!.text('organizationID'))
+                    .where((p) => p.text('id') == periodID)
+                    .firstOrNull
+                    ?.text('label') ??
+                widget.periodLabel ??
+                '';
+      final leadOnly = _leadOnly(group!);
+      rows = [
+        for (final p in _grProjects(store, widget.groupID))
+          if (p.text('periodLabel') == label &&
+              (!leadOnly || p.text('leadID') == store.currentUserID))
+            p,
+      ];
+    }
+    return rows..sort((a, b) => b.text('dueAt').compareTo(a.text('dueAt')));
   }
 
   Future<void> _load() async {
@@ -1948,23 +2177,18 @@ class _ReportState extends _WorkspaceState<ReportScreen>
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: store,
     builder: (context, _) {
-      final group = store.group(widget.groupID);
-      final orgID = group?.text('organizationID') ?? '';
+      final options = _periodOptions();
       final choices = _choices();
       final data = this.data;
       return detailPage(
         title: 'Rekap LPJ',
         children: [
-          if (widget.periodID == null && group != null && _member(store, group))
+          if (options.length > 1)
             Wrap(
               spacing: 8,
               runSpacing: 8,
               children: [
-                for (final (id, label) in [
-                  (null, 'Periode berjalan'),
-                  for (final p in store.periods(orgID))
-                    (p.text('id') as String?, p.text('label')),
-                ])
+                for (final (id, label) in options)
                   ChoiceChip(
                     key: Key('report-period-${id ?? 'current'}'),
                     label: Text(label),
@@ -2067,7 +2291,9 @@ class _ReportState extends _WorkspaceState<ReportScreen>
             children: [
               Text(group.text('name'), style: gl(21, w700, -0.02)),
               Text(
-                '${data.text('organization')} · Periode ${data.text('period')}',
+                data.text('period').isEmpty
+                    ? data.text('organization')
+                    : '${data.text('organization')} · Periode ${data.text('period')}',
                 style: gl(14, w400, 0, GLTheme.secondary),
               ),
               SizedBox(height: 6),
