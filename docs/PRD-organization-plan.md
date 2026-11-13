@@ -57,7 +57,7 @@ Kenapa memilih kita: dibuat untuk cara kerja organisasi kampus (divisi, proker, 
 |---|---|---|
 | ORG-01 | **Workspace Organisasi** | Satu organisasi berisi banyak divisi. Divisi memakai "grup" yang sudah ada, jadi proyek, tugas, dan chat langsung berfungsi |
 | ORG-02 | **Kapasitas besar** | Anggota organisasi dan anggota per divisi boleh lebih dari 8 (angka pasti menunggu validasi) |
-| ORG-03 | **Jabatan dan hak akses** | Ketua, BPH, Kadiv, Staf, dan Pembina (hanya melihat). Kadiv mengatur divisinya; BPH melihat semua |
+| ORG-03 | **Jabatan dan hak akses** | Ketua, BPH, Kadiv, Staf, dan Pembina (melihat, dan sejak Tahap 2 boleh menjadi penyetuju pengajuan). Kadiv mengatur divisinya; BPH melihat semua |
 | ORG-04 | **Undangan per divisi** | Satu tautan per divisi untuk memasukkan banyak anggota sekaligus, misalnya hasil oprec |
 | ORG-05 | **Dashboard Organisasi** | Satu layar untuk BPH: progres tiap proker, yang terlambat, yang "Tanpa kabar", dan review yang tertahan |
 | ORG-06 | **Status langganan** | Aktif atau berakhir. Saat berakhir, organisasi kembali ke batas gratis: data dan pekerjaan berjalan tetap bisa dipakai, tetapi Dashboard, divisi baru, dan anggota di atas 8 per divisi terkunci (keputusan 12 November 2026) |

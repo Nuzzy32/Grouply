@@ -109,6 +109,25 @@ Review tambahan menutup pesan gagal yang terlihat lintas persona, koordinator de
 - Batas yang diketahui: picker "Atur jabatan" hanya menampilkan orang yang satu divisi dengan Ketua, karena `users` di snapshot dibatasi `profile_visible`. Client SwiftUI tidak mengenal organisasi.
 - Belum ada bukti cloud, perangkat nyata, atau uji beban. Fresh database replay tidak dijalankan; migration diterapkan incremental pada database lokal yang ada.
 
+## Organization Plan Tahap 2 — backend lokal, 12 November 2026
+
+- Migration `20261112133033_org_work.sql`:
+  - `groups.is_committee`, `projects.lead_id`, `tasks.meeting_id`, dan enam tabel tertutup (`meetings`, `meeting_attendance`, `approvals`, `approval_steps`, `announcements`, `announcement_reads`).
+  - Aksi baru di `private.mutate_orgwork`: `setProjectLead`, `createMeeting`/`updateMeeting`/`cancelMeeting`/`recordMeeting`, `requestApproval`/`decideApproval`/`cancelApproval`, `postAnnouncement`/`deleteAnnouncement`/`markAnnouncementRead`; `createDivision` menerima `committee`.
+  - RPC `grouply_meeting`; snapshot mendapat `meetings[]`, `isCommittee`, `leadID`, `organizations[].approvals` dan `announcements`; Dashboard mendapat `isCommittee`.
+  - Trigger `group_members_org_guard` diperluas: mengosongkan koordinator sie dan notulis di grup yang ditinggalkan, dan membuat pengajuan `lapsed` saat pengaju atau penyetuju keluar organisasi.
+  - `private.mutate`, `mutate_workflow`, `mutate_org`, `org_overview`, dan `snapshot` didefinisikan ulang dari salinan persis versi Tahap 1; hanya blok yang dicatat di komentar tiap fungsi yang berubah.
+- Verifikasi lokal:
+  - Suite SQL: `workflow` **40**, `milestone_e` **54**, `organization` **66** (sama seperti sebelum migration), `organization_work` **120 PASS**, semuanya rollback.
+  - Uji kunci: `moderation_local.py check-locks` 5/5, `billing_local.py check-locks` **10/10**.
+  - Uji mutasi: melonggarkan pemeriksaan hak penyetuju membuat suite SQL dan satu uji kunci gagal; setelah dipulihkan, semuanya lulus lagi.
+  - `backend_local.py smoke` lulus; advisors (warn) dan lint bersih; tiga tes integrasi Flutter localhost yang sudah ada tetap lulus terhadap backend baru.
+- Client Flutter Tahap 2 (file baru `features/org_work_screens.dart`): Divisi/Kepanitiaan, koordinator sie, rapat (daftar, detail, jadwal, notulen + hadir/izin, "Jadikan tugas"), persetujuan (Menunggu saya / Pengajuan saya / Semua, Setujui/Tolak/Batalkan), pengumuman dengan hitungan baca, badge di kartu organisasi, pengingat lokal rapat (H-1 dan 1 jam), dan penanda kepanitiaan serta pengajuan tertahan di Dashboard.
+- Review atas client menemukan dua bug sebelum digabung (sheet rapat memakai versi dari daftar sehingga bisa menimpa agenda/notulen; Kadiv bukan pengurus tidak bisa membuka pengajuan divisinya) dan tujuh perbaikan kecil; semuanya diperbaiki dengan tes.
+- Tes integrasi localhost sempat gagal acak (sekitar 3 dari 5 run): `refresh()` yang dipanggil langsung bisa disalip muat ulang otomatis dari realtime dan selesai tanpa menerapkan data terbaru. Sekarang refresh yang tersalip menunggu snapshot terbaru diterapkan; ada tes unit yang gagal tanpa perbaikan itu.
+- Verifikasi Flutter di hasil gabungan: `flutter analyze` bersih; `flutter test` **167 lulus** dengan 4 tes opt-in localhost dilewati. Dengan `GROUPLY_LOCAL_INTEGRATION=1`, keempat tes localhost lulus 3/3 run di hasil gabungan (8/8 di branch sebelum digabung). Tes Tahap 2 mencakup kepanitiaan, koordinator sie membuat tugas, notulen + daftar hadir + tugas dari rapat, persetujuan dua jenjang + pesan "sudah diputuskan", dan hitungan baca pengumuman.
+- Push server (ORG-11) tidak dibuat. Belum ada bukti cloud, perangkat nyata, uji beban, atau audit VoiceOver.
+
 ## Target cloud dan rilis yang belum tersedia
 
 Belum tersedia/terverifikasi: deployment cloud, provider Apple nyata dan pencabutan token Apple, Realtime Group Chat lintas perangkat fisik, APNs/pengingat lokal, domain/AASA/Universal Links, operator moderasi production dan kebijakan retention. Penghapusan akun password server dan CLI moderasi tersedia lokal, bukan bukti readiness Apple/App Review. Source migration aktual ada di `supabase/migrations`; DDL dokumen produk mencakup target yang lebih luas. Tidak ada proyek cloud atau database production yang diubah. Gate cloud/TestFlight tetap belum dicentang.
