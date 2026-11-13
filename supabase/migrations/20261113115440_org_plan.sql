@@ -68,7 +68,7 @@ BEGIN
   IF e ? 'description' AND (jsonb_typeof(e->'description') IS DISTINCT FROM 'string' OR length(e->>'description') > 2000) THEN
     RETURN false;
   END IF;
-  IF jsonb_typeof(e->'offsetDays') IS DISTINCT FROM 'number' THEN RETURN false; END IF;
+  IF jsonb_typeof(e->'offsetDays') IS DISTINCT FROM 'number' OR (e->>'offsetDays') !~ '^-?[0-9]+$' THEN RETURN false; END IF;
   days := (e->>'offsetDays')::numeric;
   IF days <> trunc(days) OR days NOT BETWEEN -365 AND 365 THEN RETURN false; END IF;
   IF section THEN
@@ -259,7 +259,7 @@ BEGIN
     RETURN '{}'::jsonb;
   END IF;
 
-  IF action IN ('closeCommittee','reopenCommittee','setCoordinator') THEN
+  IF action IN ('closeCommittee','reopenCommittee','setCoordinator','removeClosedMember') THEN
     SELECT * INTO g FROM public.groups WHERE id = (payload->>'groupID')::uuid FOR UPDATE;
     IF g.id IS NULL OR g.organization_id IS NULL THEN RAISE EXCEPTION 'forbidden'; END IF;
     SELECT * INTO o FROM public.organizations WHERE id = g.organization_id FOR NO KEY UPDATE;
@@ -292,6 +292,18 @@ BEGIN
       END IF;
       UPDATE public.groups SET closed_at = NULL WHERE id = g.id;
       INSERT INTO public.chat_messages(group_id, sender_id, content, kind) VALUES (g.id, actor, 'Membuka kembali kepanitiaan', 'activity');
+    ELSIF action = 'removeClosedMember' THEN
+      -- Handover: frees seats held by people left only in a closed committee.
+      IF NOT EXISTS(SELECT 1 FROM public.organization_roles WHERE organization_id = o.id AND user_id = actor AND role = 'ketua') THEN
+        RAISE EXCEPTION 'forbidden';
+      END IF;
+      IF g.closed_at IS NULL THEN RAISE EXCEPTION 'invalid_input'; END IF;
+      target := (payload->>'userID')::uuid;
+      IF target IS NULL OR NOT EXISTS(SELECT 1 FROM public.group_members WHERE group_id = g.id AND user_id = target) THEN
+        RAISE EXCEPTION 'invalid_input';
+      END IF;
+      IF target = g.coordinator_id THEN RAISE EXCEPTION 'coordinator_transfer_required'; END IF;
+      DELETE FROM public.group_members WHERE group_id = g.id AND user_id = target;
     ELSE
       IF NOT EXISTS(SELECT 1 FROM public.organization_roles WHERE organization_id = o.id AND user_id = actor AND role = 'ketua') THEN
         RAISE EXCEPTION 'forbidden';
@@ -380,6 +392,24 @@ BEGIN
 END;
 $$;
 
+CREATE FUNCTION private.org_members(org_id uuid)
+RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = '' AS $$
+DECLARE actor uuid := auth.uid();
+BEGIN
+  IF actor IS NULL OR NOT EXISTS(SELECT 1 FROM public.profiles WHERE id = actor) THEN RAISE EXCEPTION 'unauthorized'; END IF;
+  IF NOT EXISTS(SELECT 1 FROM public.organization_roles r
+      WHERE r.organization_id = org_members.org_id AND r.user_id = actor AND r.role = 'ketua') THEN
+    RAISE EXCEPTION 'forbidden';
+  END IF;
+  RETURN coalesce((SELECT jsonb_agg(jsonb_build_object('groupID', g.id, 'name', g.name, 'isCommittee', g.is_committee,
+      'closed', g.closed_at IS NOT NULL, 'coordinatorID', coalesce(g.coordinator_id::text, ''),
+      'members', coalesce((SELECT jsonb_agg(jsonb_build_object('id', m.user_id, 'name', private.org_name(m.user_id, actor))
+          ORDER BY m.user_id) FROM public.group_members m WHERE m.group_id = g.id), '[]'))
+    ORDER BY g.is_committee, g.name, g.id)
+    FROM public.groups g WHERE g.organization_id = org_members.org_id), '[]');
+END;
+$$;
+
 CREATE FUNCTION private.org_archive(org_id uuid)
 RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = '' AS $$
 DECLARE actor uuid := auth.uid();
@@ -443,7 +473,7 @@ BEGIN
             'status', x.status, 'dueAt', private.iso(x.due_at),
             'doneAt', private.iso((SELECT max(r.created_at) FROM public.reviews r JOIN public.submissions s ON s.id = r.submission_id
               WHERE s.task_id = x.id AND r.decision = 'approved')),
-            'revisions', (SELECT count(*) FROM public.submissions s WHERE s.task_id = x.id),
+            'revisions', (SELECT greatest(count(*) - 1, 0) FROM public.submissions s WHERE s.task_id = x.id),
             'links', coalesce((SELECT s.links FROM public.submissions s WHERE s.task_id = x.id ORDER BY s.revision DESC LIMIT 1), '[]'))
           ORDER BY x.due_at, x.id) FROM public.tasks x WHERE x.project_id = q.id), '[]'))
       ORDER BY q.due_at, q.id) FROM public.projects q WHERE q.id = ANY(chosen)), '[]'),
@@ -470,10 +500,10 @@ $$;
 
 REVOKE ALL ON FUNCTION private.valid_plan_entry(jsonb,boolean), private.valid_sections(jsonb) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION private.mutate_orgplan(text,jsonb) FROM PUBLIC, anon, authenticated, service_role;
-REVOKE ALL ON FUNCTION private.templates(uuid), private.template(uuid), private.org_archive(uuid), private.report(uuid,uuid,uuid[])
-  FROM PUBLIC, anon, service_role;
-GRANT EXECUTE ON FUNCTION private.templates(uuid), private.template(uuid), private.org_archive(uuid), private.report(uuid,uuid,uuid[])
-  TO authenticated;
+REVOKE ALL ON FUNCTION private.templates(uuid), private.template(uuid), private.org_archive(uuid), private.org_members(uuid),
+  private.report(uuid,uuid,uuid[]) FROM PUBLIC, anon, service_role;
+GRANT EXECUTE ON FUNCTION private.templates(uuid), private.template(uuid), private.org_archive(uuid), private.org_members(uuid),
+  private.report(uuid,uuid,uuid[]) TO authenticated;
 
 CREATE FUNCTION public.grouply_templates(org_id uuid)
 RETURNS jsonb LANGUAGE sql SET search_path = '' AS $$ SELECT private.templates(org_id) $$;
@@ -481,12 +511,14 @@ CREATE FUNCTION public.grouply_template(template_id uuid)
 RETURNS jsonb LANGUAGE sql SET search_path = '' AS $$ SELECT private.template(template_id) $$;
 CREATE FUNCTION public.grouply_org_archive(org_id uuid)
 RETURNS jsonb LANGUAGE sql SET search_path = '' AS $$ SELECT private.org_archive(org_id) $$;
+CREATE FUNCTION public.grouply_org_members(org_id uuid)
+RETURNS jsonb LANGUAGE sql SET search_path = '' AS $$ SELECT private.org_members(org_id) $$;
 CREATE FUNCTION public.grouply_report(group_id uuid, period_id uuid DEFAULT NULL, project_ids uuid[] DEFAULT NULL)
 RETURNS jsonb LANGUAGE sql SET search_path = '' AS $$ SELECT private.report(group_id, period_id, project_ids) $$;
 REVOKE ALL ON FUNCTION public.grouply_templates(uuid), public.grouply_template(uuid), public.grouply_org_archive(uuid),
-  public.grouply_report(uuid,uuid,uuid[]) FROM PUBLIC, anon, service_role;
+  public.grouply_org_members(uuid), public.grouply_report(uuid,uuid,uuid[]) FROM PUBLIC, anon, service_role;
 GRANT EXECUTE ON FUNCTION public.grouply_templates(uuid), public.grouply_template(uuid), public.grouply_org_archive(uuid),
-  public.grouply_report(uuid,uuid,uuid[]) TO authenticated;
+  public.grouply_org_members(uuid), public.grouply_report(uuid,uuid,uuid[]) TO authenticated;
 
 -- Copied from 20261112133033; changed: closed-committee allow list, restoreProject of period archives, createTask planItemID.
 CREATE OR REPLACE FUNCTION private.mutate_workflow (
@@ -1069,7 +1101,7 @@ BEGIN
   END IF;
   IF action = 'reportContent' THEN RETURN private.report_content(payload); END IF;
   IF action IN ('applyTemplate','createTemplate','deleteTemplate','deletePlanItem','closeCommittee','reopenCommittee',
-      'setCoordinator','closePeriod') THEN
+      'setCoordinator','removeClosedMember','closePeriod') THEN
     RETURN private.mutate_orgplan(action,payload);
   END IF;
   IF action IN ('setProjectLead','createMeeting','updateMeeting','cancelMeeting','recordMeeting','requestApproval',

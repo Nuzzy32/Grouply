@@ -130,7 +130,7 @@ Perubahan pada aksi yang sudah ada:
 - Proyek: yang berlabel periode itu, atau untuk periode berjalan yang belum berlabel. `project_ids` maks 20 dan harus termasuk di sana.
 - Rapat dan pengajuan: milik grup itu dalam jendela periode (`started_at`..`closed_at`, atau sampai sekarang). Maks 100 rapat; notulen dipotong 4.000 karakter per rapat dengan penanda `minutesTruncated`.
 - Koordinator sie hanya menerima proyeknya sendiri, rapat grup (sudah ia lihat sebagai anggota), dan **tanpa** pengajuan.
-- `doneAt` = waktu review yang menyetujui; `links` = tautan submission terakhir. Nama mengikuti `private.org_name` (akun terhapus → "Anggota terhapus", diblokir pelihat → "Anggota").
+- `doneAt` = waktu review yang menyetujui; `links` = tautan submission terakhir; `revisions` = jumlah pengiriman setelah yang pertama. Nama mengikuti `private.org_name` (akun terhapus → "Anggota terhapus", diblokir pelihat → "Anggota").
 
 ### 4.3 Snapshot
 
@@ -147,6 +147,8 @@ Aditif:
 - `applyTemplate` → `{projectIDs: [...]}` berurutan sesuai sie.
 - `closePeriod` → `{periodID, archived}` (`archived` = jumlah proyek yang diberi label periode).
 - `grouply_org_archive(org_id uuid)` → `{periods: [{id, label, startedAt, closedAt, projects: [{id, groupID, groupName, title, dueAt, total, done}], committees: [{id, name, closedAt}]}]}`.
+- `grouply_org_members(org_id uuid)` (Ketua saja, tanpa syarat paket) → `[{groupID, name, isCommittee, closed, coordinatorID, members: [{id, name}]}]` untuk semua grup organisasi, termasuk yang ditutup atau kosong. Dipakai layar serah terima, karena snapshot hanya memuat grup tempat Ketua menjadi anggota.
+- Aksi `removeClosedMember {groupID, userID}` (Ketua): mengeluarkan anggota dari kepanitiaan yang sudah ditutup untuk membebaskan kursi; grup belum ditutup → `invalid_input`, coordinator → `coordinator_transfer_required`.
 - `grouply_report(group_id uuid, period_id uuid default null, project_ids uuid[] default null)` → bentuk di 4.2; `project_ids` null = semua proyek grup di periode itu (maks 20 diambil terbaru menurut deadline).
 - Kode error baru: `group_closed`, `committee_busy`, `plan_item_used`, `period_exists`.
 

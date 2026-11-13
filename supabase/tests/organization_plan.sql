@@ -117,6 +117,7 @@ SELECT pg_temp.actor(:'kadiv');
 SELECT pg_temp.fails('createTemplate',jsonb_build_object('organizationID',:'org','name','x','sections','[]'::jsonb),'invalid_input');
 SELECT pg_temp.fails('createTemplate',jsonb_build_object('organizationID',:'org','name','x','sections','[{"title":"ab","offsetDays":0,"items":[]}]'::jsonb),'invalid_input');
 SELECT pg_temp.fails('createTemplate',jsonb_build_object('organizationID',:'org','name','x','sections','[{"title":"Sie A","offsetDays":1.5,"items":[]}]'::jsonb),'invalid_input');
+SELECT pg_temp.fails('createTemplate',jsonb_build_object('organizationID',:'org','name','x','sections','[{"title":"Sie A","offsetDays":5.0,"items":[]}]'::jsonb),'invalid_input');
 SELECT pg_temp.fails('createTemplate',jsonb_build_object('organizationID',:'org','name','x','sections','[{"title":"Sie A","offsetDays":0,"items":[],"owner":"x"}]'::jsonb),'invalid_input');
 SELECT pg_temp.fails('createTemplate',jsonb_build_object('organizationID',:'org','name','x','sections',
   jsonb_build_array(jsonb_build_object('title','Sie A','offsetDays',0,'items',(SELECT jsonb_agg(jsonb_build_object('title','Butir '||n,'offsetDays',-n)) FROM generate_series(1,41) n)))),'invalid_input');
@@ -236,6 +237,23 @@ SELECT pg_temp.check(NOT EXISTS(SELECT 1 FROM jsonb_array_elements(public.groupl
 SELECT pg_temp.actor(:'ketpel');
 SELECT pg_temp.fails('reopenCommittee',jsonb_build_object('groupID',:'com'),'forbidden');
 
+-- Handover reaches groups the ketua is not in: member list and removing people left in a closed committee.
+SELECT pg_temp.actor(:'bph');
+SELECT pg_temp.denied(format('SELECT public.grouply_org_members(%L)',:'org'),'forbidden');
+SELECT pg_temp.fails('removeClosedMember',jsonb_build_object('groupID',:'com','userID',:'panitia'),'forbidden');
+SELECT pg_temp.actor(:'ketua');
+SELECT pg_temp.check((SELECT (g->>'closed')::boolean AND g->>'coordinatorID'=:'ketpel'
+  AND EXISTS(SELECT 1 FROM jsonb_array_elements(g->'members') m WHERE m->>'id'=:'panitia' AND m->>'name'='Plan fixture 7')
+  FROM jsonb_array_elements(public.grouply_org_members(:'org')) g WHERE g->>'groupID'=:'com'),'the ketua lists members of groups they are not in');
+SELECT pg_temp.check(EXISTS(SELECT 1 FROM jsonb_array_elements(public.grouply_org_members(:'org')) g WHERE g->>'groupID'=:'humas'
+  AND jsonb_array_length(g->'members')=4),'every division is listed with its members');
+SELECT pg_temp.fails('removeClosedMember',jsonb_build_object('groupID',:'humas','userID',:'staf'),'invalid_input');
+SELECT pg_temp.fails('removeClosedMember',jsonb_build_object('groupID',:'com','userID',:'ketpel'),'coordinator_transfer_required');
+SELECT pg_temp.fails('removeClosedMember',jsonb_build_object('groupID',:'com','userID',:'outsider'),'invalid_input');
+SELECT public.grouply_mutate('removeClosedMember',jsonb_build_object('groupID',:'com','userID',:'panitia'));
+SELECT pg_temp.check(NOT EXISTS(SELECT 1 FROM jsonb_array_elements(public.grouply_org_members(:'org')) g, jsonb_array_elements(g->'members') m
+  WHERE g->>'groupID'=:'com' AND m->>'id'=:'panitia'),'the ketua frees a seat held only in a closed committee');
+
 -- ORG-13 period close: completed work is archived and labelled, running work carries over.
 SELECT pg_temp.actor(:'kadiv');
 SELECT public.grouply_mutate('createProject',jsonb_build_object('groupID',:'humas','title','Rilis pers','dueAt',now()+interval '9 days'))->>'id' AS done_proj \gset
@@ -278,6 +296,7 @@ SELECT pg_temp.check((SELECT r->>'period'='2026/2027' AND (r->'totals'->>'approv
   FROM (SELECT public.grouply_report(:'com',:'period1') r) s),'committee report sums approved requests and skips cancelled meetings');
 SELECT pg_temp.actor(:'kadiv');
 SELECT pg_temp.check((SELECT t->>'status'='done' AND t->>'doneAt' IS NOT NULL AND t->'links'->>0='https://contoh.id/hasil' AND t->>'assignee'='Plan fixture 4'
+  AND (t->>'revisions')::int=0
   FROM (SELECT public.grouply_report(:'humas',:'period1',ARRAY[:'done_proj']::uuid[])->'projects'->0->'tasks'->0 t) s),'coordinator report carries assignee, done date and links');
 SELECT pg_temp.denied(format('SELECT public.grouply_report(%L,%L,%L)',:'humas',:'period1',ARRAY[:'acara']::uuid[]),'forbidden');
 SELECT public.grouply_mutate('blockUser',jsonb_build_object('id',:'staf'));
