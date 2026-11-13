@@ -122,7 +122,11 @@ Review tambahan menutup pesan gagal yang terlihat lintas persona, koordinator de
   - Uji kunci: `moderation_local.py check-locks` 5/5, `billing_local.py check-locks` **10/10**.
   - Uji mutasi: melonggarkan pemeriksaan hak penyetuju membuat suite SQL dan satu uji kunci gagal; setelah dipulihkan, semuanya lulus lagi.
   - `backend_local.py smoke` lulus; advisors (warn) dan lint bersih; tiga tes integrasi Flutter localhost yang sudah ada tetap lulus terhadap backend baru.
-- Client Flutter Tahap 2 belum digabung; belum ada bukti ujung-ke-ujung dari aplikasi. Push server (ORG-11) tidak dibuat. Belum ada bukti cloud, perangkat nyata, atau uji beban.
+- Client Flutter Tahap 2 (file baru `features/org_work_screens.dart`): Divisi/Kepanitiaan, koordinator sie, rapat (daftar, detail, jadwal, notulen + hadir/izin, "Jadikan tugas"), persetujuan (Menunggu saya / Pengajuan saya / Semua, Setujui/Tolak/Batalkan), pengumuman dengan hitungan baca, badge di kartu organisasi, pengingat lokal rapat (H-1 dan 1 jam), dan penanda kepanitiaan serta pengajuan tertahan di Dashboard.
+- Review atas client menemukan dua bug sebelum digabung (sheet rapat memakai versi dari daftar sehingga bisa menimpa agenda/notulen; Kadiv bukan pengurus tidak bisa membuka pengajuan divisinya) dan tujuh perbaikan kecil; semuanya diperbaiki dengan tes.
+- Tes integrasi localhost sempat gagal acak (sekitar 3 dari 5 run): `refresh()` yang dipanggil langsung bisa disalip muat ulang otomatis dari realtime dan selesai tanpa menerapkan data terbaru. Sekarang refresh yang tersalip menunggu snapshot terbaru diterapkan; ada tes unit yang gagal tanpa perbaikan itu.
+- Verifikasi Flutter di hasil gabungan: `flutter analyze` bersih; `flutter test` **167 lulus** dengan 4 tes opt-in localhost dilewati. Dengan `GROUPLY_LOCAL_INTEGRATION=1`, keempat tes localhost lulus 3/3 run di hasil gabungan (8/8 di branch sebelum digabung). Tes Tahap 2 mencakup kepanitiaan, koordinator sie membuat tugas, notulen + daftar hadir + tugas dari rapat, persetujuan dua jenjang + pesan "sudah diputuskan", dan hitungan baca pengumuman.
+- Push server (ORG-11) tidak dibuat. Belum ada bukti cloud, perangkat nyata, uji beban, atau audit VoiceOver.
 
 ## Target cloud dan rilis yang belum tersedia
 
