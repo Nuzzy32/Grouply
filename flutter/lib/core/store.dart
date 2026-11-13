@@ -459,6 +459,10 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
   /// A committee (kepanitiaan) is an organization group flagged by the server.
   bool isCommittee(JsonMap? group) => group?['isCommittee'] == true;
 
+  /// Own report on organization content (`kind` is announcement/meeting/approval).
+  bool hasReported(String kind, String id) =>
+      reports.any((row) => row['kind'] == kind && row['targetID'] == id);
+
   /// Coordinator of the project's group, or its koordinator sie (`leadID`).
   bool canManageTasks(JsonMap? project) {
     final group = this.group(project?.text('groupID') ?? '');

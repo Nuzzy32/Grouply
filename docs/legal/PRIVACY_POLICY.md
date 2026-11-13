@@ -40,7 +40,7 @@ Kebijakan ini disusun dengan mengacu pada Undang-Undang No. 27 Tahun 2022 tentan
 
 - **Anggota grup yang sama** melihat nama dan warna profil Anda, serta konten, pesan, dan aktivitas Anda di grup tersebut. Pesan dan konten grup **tidak** terenkripsi ujung-ke-ujung; konten tersimpan di server agar dapat diakses anggota.
 - **Pengguna lain di luar grup** tidak dapat melihat data Anda. Akses dibatasi di server (row-level security), bukan hanya di aplikasi.
-- **Operator moderasi kami** dapat membaca pesan yang dilaporkan beserta alasannya, hanya untuk meninjau laporan.
+- **Operator moderasi kami** dapat membaca pesan, pengumuman, rapat, atau pengajuan yang dilaporkan beserta alasannya, hanya untuk meninjau laporan.
 - **Penyedia layanan (pemroses data)**:
   - Supabase Inc. — basis data, autentikasi, dan realtime. Lokasi server: `[REGION SUPABASE, mis. Singapura]`.
   - `[PENYEDIA SMTP]` — pengiriman email kode verifikasi dan atur ulang sandi.
@@ -85,7 +85,7 @@ Grouply ditujukan bagi pengguna berusia `[USIA MINIMUM, mis. 13]` tahun ke atas.
 
 ## 10. Konten dan perilaku pengguna
 
-Anda dapat melaporkan pesan yang melanggar aturan dan memblokir pengguna lain dari dalam aplikasi. Blokir hanya menyembunyikan pesan pengguna tersebut dari tampilan Anda. Laporan ditinjau sesuai [Prosedur Moderasi](MODERATION_OPERATIONS.md). Pesan yang melanggar dapat diganti dengan penanda moderasi.
+Anda dapat melaporkan pesan, serta pengumuman, rapat, dan pengajuan di paket organisasi, yang melanggar aturan dan memblokir pengguna lain dari dalam aplikasi. Blokir hanya menyembunyikan pesan pengguna tersebut dari tampilan Anda. Laporan ditinjau sesuai [Prosedur Moderasi](MODERATION_OPERATIONS.md). Pesan yang melanggar dapat diganti dengan penanda moderasi.
 
 ## 11. Tautan eksternal
 

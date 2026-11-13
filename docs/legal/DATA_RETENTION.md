@@ -22,7 +22,7 @@
 | Proyek, tugas, submission, review | `projects`, `tasks`, `submissions`, `reviews` | Disimpan tanpa batas; submission append-only; identitas dikosongkan saat hapus akun | Disimpan selama grup ada |
 | Riwayat aktivitas | `activity_events` | Disimpan tanpa batas; `actor_id` dikosongkan saat hapus akun | Hapus event lebih tua dari `[24]` bulan |
 | Undangan | `private.invitations` | Kedaluwarsa setelah 7 hari (bawaan) atau dicabut; baris tetap disimpan | Hapus baris `[30]` hari setelah kedaluwarsa/dicabut/habis kuota |
-| Laporan konten | `private.content_reports` | Disimpan tanpa batas. Saat pelapor menghapus akun, `reason` diganti `[Pelapor terhapus]` dan `reporter_id` dikosongkan | Laporan `pending` disimpan sampai ditinjau. Laporan selesai dihapus `[12]` bulan setelah `reviewed_at` |
+| Laporan konten | `private.content_reports` | Disimpan tanpa batas. Saat pelapor menghapus akun, `reason` diganti `[Pelapor terhapus]` dan `reporter_id` dikosongkan. Laporan konten organisasi menyimpan salinan isi yang dilaporkan (`excerpt`, maks 2.000 karakter) | Laporan `pending` disimpan sampai ditinjau. Laporan selesai dihapus `[12]` bulan setelah `reviewed_at` |
 | Pesan yang dimoderasi | `chat_messages` | Isi diganti penanda moderasi (keputusan `removed`); isi asli tidak disimpan di tabel | Sama |
 | Grup tanpa anggota | `groups` + turunannya | Bila anggota terakhir menghapus akun, grup dan riwayat tetap ada tanpa koordinator/anggota; undangan dicabut | Hapus permanen grup tanpa anggota setelah `[90]` hari beserta seluruh kontennya |
 | Log server / API | Supabase | Mengikuti retensi log paket Supabase `[sebutkan paket]` | Tidak lebih dari `[90]` hari |

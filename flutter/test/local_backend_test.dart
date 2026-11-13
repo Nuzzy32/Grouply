@@ -1087,6 +1087,46 @@ void main() {
           'Read counts do not match.',
         );
 
+        // The operator dismisses it again so the local queue stays clean.
+        stage = 'report organization content';
+        final report = (await alex.mutate('reportContent', {
+          'kind': 'announcement',
+          'id': post,
+          'reason': 'Uji laporan lokal',
+        })).text('id');
+        _check(
+          alex.hasReported('announcement', post),
+          'Report on organization content is not in the snapshot.',
+        );
+        await _denied(
+          () => backends[0].mutate('reportContent', {
+            'kind': 'announcement',
+            'id': post,
+            'reason': 'Punya sendiri',
+          }),
+          'forbidden',
+        );
+        final review = await http.postUrl(
+          Uri.parse('$url/rest/v1/rpc/grouply_moderation'),
+        );
+        review.headers
+          ..set('apikey', service)
+          ..set('Authorization', 'Bearer $service')
+          ..contentType = ContentType.json;
+        review.write(
+          jsonEncode({
+            'action': 'review',
+            'payload': {
+              'id': report,
+              'decision': 'dismissed',
+              'note': 'Uji integrasi lokal',
+            },
+          }),
+        );
+        final reviewed = await review.close();
+        await reviewed.drain<void>();
+        _check(reviewed.statusCode == 200, 'Operator review was rejected.');
+
         // Finish both tasks so the persistent accounts hold no assignments.
         stage = 'cleanup';
         for (final task in [first, second]) {
