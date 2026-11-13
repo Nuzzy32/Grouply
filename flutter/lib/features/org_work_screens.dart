@@ -168,7 +168,10 @@ List<Widget> _groupWorkSection(_WorkspaceState state, JsonMap group) {
   bool past(JsonMap m) => m.date('startsAt')!.isBefore(store.now);
   final next = scheduled.where((m) => !past(m)).toList();
   // Meetings already held but not yet recorded, newest first.
-  final unrecorded = scheduled.where(past).toList().reversed.take(3).toList();
+  // A closed committee records nothing more (§4.1 daftar izin).
+  final unrecorded = store.isClosed(group)
+      ? <JsonMap>[]
+      : scheduled.where(past).toList().reversed.take(3).toList();
   return [
     Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -209,30 +212,32 @@ List<Widget> _groupWorkSection(_WorkspaceState state, JsonMap group) {
           SizedBox(height: 10),
           _workList([for (final m in unrecorded) _meetingRow(state, m)]),
         ],
-        SizedBox(height: 10),
-        Row(
-          children: [
-            if (coord) ...[
+        if (!store.isClosed(group)) ...[
+          SizedBox(height: 10),
+          Row(
+            children: [
+              if (coord) ...[
+                Expanded(
+                  child: GLOutlineButton(
+                    key: Key('meeting-schedule'),
+                    title: 'Jadwalkan rapat',
+                    icon: active ? 'calendar.badge.plus' : 'lock',
+                    onPressed: () => _scheduleMeeting(state, group),
+                  ),
+                ),
+                SizedBox(width: 8),
+              ],
               Expanded(
                 child: GLOutlineButton(
-                  key: Key('meeting-schedule'),
-                  title: 'Jadwalkan rapat',
-                  icon: active ? 'calendar.badge.plus' : 'lock',
-                  onPressed: () => _scheduleMeeting(state, group),
+                  key: Key('approval-request'),
+                  title: 'Ajukan persetujuan',
+                  icon: active ? 'checkmark.seal' : 'lock',
+                  onPressed: () => _requestApproval(state, group),
                 ),
               ),
-              SizedBox(width: 8),
             ],
-            Expanded(
-              child: GLOutlineButton(
-                key: Key('approval-request'),
-                title: 'Ajukan persetujuan',
-                icon: active ? 'checkmark.seal' : 'lock',
-                onPressed: () => _requestApproval(state, group),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ],
     ),
   ];
@@ -277,7 +282,7 @@ Widget? _projectLeadRow(_WorkspaceState state, JsonMap project, JsonMap group) {
             ),
           ),
         ),
-        if (coord) ...[
+        if (coord && !store.isClosed(group)) ...[
           if (lead.isNotEmpty)
             GLTap(
               key: Key('project-lead-clear'),
@@ -596,6 +601,7 @@ class _MeetingState extends _WorkspaceState<MeetingScreen>
 
   bool _canRecord(JsonMap meeting, JsonMap group) =>
       meeting['status'] != 'cancelled' &&
+      !store.isClosed(group) &&
       (_coordinator(store, group) ||
           meeting.text('noteTakerID') == store.currentUserID);
 
@@ -611,7 +617,10 @@ class _MeetingState extends _WorkspaceState<MeetingScreen>
     final detail = this.detail;
     final coord = _coordinator(store, group);
     final tasks = [for (final id in meeting.ids('taskIDs')) ?store.task(id)];
-    final canTask = status != 'cancelled' && _taskProjects(group).isNotEmpty;
+    final canTask =
+        status != 'cancelled' &&
+        !store.isClosed(group) &&
+        _taskProjects(group).isNotEmpty;
     Widget info(String icon, String text) => Padding(
       padding: EdgeInsets.only(top: 8),
       child: Row(
@@ -633,7 +642,7 @@ class _MeetingState extends _WorkspaceState<MeetingScreen>
     );
     return detailPage(
       title: 'Rapat',
-      trailing: coord && status == 'scheduled'
+      trailing: coord && status == 'scheduled' && !store.isClosed(group)
           ? GLCircleButton(
               icon: 'ellipsis',
               label: 'Aksi rapat',

@@ -155,7 +155,10 @@ class _OrgCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final divisions = _orgRows(org, 'divisions');
-    final committees = divisions.where((d) => d['isCommittee'] == true).length;
+    final committees = divisions
+        .where((d) => d['isCommittee'] == true && d['closed'] != true)
+        .length;
+    final closed = divisions.where((d) => d['closed'] == true).length;
     final mine = divisions
         .where((d) => d['isMember'] == true)
         .map((d) => d.text('name'))
@@ -200,7 +203,7 @@ class _OrgCard extends StatelessWidget {
           ),
           SizedBox(height: 14),
           Text(
-            '${divisions.length - committees} divisi${committees > 0 ? ' · $committees kepanitiaan' : ''} · ${org.number('seatsUsed')} anggota${mine.isEmpty ? '' : ' · Divisimu: $mine'}',
+            '${divisions.length - committees - closed} divisi${committees > 0 ? ' · $committees kepanitiaan' : ''} · ${org.number('seatsUsed')} anggota${mine.isEmpty ? '' : ' · Divisimu: $mine'}',
             style: gl(14, w400, 0, GLTheme.text3),
           ),
           SizedBox(height: 14),
@@ -433,7 +436,11 @@ class _OrgState extends _WorkspaceState<OrganizationScreen>
     ];
     final committees = [
       for (final d in all)
-        if (d['isCommittee'] == true) d,
+        if (d['isCommittee'] == true && d['closed'] != true) d,
+    ];
+    final closed = [
+      for (final d in all)
+        if (d['closed'] == true) d,
     ];
     final officers = _orgRows(org, 'roles')
       ..sort(
@@ -554,6 +561,7 @@ class _OrgState extends _WorkspaceState<OrganizationScreen>
           ),
 
         _orgWorkLinks(this, orgID),
+        _orgPlanLinks(this, org),
 
         _divisionBlock(
           'Divisi',
@@ -569,6 +577,25 @@ class _OrgState extends _WorkspaceState<OrganizationScreen>
             role == 'ketua' || role == 'bph',
             active,
             committee: true,
+          ),
+        if (closed.isNotEmpty)
+          Column(
+            key: Key('org-closed-committees'),
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _workHeading(
+                'Arsip kepanitiaan',
+                sub: '${closed.length} ditutup',
+              ),
+              SizedBox(height: 10),
+              Container(
+                padding: EdgeInsets.symmetric(vertical: 4, horizontal: 14),
+                decoration: glBox(GLTheme.surface, 24),
+                child: Column(
+                  children: [for (final d in closed) _divisionRow(d)],
+                ),
+              ),
+            ],
           ),
 
         // Officers
