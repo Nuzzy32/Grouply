@@ -104,6 +104,40 @@ class FakeBackend implements GrouplyBackend {
   @override
   Future<JsonMap> meetingDetail(String id) => meeting(id);
 
+  final reads = <String>[];
+  Future<List<JsonMap>> Function(String id) templateList = (_) async => [];
+  @override
+  Future<List<JsonMap>> templates(String orgID) {
+    reads.add('templates:$orgID');
+    return templateList(orgID);
+  }
+
+  Future<JsonMap> Function(String id) templateDetail = (_) async => {};
+  @override
+  Future<JsonMap> template(String id) {
+    reads.add('template:$id');
+    return templateDetail(id);
+  }
+
+  Future<JsonMap> Function(String id) archive = (_) async => {};
+  @override
+  Future<JsonMap> orgArchive(String orgID) {
+    reads.add('archive:$orgID');
+    return archive(orgID);
+  }
+
+  Future<JsonMap> Function(String, String?, List<String>?) reportData =
+      (_, _, _) async => {};
+  @override
+  Future<JsonMap> report(
+    String groupID, {
+    String? periodID,
+    List<String>? projectIDs,
+  }) {
+    reads.add('report:$groupID:$periodID:$projectIDs');
+    return reportData(groupID, periodID, projectIDs);
+  }
+
   @override
   Future<void> connect(void Function() onChange) async {
     connections++;
@@ -970,6 +1004,307 @@ void main() {
             (e) => e.message,
             'message',
             'Kamu tidak punya izin untuk tindakan ini.',
+          ),
+        ),
+      );
+    });
+  });
+
+  group('Organization Plan Tahap 3a', () {
+    JsonMap org({Object? periods, Object? closed}) => {
+      'id': 'o1',
+      'name': 'BEM FST',
+      'description': '',
+      'periodLabel': '2027/2028',
+      'planActive': false,
+      'planExpiresAt': null,
+      'seatLimit': 0,
+      'seatsUsed': 3,
+      'myRole': 'ketua',
+      'roles': <JsonMap>[],
+      'divisions': [
+        {
+          'id': 'g1',
+          'name': 'Panitia',
+          'memberCount': 3,
+          'isMember': true,
+          'isCommittee': true,
+          'closed': ?closed,
+        },
+      ],
+      'periods': ?periods,
+    };
+    JsonMap period = {
+      'id': 'pe1',
+      'label': '2026/2027',
+      'startedAt': null,
+      'closedAt': '2026-11-01T00:00:00Z',
+    };
+    JsonMap item(String id, int position) => {
+      'id': id,
+      'position': position,
+      'title': 'Butir $id',
+      'description': '',
+      'dueAt': '2026-11-20T16:59:00Z',
+    };
+    JsonMap project({Object? label, Object? items}) => {
+      'id': 'p1',
+      'groupID': 'g1',
+      'title': 'Sie Acara',
+      'description': '',
+      'dueAt': '2026-12-01T00:00:00Z',
+      'status': 'active',
+      'periodLabel': ?label,
+      'planItems': ?items,
+    };
+    JsonMap snapshot({
+      Object? closed,
+      Object? periods,
+      Object? label,
+      Object? items,
+      Object? divisionClosed,
+    }) => cloudSnapshot('u1')
+      ..['groups'] = [
+        {
+          'id': 'g1',
+          'name': 'Panitia',
+          'description': '',
+          'course': '',
+          'coordinatorID': 'u1',
+          'tint': '',
+          'icon': '',
+          'memberIDs': ['u1'],
+          'organizationID': 'o1',
+          'isCommittee': true,
+          'closed': ?closed,
+        },
+      ]
+      ..['projects'] = [project(label: label, items: items)]
+      ..['organizations'] = [org(periods: periods, closed: divisionClosed)];
+
+    test('decodes Tahap 3a keys; plan items sort by position', () async {
+      backend.actor = 'u1';
+      backend.read = () async => snapshot(
+        closed: true,
+        divisionClosed: true,
+        periods: [period],
+        label: '2026/2027',
+        items: [item('b', 2), item('a', 1)],
+      );
+      await store.initialize();
+      expect(store.isClosed(store.group('g1')), isTrue);
+      expect(store.isClosed(null), isFalse);
+      expect(store.periods('o1').single['label'], '2026/2027');
+      expect(store.project('p1')!['periodLabel'], '2026/2027');
+      expect(store.planItems(store.project('p1')).map((i) => i['id']), [
+        'a',
+        'b',
+      ]);
+      expect(
+        (store.organization('o1')!['divisions'] as List).single['closed'],
+        isTrue,
+      );
+    });
+
+    test('a database without Tahap 3a decodes as empty', () async {
+      backend.actor = 'u1';
+      backend.read = () async => snapshot();
+      await store.initialize();
+      expect(store.isClosed(store.group('g1')), isFalse);
+      expect(store.periods('o1'), isEmpty);
+      expect(store.project('p1')!['periodLabel'], '');
+      expect(store.planItems(store.project('p1')), isEmpty);
+      expect(store.planItems(null), isEmpty);
+    });
+
+    test('malformed Tahap 3a keys never partially apply', () async {
+      backend.actor = 'u1';
+      backend.read = () async => snapshot();
+      await store.initialize();
+      for (final bad in <JsonMap>[
+        snapshot(closed: 'yes'),
+        snapshot(divisionClosed: 1),
+        snapshot(label: 2026),
+        snapshot(items: {'a': item('a', 1)}),
+        snapshot(items: [item('a', 1)..['position'] = '1']),
+        snapshot(items: [item('a', 1)..['dueAt'] = 'besok']),
+        snapshot(items: [item('', 1)]),
+        snapshot(
+          periods: [
+            {...period, 'closedAt': null},
+          ],
+        ),
+        snapshot(
+          periods: [
+            {...period, 'label': null},
+          ],
+        ),
+        snapshot(periods: 'pe1'),
+      ]) {
+        backend.read = () async => bad..['users'][0]['name'] = 'Partial';
+        await expectLater(store.refresh(), throwsFormatException);
+      }
+      expect(store.user('u1')!.text('name'), 'Ayu');
+    });
+
+    test('new error codes have their own text and reload when stale', () async {
+      expect(
+        GrouplyStore.codeText('group_closed'),
+        startsWith('Kepanitiaan ini sudah ditutup'),
+      );
+      expect(
+        GrouplyStore.codeText('committee_busy'),
+        startsWith('Kepanitiaan belum bisa ditutup'),
+      );
+      expect(
+        GrouplyStore.codeText('plan_item_used'),
+        startsWith('Butir rencana ini sudah dijadikan tugas'),
+      );
+      expect(
+        GrouplyStore.codeText('period_exists'),
+        startsWith('Label periode itu sudah pernah ditutup'),
+      );
+      expect(
+        GrouplyStore.codeText('rate_limited', 'applyTemplate'),
+        contains('5 kali per jam'),
+      );
+      expect(
+        GrouplyStore.codeText('rate_limited', 'createTemplate'),
+        contains('50 template'),
+      );
+      backend.actor = 'u1';
+      await store.initialize();
+      for (final (code, reloads) in [
+        ('group_closed', true),
+        ('plan_item_used', true),
+        ('committee_busy', false),
+        ('period_exists', false),
+      ]) {
+        final before = backend.snapshots;
+        backend.write = (_, _) async =>
+            throw PostgrestException(message: code, code: 'P0001');
+        await expectLater(
+          store.mutate('createTask', {}),
+          throwsA(isA<GrouplyException>()),
+        );
+        await Future<void>.delayed(const Duration(milliseconds: 200));
+        expect(backend.snapshots, before + (reloads ? 1 : 0), reason: code);
+      }
+    });
+
+    test('read RPCs pass parameters, decode lists and map codes', () async {
+      backend.actor = 'u1';
+      await store.initialize();
+      backend.templateList = (_) async => [
+        {
+          'id': 't1',
+          'name': 'Seminar',
+          'description': '',
+          'builtIn': true,
+          'sectionCount': 2,
+          'itemCount': 3,
+          'createdAt': '2026-01-01T00:00:00Z',
+          'mine': false,
+        },
+      ];
+      expect((await store.templates('o1')).single['name'], 'Seminar');
+      backend.templateDetail = (id) async => {
+        'id': id,
+        'name': 'Seminar',
+        'description': '',
+        'builtIn': true,
+        'sections': [
+          {
+            'title': 'Sie Acara',
+            'description': '',
+            'offsetDays': -1,
+            'items': [
+              {'title': 'Rundown', 'description': '', 'offsetDays': -7},
+            ],
+          },
+        ],
+      };
+      final detail = await store.template('t1');
+      expect((detail['sections'] as List).single['items'], hasLength(1));
+      backend.archive = (_) async => {
+        'periods': [
+          {
+            ...period,
+            'projects': [
+              {
+                'id': 'p1',
+                'groupID': 'g1',
+                'title': 'A',
+                'total': 1,
+                'done': 1,
+              },
+            ],
+            'committees': <JsonMap>[],
+          },
+        ],
+      };
+      expect(
+        ((await store.orgArchive('o1'))['periods'] as List).single['label'],
+        '2026/2027',
+      );
+      backend.reportData = (_, _, _) async => {
+        'generatedAt': '2026-11-13T00:00:00Z',
+        'organization': 'BEM FST',
+        'period': '2026/2027',
+        'group': {'name': 'Panitia', 'isCommittee': true, 'coordinator': 'Ayu'},
+        'projects': [
+          {'title': 'Sie Acara', 'tasks': <JsonMap>[]},
+        ],
+        'meetings': <JsonMap>[],
+        'totals': {'tasks': 0, 'done': 0, 'approvedAmount': 0},
+      };
+      final report = await store.report(
+        'g1',
+        periodID: 'pe1',
+        projectIDs: ['p1'],
+      );
+      // A koordinator sie's report has no `approvals` key: empty, not null.
+      expect(report['approvals'], isEmpty);
+      expect(backend.reads, [
+        'templates:o1',
+        'template:t1',
+        'archive:o1',
+        'report:g1:pe1:[p1]',
+      ]);
+      // Server codes keep their text; a bad shape gets the fallback.
+      backend.templateList = (_) async =>
+          throw const PostgrestException(message: 'forbidden', code: 'P0001');
+      await expectLater(
+        store.templates('o1'),
+        throwsA(
+          isA<GrouplyException>().having(
+            (e) => e.message,
+            'message',
+            GrouplyStore.codeText('forbidden'),
+          ),
+        ),
+      );
+      backend.templateList = (_) async => [
+        {'id': 't1', 'name': 'Seminar', 'builtIn': 'ya'},
+      ];
+      await expectLater(
+        store.templates('o1'),
+        throwsA(
+          isA<GrouplyException>().having(
+            (e) => e.message,
+            'message',
+            startsWith('Template belum dapat dimuat'),
+          ),
+        ),
+      );
+      backend.reportData = (_, _, _) async => {'projects': 'none'};
+      await expectLater(
+        store.report('g1'),
+        throwsA(
+          isA<GrouplyException>().having(
+            (e) => e.message,
+            'message',
+            startsWith('Rekap belum dapat dimuat'),
           ),
         ),
       );

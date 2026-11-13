@@ -983,6 +983,7 @@ class _GroupState extends _WorkspaceState<GroupScreen>
     final members = group.ids('memberIDs');
     final org = store.organization(group.text('organizationID'));
     final committee = store.isCommittee(group);
+    final closed = store.isClosed(group);
 
     return detailPage(
       title: 'Grup',
@@ -1153,28 +1154,33 @@ class _GroupState extends _WorkspaceState<GroupScreen>
                     ],
                   ),
                 ),
-                SizedBox(width: 8),
-                _grButton(
-                  label: 'Undang anggota',
-                  onTap: () => createInvite(groupID),
-                  child: Container(
-                    height: 44,
-                    padding: EdgeInsets.only(left: 10, right: 14),
-                    decoration: ShapeDecoration(
-                      shape: StadiumBorder(
-                        side: BorderSide(color: GLTheme.ink, width: 1.5),
+                if (!closed) ...[
+                  SizedBox(width: 8),
+                  _grButton(
+                    label: 'Undang anggota',
+                    onTap: () => createInvite(groupID),
+                    child: Container(
+                      height: 44,
+                      padding: EdgeInsets.only(left: 10, right: 14),
+                      decoration: ShapeDecoration(
+                        shape: StadiumBorder(
+                          side: BorderSide(color: GLTheme.ink, width: 1.5),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          GLIcon(
+                            coord ? 'person.badge.plus' : 'lock',
+                            size: 19,
+                          ),
+                          SizedBox(width: 4),
+                          Text('Undang', style: gl(14, w600)),
+                        ],
                       ),
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        GLIcon(coord ? 'person.badge.plus' : 'lock', size: 19),
-                        SizedBox(width: 4),
-                        Text('Undang', style: gl(14, w600)),
-                      ],
-                    ),
                   ),
-                ),
+                ],
               ],
             ),
             SizedBox(height: 10),
@@ -1207,6 +1213,7 @@ class _GroupState extends _WorkspaceState<GroupScreen>
         ),
 
         ..._groupWorkSection(this, group),
+        ..._groupPlanSection(this, group),
 
         // Projects
         Padding(
@@ -1222,35 +1229,37 @@ class _GroupState extends _WorkspaceState<GroupScreen>
                       style: gl(21, w700, -0.02),
                     ),
                   ),
-                  SizedBox(width: 8),
-                  _grButton(
-                    key: Key('create-project'),
-                    label: committee ? 'Buat sie' : 'Buat proyek',
-                    onTap: () => _newProject(group),
-                    child: Container(
-                      height: 44,
-                      padding: EdgeInsets.only(left: 10, right: 14),
-                      decoration: ShapeDecoration(
-                        color: GLTheme.ink,
-                        shape: StadiumBorder(),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          GLIcon(
-                            coord ? 'plus' : 'lock',
-                            size: 19,
-                            color: GLTheme.onInk,
-                          ),
-                          SizedBox(width: 4),
-                          Text(
-                            committee ? 'Buat sie' : 'Buat proyek',
-                            style: gl(14, w600, 0, GLTheme.onInk),
-                          ),
-                        ],
+                  if (!closed) ...[
+                    SizedBox(width: 8),
+                    _grButton(
+                      key: Key('create-project'),
+                      label: committee ? 'Buat sie' : 'Buat proyek',
+                      onTap: () => _newProject(group),
+                      child: Container(
+                        height: 44,
+                        padding: EdgeInsets.only(left: 10, right: 14),
+                        decoration: ShapeDecoration(
+                          color: GLTheme.ink,
+                          shape: StadiumBorder(),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            GLIcon(
+                              coord ? 'plus' : 'lock',
+                              size: 19,
+                              color: GLTheme.onInk,
+                            ),
+                            SizedBox(width: 4),
+                            Text(
+                              committee ? 'Buat sie' : 'Buat proyek',
+                              style: gl(14, w600, 0, GLTheme.onInk),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
+                  ],
                 ],
               ),
               SizedBox(height: 10),
@@ -1330,7 +1339,7 @@ class _GroupState extends _WorkspaceState<GroupScreen>
                         textAlign: TextAlign.center,
                         style: gl(15, w400, 0, GLTheme.secondary, 4),
                       ),
-                      if (coord) ...[
+                      if (coord && !closed) ...[
                         SizedBox(height: 14),
                         GLTap(
                           onTap: () => _newProject(group),

@@ -30,6 +30,23 @@ abstract class GrouplyBackend {
 
   /// Meeting agenda, minutes and attendance (`grouply_meeting`, Tahap 2 §4.6).
   Future<Map<String, dynamic>> meetingDetail(String id);
+
+  /// Built-in and organization templates (`grouply_templates`, Tahap 3 §4.5).
+  Future<List<Map<String, dynamic>>> templates(String orgID);
+
+  /// One template with its sections (`grouply_template`).
+  Future<Map<String, dynamic>> template(String id);
+
+  /// Closed periods with their labelled projects (`grouply_org_archive`).
+  Future<Map<String, dynamic>> orgArchive(String orgID);
+
+  /// LPJ data for one group and period (`grouply_report`); null = current
+  /// period / every project of it.
+  Future<Map<String, dynamic>> report(
+    String groupID, {
+    String? periodID,
+    List<String>? projectIDs,
+  });
   Future<void> connect(void Function() onChange);
   Future<void> disconnect();
   Future<void> foreground();
@@ -338,6 +355,40 @@ class SupabaseGrouplyBackend implements GrouplyBackend {
   @override
   Future<Map<String, dynamic>> meetingDetail(String id) async =>
       _object(await _sdk.rpc('grouply_meeting', params: {'meeting_id': id}));
+
+  @override
+  Future<List<Map<String, dynamic>>> templates(String orgID) async {
+    final value = await _sdk.rpc(
+      'grouply_templates',
+      params: {'org_id': orgID},
+    );
+    if (value is! List) {
+      throw const FormatException('Respons server tidak valid.');
+    }
+    return [for (final row in value) _object(row)];
+  }
+
+  @override
+  Future<Map<String, dynamic>> template(String id) async =>
+      _object(await _sdk.rpc('grouply_template', params: {'template_id': id}));
+  @override
+  Future<Map<String, dynamic>> orgArchive(String orgID) async =>
+      _object(await _sdk.rpc('grouply_org_archive', params: {'org_id': orgID}));
+  @override
+  Future<Map<String, dynamic>> report(
+    String groupID, {
+    String? periodID,
+    List<String>? projectIDs,
+  }) async => _object(
+    await _sdk.rpc(
+      'grouply_report',
+      params: {
+        'group_id': groupID,
+        'period_id': periodID,
+        'project_ids': projectIDs,
+      },
+    ),
+  );
 
   @override
   Future<void> connect(void Function() onChange) async {

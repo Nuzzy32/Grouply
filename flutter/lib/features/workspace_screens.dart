@@ -5,11 +5,13 @@ import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../core/lpj_export.dart';
 import '../core/store.dart';
 import '../ui/gl.dart';
 import 'chat_screens.dart';
 
 part 'groups_screens.dart';
+part 'org_plan_screens.dart';
 part 'org_screens.dart';
 part 'org_work_screens.dart';
 part 'project_screens.dart';

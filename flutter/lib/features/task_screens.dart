@@ -2484,14 +2484,18 @@ class _TaskMemberChip extends StatelessWidget {
 /// Opens the Swift `TaskEditor` sheet. Creates a task when [task] is null,
 /// otherwise edits it. Resolves to the store result after a successful save.
 /// [title] and [meetingID] prefill a new task made from a meeting
-/// ("Jadikan tugas", Tahap 2 §5.2).
+/// ("Jadikan tugas", Tahap 2 §5.2); [title], [description], [dueAt] and
+/// [planItemID] one made from a plan item (Tahap 3 §5).
 Future<JsonMap?> _showTaskSheet(
   _WorkspaceState state,
   JsonMap project,
   JsonMap group, {
   JsonMap? task,
   String? title,
+  String? description,
+  DateTime? dueAt,
   String? meetingID,
+  String? planItemID,
 }) => showGLSheet<JsonMap>(
   state.context,
   title: task == null ? 'Buat tugas' : 'Edit tugas',
@@ -2501,7 +2505,10 @@ Future<JsonMap?> _showTaskSheet(
     group: group,
     task: task,
     initialTitle: title,
+    initialDescription: description,
+    initialDue: dueAt,
     meetingID: meetingID,
+    planItemID: planItemID,
   ),
 );
 
@@ -2512,12 +2519,16 @@ class _TaskEditorSheet extends StatefulWidget {
     required this.group,
     this.task,
     this.initialTitle,
+    this.initialDescription,
+    this.initialDue,
     this.meetingID,
+    this.planItemID,
   });
   final GrouplyStore store;
   final JsonMap project, group;
   final JsonMap? task;
-  final String? initialTitle, meetingID;
+  final String? initialTitle, initialDescription, meetingID, planItemID;
+  final DateTime? initialDue;
   @override
   State<_TaskEditorSheet> createState() => _TaskEditorSheetState();
 }
@@ -2527,11 +2538,19 @@ class _TaskEditorSheetState extends State<_TaskEditorSheet> {
     text: widget.task?.text('title') ?? widget.initialTitle,
   );
   late final description = TextEditingController(
-    text: widget.task?.text('description'),
+    text: widget.task?.text('description') ?? widget.initialDescription,
   );
-  late DateTime dueAt = widget.task == null
+  // A plan item already past its date starts at today: deadlines must lie
+  // in the future.
+  late DateTime dueAt = widget.task != null
+      ? _taskDue(widget.task!).toLocal()
+      : widget.initialDue == null
       ? _taskEndOfDay(DateTime.now().add(Duration(days: 3)))
-      : _taskDue(widget.task!).toLocal();
+      : _taskEndOfDay(
+          widget.initialDue!.isBefore(DateTime.now())
+              ? DateTime.now()
+              : widget.initialDue!,
+        );
   late String? assigneeID = widget.task?.text('assigneeID');
   late String? reviewerID = widget.task?.text('reviewerID');
   // Captured when the editor opens (not lazily on save) so a concurrent
@@ -2831,6 +2850,7 @@ class _TaskEditorSheetState extends State<_TaskEditorSheet> {
         'reviewerID': r,
         'dueAt': _taskEndOfDay(dueAt).toUtc().toIso8601String(),
         'meetingID': ?widget.meetingID,
+        'planItemID': ?widget.planItemID,
       };
       success =
           'Tugas dibuat. ${a == store.currentUserID ? 'Ditugaskan ke kamu.' : '${_taskUserName(store, a, 'Anggota')} akan diberi tahu.'}';

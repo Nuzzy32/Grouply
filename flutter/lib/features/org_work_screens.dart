@@ -209,30 +209,32 @@ List<Widget> _groupWorkSection(_WorkspaceState state, JsonMap group) {
           SizedBox(height: 10),
           _workList([for (final m in unrecorded) _meetingRow(state, m)]),
         ],
-        SizedBox(height: 10),
-        Row(
-          children: [
-            if (coord) ...[
+        if (!store.isClosed(group)) ...[
+          SizedBox(height: 10),
+          Row(
+            children: [
+              if (coord) ...[
+                Expanded(
+                  child: GLOutlineButton(
+                    key: Key('meeting-schedule'),
+                    title: 'Jadwalkan rapat',
+                    icon: active ? 'calendar.badge.plus' : 'lock',
+                    onPressed: () => _scheduleMeeting(state, group),
+                  ),
+                ),
+                SizedBox(width: 8),
+              ],
               Expanded(
                 child: GLOutlineButton(
-                  key: Key('meeting-schedule'),
-                  title: 'Jadwalkan rapat',
-                  icon: active ? 'calendar.badge.plus' : 'lock',
-                  onPressed: () => _scheduleMeeting(state, group),
+                  key: Key('approval-request'),
+                  title: 'Ajukan persetujuan',
+                  icon: active ? 'checkmark.seal' : 'lock',
+                  onPressed: () => _requestApproval(state, group),
                 ),
               ),
-              SizedBox(width: 8),
             ],
-            Expanded(
-              child: GLOutlineButton(
-                key: Key('approval-request'),
-                title: 'Ajukan persetujuan',
-                icon: active ? 'checkmark.seal' : 'lock',
-                onPressed: () => _requestApproval(state, group),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ],
     ),
   ];
@@ -277,7 +279,7 @@ Widget? _projectLeadRow(_WorkspaceState state, JsonMap project, JsonMap group) {
             ),
           ),
         ),
-        if (coord) ...[
+        if (coord && !store.isClosed(group)) ...[
           if (lead.isNotEmpty)
             GLTap(
               key: Key('project-lead-clear'),

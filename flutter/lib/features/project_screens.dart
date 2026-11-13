@@ -248,6 +248,7 @@ class _ProjectState extends _WorkspaceState<ProjectScreen> {
         if (status == 'completed') _doneBanner(p, group, isCoord),
         _hero(p, group),
         ?_projectLeadRow(this, p, group),
+        ..._projectPlanSection(this, p, group),
         _pulse(p, group, tasks, isCoord, stale, idle),
         Padding(
           padding: EdgeInsets.only(top: 4),
@@ -255,26 +256,27 @@ class _ProjectState extends _WorkspaceState<ProjectScreen> {
             spacing: 8,
             children: [
               Expanded(child: Text('Tugas', style: gl(22, w700, -0.02))),
-              GLTap(
-                key: ValueKey('add-task'),
-                onTap: () => _openNewTask(p, group),
-                child: Container(
-                  height: 44,
-                  padding: EdgeInsets.only(left: 12, right: 16),
-                  decoration: _pjOutline,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    spacing: 4,
-                    children: [
-                      GLIcon(
-                        canTasks && status == 'active' ? 'plus' : 'lock',
-                        size: 20,
-                      ),
-                      Text('Buat tugas', style: gl(15, w600)),
-                    ],
+              if (!store.isClosed(group))
+                GLTap(
+                  key: ValueKey('add-task'),
+                  onTap: () => _openNewTask(p, group),
+                  child: Container(
+                    height: 44,
+                    padding: EdgeInsets.only(left: 12, right: 16),
+                    decoration: _pjOutline,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      spacing: 4,
+                      children: [
+                        GLIcon(
+                          canTasks && status == 'active' ? 'plus' : 'lock',
+                          size: 20,
+                        ),
+                        Text('Buat tugas', style: gl(15, w600)),
+                      ],
+                    ),
                   ),
                 ),
-              ),
             ],
           ),
         ),
