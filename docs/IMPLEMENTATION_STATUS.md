@@ -128,6 +128,12 @@ Review tambahan menutup pesan gagal yang terlihat lintas persona, koordinator de
 - Verifikasi Flutter di hasil gabungan: `flutter analyze` bersih; `flutter test` **167 lulus** dengan 4 tes opt-in localhost dilewati. Dengan `GROUPLY_LOCAL_INTEGRATION=1`, keempat tes localhost lulus 3/3 run di hasil gabungan (8/8 di branch sebelum digabung). Tes Tahap 2 mencakup kepanitiaan, koordinator sie membuat tugas, notulen + daftar hadir + tugas dari rapat, persetujuan dua jenjang + pesan "sudah diputuskan", dan hitungan baca pengumuman.
 - Push server (ORG-11) tidak dibuat. Belum ada bukti cloud, perangkat nyata, uji beban, atau audit VoiceOver.
 
+## Laporkan konten organisasi — 13 November 2026
+
+- Migration `20261113111326_report_org_content.sql`: `private.content_reports` mendapat `target_kind`/`target_id`/`excerpt`; aksi `reportContent` (pengumuman, rapat, pengajuan; ditolak untuk penulisnya sendiri, satu laporan per pelapor per konten, lima per menit); antrean dan `review` operator mencakup konten organisasi, dengan kunci grup → organisasi sebelum baris laporan; snapshot `reports[]` mendapat `kind` dan `targetID`.
+- Flutter: tombol **Laporkan** di layar rapat, pengajuan, dan pengumuman memakai lembar laporan yang sama dengan chat; berubah menjadi "Sudah kamu laporkan" setelah terkirim.
+- Verifikasi lokal: `organization_work` **142 PASS** (22 baru), `workflow` 40, `milestone_e` 54, `organization` 66; uji kunci `billing_local.py` **12/12**, `moderation_local.py` 5/5; smoke, advisors, dan lint bersih; `flutter analyze` bersih, `flutter test` **168 lulus**; keempat tes localhost lulus 3/3 run, termasuk laporan pengumuman dan peninjauan operator lewat HTTP.
+
 ## Target cloud dan rilis yang belum tersedia
 
 Belum tersedia/terverifikasi: deployment cloud, provider Apple nyata dan pencabutan token Apple, Realtime Group Chat lintas perangkat fisik, APNs/pengingat lokal, domain/AASA/Universal Links, operator moderasi production dan kebijakan retention. Penghapusan akun password server dan CLI moderasi tersedia lokal, bukan bukti readiness Apple/App Review. Source migration aktual ada di `supabase/migrations`; DDL dokumen produk mencakup target yang lebih luas. Tidak ada proyek cloud atau database production yang diubah. Gate cloud/TestFlight tetap belum dicentang.

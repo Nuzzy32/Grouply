@@ -350,7 +350,7 @@ Desain ini sudah ditinjau secara independen terhadap kode migration dan Flutter.
 
 ## 9. Batas yang diketahui dan di luar Tahap 2
 
-- **Belum ada tombol "Laporkan"** untuk pengumuman, notulen, dan pengajuan. Pelaporan yang ada hanya untuk pesan chat. Sebelum rilis ke store, konten buatan pengguna ini perlu jalur lapor. Untuk pilot, penulisnya terbatas pada pengurus dan coordinator.
+- **Laporkan** (ditambahkan 13 November 2026, migration `20261113111326_report_org_content.sql`): pengumuman, rapat (termasuk notulen), dan pengajuan bisa dilaporkan lewat aksi `reportContent {kind, id, reason}` oleh siapa pun yang bisa melihatnya, kecuali penulisnya sendiri. Laporan masuk antrean operator yang sama; salinan isi (`excerpt`, maks 2.000 karakter) disimpan supaya bukti tetap ada walau pengumuman ditarik. `removed` mengganti judul dan isi dengan `[Dihapus moderator]`.
 - **Notifikasi lokal bukan pengganti push.** Jadwalnya hanya diperbarui saat aplikasi dibuka di perangkat itu. Rapat yang dibatalkan atau dipindah saat aplikasi tertutup tetap berbunyi pada jam lama, dan rapat baru tidak memberi tahu sampai aplikasi dibuka. Pengajuan dan pengumuman baru sama sekali tidak memberi tahu saat aplikasi tertutup.
 - Kepanitiaan yang sudah selesai belum bisa ditutup; ia tetap tampil dan dihitung di batas 30. Penutupan masuk bersama arsip periode (ORG-13).
 - Anggota kepanitiaan masuk lewat kode undangan. "Tambah langsung dari daftar anggota organisasi" tidak dibuat, karena nama anggota divisi lain memang disembunyikan.

@@ -20,12 +20,20 @@ def attempt(action, payload):
     return "SELECT pg_temp.try('" + action + "','" + json.dumps(payload) + "'::jsonb);"
 
 
+def call(actor, request):
+    # A None actor is the operator: the request is a moderation payload for grouply_moderation.
+    if actor is None:
+        return ("SET LOCAL ROLE service_role; SELECT set_config('request.jwt.claims','{\"role\":\"service_role\"}',true); "
+                "SELECT public.grouply_moderation('review','" + json.dumps(request) + "'::jsonb);")
+    return login(actor) + attempt(*request)
+
+
 def check_locks():
     run = uuid.uuid4().hex[:8]
-    k, c1, c2, x, y, m, d, z, w, fk, fc, fr, fd, fb, fl, fq = users = [str(uuid.uuid4()) for _ in range(16)]
+    k, c1, c2, x, y, m, d, z, w, fk, fc, fr, fd, fb, fl, fq, ft, fu = users = [str(uuid.uuid4()) for _ in range(18)]
     org_a, org_b, org_c, org_e, org_f = orgs = [str(uuid.uuid4()) for _ in range(5)]
     a1, a2, b1, b2, cg, e1, e2, f1 = groups = [str(uuid.uuid4()) for _ in range(8)]
-    ap1, ap2, ap3, proj = [str(uuid.uuid4()) for _ in range(4)]
+    ap1, ap2, ap3, proj, notice, rep_a, rep_b = [str(uuid.uuid4()) for _ in range(7)]
     listed = lambda ids: ",".join("'" + i + "'" for i in ids)
     setup = f"""
       BEGIN;
@@ -39,13 +47,16 @@ def check_locks():
       INSERT INTO public.group_members VALUES
         ('{a1}','{c1}'),('{a1}','{k}'),('{a2}','{c2}'),('{b1}','{c1}'),('{b1}','{k}'),('{b2}','{c2}'),('{b2}','{k}'),
         ('{cg}','{k}'),('{cg}','{m}'),('{e1}','{k}'),('{e1}','{d}'),('{e1}','{z}'),('{e2}','{c1}'),('{e2}','{d}'),('{e2}','{w}'),
-        ('{f1}','{fk}'),('{f1}','{fc}'),('{f1}','{fr}'),('{f1}','{fd}'),('{f1}','{fb}'),('{f1}','{fl}'),('{f1}','{fq}');
+        ('{f1}','{fk}'),('{f1}','{fc}'),('{f1}','{fr}'),('{f1}','{fd}'),('{f1}','{fb}'),('{f1}','{fl}'),('{f1}','{fq}'),('{f1}','{ft}'),('{f1}','{fu}');
       INSERT INTO public.organization_roles SELECT id::uuid,'{k}','ketua' FROM unnest(ARRAY[{listed(orgs[:4])}]) id;
       INSERT INTO public.organization_roles VALUES ('{org_f}','{fk}','ketua'),('{org_f}','{fb}','bph');
       INSERT INTO public.projects(id,group_id,title,due_at,lead_id) VALUES ('{proj}','{f1}','Sie lock',now()+interval '30 days','{fl}');
       INSERT INTO public.approvals(id,organization_id,group_id,requester_id,title,note) VALUES
         ('{ap1}','{org_f}','{f1}','{fr}','Lock 1','x'),('{ap2}','{org_f}','{f1}','{fd}','Lock 2','x'),('{ap3}','{org_f}','{f1}','{fq}','Lock 3','x');
       INSERT INTO public.approval_steps(approval_id,position,approver_id) VALUES ('{ap1}',1,'{fk}'),('{ap2}',1,'{fk}'),('{ap3}',1,'{fb}');
+      INSERT INTO public.announcements(id,organization_id,group_id,author_id,title,body) VALUES ('{notice}','{org_f}','{f1}','{fc}','Lock','Isi');
+      INSERT INTO private.content_reports(id,reporter_id,reason,target_kind,target_id,excerpt) VALUES
+        ('{rep_a}','{ft}','Lock A','announcement','{notice}','Lock'),('{rep_b}','{fu}','Lock B','announcement','{notice}','Lock');
       INSERT INTO private.invitations(group_id,token_hash,max_uses) VALUES
         ('{a1}',extensions.digest('lock-{run}-a1','sha256'),5),('{a2}',extensions.digest('lock-{run}-a2','sha256'),5);
       COMMIT;
@@ -56,6 +67,8 @@ def check_locks():
       DELETE FROM public.chat_messages WHERE group_id IN ({listed(groups)});
       DELETE FROM public.activity_events WHERE group_id IN ({listed(groups)});
       DELETE FROM public.approvals WHERE organization_id IN ({listed(orgs)});
+      DELETE FROM private.content_reports WHERE id IN ('{rep_a}','{rep_b}');
+      DELETE FROM public.announcements WHERE organization_id IN ({listed(orgs)});
       DELETE FROM public.tasks WHERE project_id IN (SELECT id FROM public.projects WHERE group_id IN ({listed(groups)}));
       DELETE FROM public.projects WHERE group_id IN ({listed(groups)});
       DELETE FROM private.invitations WHERE group_id IN ({listed(groups)});
@@ -98,6 +111,15 @@ def check_locks():
          fl, ("createTask", {"projectID": proj, "title": "Telat", "assigneeID": fq, "reviewerID": fc, "dueAt": "2030-01-01T00:00:00Z"}),
          "COMMIT;", "error:forbidden",
          f"SELECT NOT EXISTS(SELECT 1 FROM public.tasks WHERE project_id='{proj}') AND (SELECT lead_id IS NULL FROM public.projects WHERE id='{proj}');"),
+        # Reports on organization content: operator review vs reporter account deletion, both orders.
+        ("operator removes reported content while the reporter deletes the account", None,
+         {"id": rep_a, "decision": "removed", "note": "Lock regression"}, '"status": "removed"',
+         ft, ("deleteAccount", {}), "COMMIT;", '"deleted": true',
+         f"SELECT (SELECT status='removed' FROM private.content_reports WHERE id='{rep_a}') "
+         f"AND (SELECT title='[Dihapus moderator]' FROM public.announcements WHERE id='{notice}');"),
+        ("reporter deletes the account while the operator reviews", fu, ("deleteAccount", {}), '"deleted": true',
+         None, {"id": rep_b, "decision": "dismissed", "note": "Lock regression"}, "COMMIT;", '"status": "dismissed"',
+         f"SELECT status='pending' AND reporter_id IS NULL AND reason='[Pelapor terhapus]' FROM private.content_reports WHERE id='{rep_b}';"),
     ]
     sql(setup)
     failures = []
@@ -108,9 +130,9 @@ def check_locks():
                 first, second = Session(), Session()
                 for session in (first, second):
                     session.run(TRY)
-                held = first.run(login(holder) + attempt(*holder_call))
+                held = first.run(call(holder, holder_call))
                 assert any(holder_expect in line for line in held), "holder got " + " ".join(held)
-                waiting = second.send(login(waiter) + attempt(*waiter_call))
+                waiting = second.send(call(waiter, waiter_call))
                 blocked(second, first)
                 first.run(release)
                 got = second.receive(waiting)

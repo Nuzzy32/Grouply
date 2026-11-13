@@ -17,10 +17,11 @@ App Store (Guideline 1.2) dan Google Play (kebijakan UGC) mewajibkan aplikasi de
 
 ## 2. Alur laporan (sesuai kode)
 
-- Pengguna melaporkan pesan dari menu pesan, dengan alasan (1–1.000 karakter).
+- Pengguna melaporkan pesan dari menu pesan, dengan alasan (1–1.000 karakter). Di paket organisasi, pengumuman, rapat (termasuk notulen), dan pengajuan juga bisa dilaporkan dari layarnya masing-masing oleh siapa pun yang bisa melihatnya, kecuali penulisnya.
 - Server memeriksa keanggotaan, menolak laporan atas pesan sendiri, menyimpan satu laporan per pelapor per pesan, dan membatasi lima laporan baru per menit.
 - Laporan berstatus `pending` sampai operator memutuskan `dismissed` atau `removed`.
-- `removed` mengganti isi pesan dengan penanda moderasi. Tugas, submission, dan review tidak ikut dihapus.
+- `removed` mengganti isi pesan dengan penanda moderasi. Untuk konten organisasi, judul dan isinya diganti `[Dihapus moderator]` (tempat dan agenda rapat dikosongkan, tautan pengajuan dihapus); status pengajuan tidak berubah. Tugas, submission, dan review tidak ikut dihapus.
+- Antrean menampilkan `kind` (`message`/`announcement`/`meeting`/`approval`), `targetID`, grup/organisasi, dan teksnya. Untuk konten organisasi, teks itu adalah salinan saat dilaporkan, jadi tetap terbaca walau pengumuman sudah ditarik.
 - Pelapor melihat status laporannya sendiri; catatan operator tidak ditampilkan.
 - Keputusan yang sama dapat diulang dengan aman; keputusan berbeda atas laporan yang sudah selesai ditolak.
 

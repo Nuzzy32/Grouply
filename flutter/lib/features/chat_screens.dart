@@ -1646,9 +1646,25 @@ class _MessageSheet extends StatelessWidget {
 }
 
 /// `ChatReportSheet` — reason radio list, optional details, done state.
+/// Report sheet shared by chat messages and organization content.
+Future<void> showReportSheet(
+  BuildContext context, {
+  required String title,
+  required String note,
+  required Future<void> Function(String reason) onSubmit,
+}) => _showChatSheet<void>(
+  context,
+  (_) => _ModerationDialog(title: title, note: note, onSubmit: onSubmit),
+);
+
 class _ModerationDialog extends StatefulWidget {
-  const _ModerationDialog({required this.onSubmit});
+  const _ModerationDialog({
+    required this.onSubmit,
+    this.title = 'Laporkan pesan',
+    this.note = 'Pengirim tidak akan tahu siapa yang melapor.',
+  });
   final Future<void> Function(String reason) onSubmit;
+  final String title, note;
 
   @override
   State<_ModerationDialog> createState() => _ModerationDialogState();
@@ -1702,7 +1718,7 @@ class _ModerationDialogState extends State<_ModerationDialog> {
     children: [
       Row(
         children: [
-          Expanded(child: Text('Laporkan pesan', style: gl(22, w700, -0.02))),
+          Expanded(child: Text(widget.title, style: gl(22, w700, -0.02))),
           SizedBox(width: 8),
           GLTap(
             label: 'Tutup',
@@ -1717,10 +1733,7 @@ class _ModerationDialogState extends State<_ModerationDialog> {
         ],
       ),
       SizedBox(height: 8),
-      Text(
-        'Pengirim tidak akan tahu siapa yang melapor.',
-        style: gl(14, w400, 0, GLTheme.text3),
-      ),
+      Text(widget.note, style: gl(14, w400, 0, GLTheme.text3)),
       SizedBox(height: 14),
       Container(
         padding: EdgeInsets.symmetric(vertical: 4, horizontal: 16),

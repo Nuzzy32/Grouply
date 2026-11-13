@@ -384,6 +384,53 @@ SELECT pg_temp.actor(:'bph');
 SELECT pg_temp.fails('createDivision',jsonb_build_object('organizationID',:'org','name','Panitia ke-31','committee',true),'invalid_input');
 SELECT pg_temp.check(public.grouply_mutate('createDivision',jsonb_build_object('organizationID',:'org','name','Divisi baru')) ? 'id','divisions are not blocked by the committee limit');
 
+
+-- Reports on organization content (store UGC requirement).
+CREATE FUNCTION pg_temp.report(rid text) RETURNS jsonb LANGUAGE sql AS $$
+  SELECT r FROM jsonb_array_elements(public.grouply_snapshot()->'reports') r WHERE r->>'id'=rid;
+$$;
+SELECT pg_temp.actor(:'staf');
+SELECT pg_temp.fails('reportContent',jsonb_build_object('kind','task','id',:'ann2','reason','x'),'invalid_input');
+SELECT pg_temp.fails('reportContent',jsonb_build_object('kind','announcement','id','bukan-id','reason','x'),'invalid_input');
+SELECT pg_temp.fails('reportContent',jsonb_build_object('kind','announcement','id',:'ann2','reason','  '),'invalid_input');
+SELECT pg_temp.fails('reportContent',jsonb_build_object('kind','announcement','id',gen_random_uuid(),'reason','x'),'forbidden');
+SELECT public.grouply_mutate('reportContent',jsonb_build_object('kind','announcement','id',:'ann2','reason','Kasar'))->>'id' AS rep_ann \gset
+SELECT pg_temp.check(public.grouply_mutate('reportContent',jsonb_build_object('kind','announcement','id',:'ann2','reason','Lagi'))->>'id'=:'rep_ann','reporting the same content twice is idempotent');
+SELECT pg_temp.check((SELECT r->>'kind'='announcement' AND r->>'targetID'=:'ann2' AND r->>'messageID'='' AND r->>'status'='pending' FROM (SELECT pg_temp.report(:'rep_ann') r) s),'reporter sees the report with its target');
+SELECT public.grouply_mutate('reportContent',jsonb_build_object('kind','meeting','id',:'meet1','reason','Notulen menyinggung'))->>'id' AS rep_meet \gset
+SELECT (SELECT a->>'id' FROM jsonb_array_elements(pg_temp.org(:'org')->'announcements') a WHERE a->>'groupID'='' ORDER BY a->>'id' LIMIT 1) AS org_ann \gset
+SELECT public.grouply_mutate('reportContent',jsonb_build_object('kind','announcement','id',:'org_ann','reason','Spam'))->>'id' AS rep_org \gset
+SELECT pg_temp.fails('reportContent',jsonb_build_object('kind','approval','id',:'ap3','reason','Pengajuan sendiri'),'forbidden');
+SELECT pg_temp.actor(:'kadiv');
+SELECT pg_temp.fails('reportContent',jsonb_build_object('kind','announcement','id',:'ann2','reason','Punyaku'),'forbidden');
+SELECT public.grouply_mutate('reportContent',jsonb_build_object('kind','approval','id',:'ap3','reason','Tautan mencurigakan'))->>'id' AS rep_ap \gset
+SELECT pg_temp.actor(:'kadiv2');
+SELECT pg_temp.fails('reportContent',jsonb_build_object('kind','announcement','id',:'ann2','reason','x'),'forbidden');
+SELECT pg_temp.fails('reportContent',jsonb_build_object('kind','approval','id',:'ap3','reason','x'),'forbidden');
+SELECT pg_temp.actor(:'outsider');
+SELECT pg_temp.fails('reportContent',jsonb_build_object('kind','meeting','id',:'meet1','reason','x'),'forbidden');
+-- A withdrawn announcement keeps its report and excerpt for the operator.
+SELECT pg_temp.actor(:'kadiv');
+SELECT public.grouply_mutate('deleteAnnouncement',jsonb_build_object('id',:'ann2'));
+RESET ROLE;
+SET LOCAL ROLE service_role;
+SELECT pg_temp.operator();
+SELECT pg_temp.check((SELECT q->>'kind'='announcement' AND q->>'text' LIKE 'Piket%' AND q->>'messageID' IS NULL
+  FROM jsonb_array_elements(public.grouply_moderation('queue','{}')) q WHERE q->>'id'=:'rep_ann'),'queue keeps the excerpt of withdrawn content');
+SELECT pg_temp.check((SELECT q->>'groupID'=:'humas' AND q->>'organizationID'=:'org' FROM jsonb_array_elements(public.grouply_moderation('queue','{}')) q WHERE q->>'id'=:'rep_meet'),'queue locates meeting reports');
+SELECT pg_temp.check(public.grouply_moderation('review',jsonb_build_object('id',:'rep_meet','decision','removed','note','Melanggar'))->>'status'='removed','operator removes a meeting');
+SELECT pg_temp.check(public.grouply_moderation('review',jsonb_build_object('id',:'rep_ap','decision','removed','note','Tautan berbahaya'))->>'status'='removed','operator removes an approval text');
+SELECT pg_temp.check(public.grouply_moderation('review',jsonb_build_object('id',:'rep_org','decision','removed','note','Spam'))->>'status'='removed','operator removes an organization-wide announcement');
+SELECT pg_temp.check(public.grouply_moderation('review',jsonb_build_object('id',:'rep_ann','decision','dismissed','note','Sudah ditarik'))->>'status'='dismissed','operator dismisses a withdrawn announcement report');
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.actor(:'kadiv');
+SELECT pg_temp.check((SELECT m->>'title'='[Dihapus moderator]' AND m->>'place'='' AND (m->>'version')::int=6 FROM (SELECT pg_temp.meeting(:'meet1') m) s),'removed meeting shows the moderation marker and a new version');
+SELECT pg_temp.check((SELECT d->>'minutes'='[Dihapus moderator]' AND d->>'agenda'='' FROM (SELECT public.grouply_meeting(:'meet1') d) s),'removed minutes are replaced');
+SELECT pg_temp.check((SELECT a->>'title'='[Dihapus moderator]' AND a->>'note'='[Dihapus moderator]' AND a->'links'='[]'::jsonb FROM (SELECT pg_temp.approval(:'org',:'ap3') a) s),'removed approval text is replaced');
+SELECT pg_temp.actor(:'staf');
+SELECT pg_temp.check(pg_temp.ann(:'org',:'org_ann')->>'body'='[Dihapus moderator]','removed announcement is replaced for recipients');
+SELECT pg_temp.check(pg_temp.report(:'rep_ann')->>'status'='dismissed','reporter sees the decision');
+
 RESET ROLE;
 SET LOCAL ROLE anon;
 SELECT pg_temp.denied(format('SELECT public.grouply_meeting(%L)',:'meet1'),'permission denied');

@@ -1329,6 +1329,52 @@ class DemoBackend implements GrouplyBackend {
         reports.add({
           'id': id,
           'messageID': message.text('id'),
+          'kind': 'message',
+          'targetID': message.text('id'),
+          'reporterID': actor,
+          'reason': reason,
+          'createdAt': stamp,
+          'status': 'pending',
+          'reviewedAt': null,
+        });
+        return {'id': id};
+      case 'reportContent':
+        final reason = _demoText(payload, 'reason', 1000);
+        final kind = payload.text('kind'), target = payload.text('id');
+        final allowed = switch (kind) {
+          'announcement' => switch (_find(announcements, target)) {
+            final row? =>
+              row['authorID'] != actor && _audience(row).contains(actor),
+            null => false,
+          },
+          'meeting' => switch (_find(meetings, target)) {
+            final row? =>
+              group(row.text('groupID'))?.ids('memberIDs').contains(actor) ??
+                  false,
+            null => false,
+          },
+          'approval' => switch (_find(approvals, target)) {
+            final row? => row['requesterID'] != actor && _seesApproval(row),
+            null => false,
+          },
+          _ => throw _code('invalid_input'),
+        };
+        if (!allowed) throw _code('forbidden');
+        final existing = reports
+            .where(
+              (row) =>
+                  row.text('reporterID') == actor &&
+                  row['kind'] == kind &&
+                  row['targetID'] == target,
+            )
+            .firstOrNull;
+        if (existing != null) return {'id': existing.text('id')};
+        final id = _demoID();
+        reports.add({
+          'id': id,
+          'messageID': '',
+          'kind': kind,
+          'targetID': target,
           'reporterID': actor,
           'reason': reason,
           'createdAt': stamp,

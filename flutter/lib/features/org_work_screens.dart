@@ -726,6 +726,7 @@ class _MeetingState extends _WorkspaceState<MeetingScreen>
                     open(TaskScreen(store: store, taskID: task.text('id'))),
               ),
           ]),
+        _reportButton(this, 'meeting', widget.meetingID, 'Laporkan rapat'),
       ],
     );
   }
@@ -1840,6 +1841,13 @@ class _ApprovalState extends _WorkspaceState<ApprovalScreen>
             icon: 'xmark.circle',
             onPressed: () => _cancel(approval),
           ),
+        if (!mine)
+          _reportButton(
+            this,
+            'approval',
+            approval.text('id'),
+            'Laporkan pengajuan',
+          ),
       ],
     );
   }
@@ -2244,6 +2252,13 @@ class _AnnouncementState extends _WorkspaceState<AnnouncementScreen>
             ],
           ),
         ],
+        if (!mine)
+          _reportButton(
+            this,
+            'announcement',
+            widget.announcementID,
+            'Laporkan pengumuman',
+          ),
       ],
     );
   }
@@ -2262,4 +2277,32 @@ class _AnnouncementState extends _WorkspaceState<AnnouncementScreen>
       if (result != null && mounted) Navigator.of(context).maybePop();
     }
   }
+}
+
+/// Store UGC rule: every piece of organization content can be reported.
+Widget _reportButton(
+  _WorkspaceState state,
+  String kind,
+  String id,
+  String title,
+) {
+  final store = state.store;
+  final done = store.hasReported(kind, id);
+  return GLOutlineButton(
+    key: Key('report-$kind'),
+    title: done ? 'Sudah kamu laporkan' : title,
+    icon: 'flag',
+    onPressed: done
+        ? null
+        : () => showReportSheet(
+            state.context,
+            title: title,
+            note: 'Penulis tidak akan tahu siapa yang melapor.',
+            onSubmit: (reason) => store.mutate('reportContent', {
+              'kind': kind,
+              'id': id,
+              'reason': reason,
+            }),
+          ),
+  );
 }

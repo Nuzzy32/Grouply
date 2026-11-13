@@ -1467,6 +1467,44 @@ void main() {
       await _settleToasts(tester);
     });
 
+    testWidgets('organization content can be reported, never by its author', (
+      tester,
+    ) async {
+      await seed();
+      // Alex (u1) reads n1 by Nadia and reports it.
+      await _show(
+        tester,
+        AnnouncementScreen(store: store, orgID: 'o1', announcementID: 'n1'),
+      );
+      await _tapOn(tester, find.byKey(const Key('report-announcement')));
+      expect(find.text('Laporkan pengumuman'), findsWidgets);
+      await _tap(tester, 'Spam');
+      await _tap(tester, 'Kirim laporan');
+      expect(store.calls.last.action, 'reportContent');
+      expect(store.calls.last.payload, {
+        'kind': 'announcement',
+        'id': 'n1',
+        'reason': 'Spam',
+      });
+      await _tap(tester, 'Selesai');
+      expect(find.text('Sudah kamu laporkan'), findsOneWidget);
+      await _settleToasts(tester);
+
+      // Meetings: any member may report.
+      await _show(tester, MeetingScreen(store: store, meetingID: 'm1'));
+      expect(find.byKey(const Key('report-meeting')), findsOneWidget);
+
+      // The requester of a1 (u2) cannot report their own request; approver u1 can.
+      await _show(
+        tester,
+        ApprovalScreen(store: store, orgID: 'o1', approvalID: 'a1'),
+      );
+      expect(find.byKey(const Key('report-approval')), findsOneWidget);
+      await signInAs(tester, 'u2');
+      expect(find.byKey(const Key('report-approval')), findsNothing);
+      await _settleToasts(tester);
+    });
+
     testWidgets('meeting edit waits for its detail and adopts newer versions', (
       tester,
     ) async {
