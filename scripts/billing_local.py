@@ -30,9 +30,10 @@ def call(actor, request):
 
 def check_locks():
     run = uuid.uuid4().hex[:8]
-    k, c1, c2, x, y, m, d, z, w, fk, fc, fr, fd, fb, fl, fq, ft, fu = users = [str(uuid.uuid4()) for _ in range(18)]
-    org_a, org_b, org_c, org_e, org_f = orgs = [str(uuid.uuid4()) for _ in range(5)]
-    a1, a2, b1, b2, cg, e1, e2, f1 = groups = [str(uuid.uuid4()) for _ in range(8)]
+    k, c1, c2, x, y, m, d, z, w, fk, fc, fr, fd, fb, fl, fq, ft, fu, pk, pc, pa, pd, pl, pt = users = [str(uuid.uuid4()) for _ in range(24)]
+    org_a, org_b, org_c, org_e, org_f, org_p = orgs = [str(uuid.uuid4()) for _ in range(6)]
+    a1, a2, b1, b2, cg, e1, e2, f1, p1, pc1 = groups = [str(uuid.uuid4()) for _ in range(10)]
+    pp, plan_item = str(uuid.uuid4()), str(uuid.uuid4())
     ap1, ap2, ap3, proj, notice, rep_a, rep_b = [str(uuid.uuid4()) for _ in range(7)]
     listed = lambda ids: ",".join("'" + i + "'" for i in ids)
     setup = f"""
@@ -41,15 +42,21 @@ def check_locks():
       INSERT INTO public.organizations(id,name,seat_limit,plan_expires_at) VALUES
         ('{org_a}','Lock A',4,now()+interval '1 day'),('{org_b}','Lock B',0,NULL),('{org_c}','Lock C',0,NULL),('{org_e}','Lock E',0,NULL),
         ('{org_f}','Lock F',50,now()+interval '1 day');
+      INSERT INTO public.organizations(id,name,seat_limit,plan_expires_at,period_label) VALUES ('{org_p}','Lock P',50,now()+interval '1 day','Lock L1');
       INSERT INTO public.groups(id,name,coordinator_id,organization_id) VALUES
         ('{a1}','A1','{c1}','{org_a}'),('{a2}','A2','{c2}','{org_a}'),('{b1}','B1','{c1}','{org_b}'),('{b2}','B2','{c2}','{org_b}'),
         ('{cg}','C1','{k}','{org_c}'),('{e1}','E1','{k}','{org_e}'),('{e2}','E2','{c1}','{org_e}'),('{f1}','F1','{fc}','{org_f}');
+      INSERT INTO public.groups(id,name,coordinator_id,organization_id,is_committee) VALUES
+        ('{p1}','P1','{pc}','{org_p}',false),('{pc1}','PC1','{pt}','{org_p}',true);
       INSERT INTO public.group_members VALUES
         ('{a1}','{c1}'),('{a1}','{k}'),('{a2}','{c2}'),('{b1}','{c1}'),('{b1}','{k}'),('{b2}','{c2}'),('{b2}','{k}'),
         ('{cg}','{k}'),('{cg}','{m}'),('{e1}','{k}'),('{e1}','{d}'),('{e1}','{z}'),('{e2}','{c1}'),('{e2}','{d}'),('{e2}','{w}'),
-        ('{f1}','{fk}'),('{f1}','{fc}'),('{f1}','{fr}'),('{f1}','{fd}'),('{f1}','{fb}'),('{f1}','{fl}'),('{f1}','{fq}'),('{f1}','{ft}'),('{f1}','{fu}');
+        ('{f1}','{fk}'),('{f1}','{fc}'),('{f1}','{fr}'),('{f1}','{fd}'),('{f1}','{fb}'),('{f1}','{fl}'),('{f1}','{fq}'),('{f1}','{ft}'),('{f1}','{fu}'),
+        ('{p1}','{pk}'),('{p1}','{pc}'),('{p1}','{pa}'),('{p1}','{pd}'),('{p1}','{pl}'),('{pc1}','{pt}'),('{pc1}','{pa}');
       INSERT INTO public.organization_roles SELECT id::uuid,'{k}','ketua' FROM unnest(ARRAY[{listed(orgs[:4])}]) id;
-      INSERT INTO public.organization_roles VALUES ('{org_f}','{fk}','ketua'),('{org_f}','{fb}','bph');
+      INSERT INTO public.organization_roles VALUES ('{org_f}','{fk}','ketua'),('{org_f}','{fb}','bph'),('{org_p}','{pk}','ketua');
+      INSERT INTO public.projects(id,group_id,title,due_at,lead_id) VALUES ('{pp}','{p1}','Sie rencana',now()+interval '30 days','{pl}');
+      INSERT INTO public.project_plan_items(id,project_id,position,title,due_at) VALUES ('{plan_item}','{pp}',1,'Butir lock',now()+interval '10 days');
       INSERT INTO public.projects(id,group_id,title,due_at,lead_id) VALUES ('{proj}','{f1}','Sie lock',now()+interval '30 days','{fl}');
       INSERT INTO public.approvals(id,organization_id,group_id,requester_id,title,note) VALUES
         ('{ap1}','{org_f}','{f1}','{fr}','Lock 1','x'),('{ap2}','{org_f}','{f1}','{fd}','Lock 2','x'),('{ap3}','{org_f}','{f1}','{fq}','Lock 3','x');
@@ -69,8 +76,10 @@ def check_locks():
       DELETE FROM public.approvals WHERE organization_id IN ({listed(orgs)});
       DELETE FROM private.content_reports WHERE id IN ('{rep_a}','{rep_b}');
       DELETE FROM public.announcements WHERE organization_id IN ({listed(orgs)});
+      DELETE FROM public.project_plan_items WHERE project_id IN (SELECT id FROM public.projects WHERE group_id IN ({listed(groups)}));
       DELETE FROM public.tasks WHERE project_id IN (SELECT id FROM public.projects WHERE group_id IN ({listed(groups)}));
       DELETE FROM public.projects WHERE group_id IN ({listed(groups)});
+      DELETE FROM public.organization_periods WHERE organization_id IN ({listed(orgs)});
       DELETE FROM private.invitations WHERE group_id IN ({listed(groups)});
       DELETE FROM public.group_members WHERE group_id IN ({listed(groups)});
       DELETE FROM public.groups WHERE id IN ({listed(groups)});
@@ -120,6 +129,24 @@ def check_locks():
         ("reporter deletes the account while the operator reviews", fu, ("deleteAccount", {}), '"deleted": true',
          None, {"id": rep_b, "decision": "dismissed", "note": "Lock regression"}, "COMMIT;", '"status": "dismissed"',
          f"SELECT status='pending' AND reporter_id IS NULL AND reason='[Pelapor terhapus]' FROM private.content_reports WHERE id='{rep_b}';"),
+        # Tahap 3a: period close, plan items, committee close.
+        ("closePeriod waits for a task in the same organization", pc,
+         ("createTask", {"projectID": pp, "title": "Lock tugas", "assigneeID": pa, "reviewerID": pc, "dueAt": "2030-01-01T00:00:00Z"}), '"id"',
+         pk, ("closePeriod", {"organizationID": org_p, "currentLabel": "Lock L1", "nextLabel": "Lock L2"}), "COMMIT;", '"periodID"',
+         f"SELECT o.period_label='Lock L1' AND EXISTS(SELECT 1 FROM public.tasks WHERE project_id='{pp}' AND title='Lock tugas') FROM public.organizations o WHERE o.id='{org_p}';"),
+        ("closePeriod waits for a member deleting the account", pd, ("deleteAccount", {}), '"deleted": true',
+         pk, ("closePeriod", {"organizationID": org_p, "currentLabel": "Lock L1", "nextLabel": "Lock L2"}), "COMMIT;", '"periodID"',
+         f"SELECT NOT EXISTS(SELECT 1 FROM public.profiles WHERE id='{pd}');"),
+        ("two people turn the same plan item into a task", pc,
+         ("createTask", {"projectID": pp, "title": "Dari rencana A", "assigneeID": pa, "reviewerID": pc, "dueAt": "2030-01-01T00:00:00Z", "planItemID": plan_item}), '"id"',
+         pl, ("createTask", {"projectID": pp, "title": "Dari rencana B", "assigneeID": pa, "reviewerID": pc, "dueAt": "2030-01-01T00:00:00Z", "planItemID": plan_item}),
+         "COMMIT;", "error:plan_item_used",
+         f"SELECT (SELECT count(*) FROM public.tasks WHERE project_id='{pp}' AND title LIKE 'Dari rencana%')=1 "
+         f"AND (SELECT task_id IS NOT NULL FROM public.project_plan_items WHERE id='{plan_item}');"),
+        ("closeCommittee waits for a new request", pa,
+         ("requestApproval", {"groupID": pc1, "title": "Lock dana", "note": "x", "approverIDs": [pt]}), '"id"',
+         pk, ("closeCommittee", {"groupID": pc1}), "COMMIT;", "error:committee_busy",
+         f"SELECT closed_at IS NULL FROM public.groups WHERE id='{pc1}';"),
     ]
     sql(setup)
     failures = []
