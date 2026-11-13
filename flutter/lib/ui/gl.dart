@@ -101,6 +101,7 @@ final _symbols = <String, IconData>{
   'bubble.left.and.bubble.right': CupertinoIcons.bubble_left_bubble_right,
   'building.2': CupertinoIcons.building_2_fill,
   'calendar': CupertinoIcons.calendar,
+  'calendar.badge.plus': CupertinoIcons.calendar_badge_plus,
   'chart.xyaxis.line': CupertinoIcons.graph_square,
   'chart.bar': CupertinoIcons.chart_bar,
   'checklist': CupertinoIcons.square_list,
@@ -108,6 +109,7 @@ final _symbols = <String, IconData>{
   'checkmark.circle': CupertinoIcons.checkmark_circle,
   'checkmark.circle.fill': CupertinoIcons.checkmark_circle_fill,
   'checkmark.shield': CupertinoIcons.checkmark_shield,
+  'checkmark.seal': CupertinoIcons.checkmark_seal,
   'chevron.backward': CupertinoIcons.chevron_back,
   'chevron.right': CupertinoIcons.chevron_right,
   'circle': CupertinoIcons.circle,
@@ -117,6 +119,7 @@ final _symbols = <String, IconData>{
   'clock.badge.xmark': Icons.timer_off_outlined,
   'cylinder.split.1x2': Icons.storage_outlined,
   'doc.on.doc': CupertinoIcons.doc_on_doc,
+  'doc.text': CupertinoIcons.doc_text,
   'ellipsis': CupertinoIcons.ellipsis,
   'exclamationmark.circle': CupertinoIcons.exclamationmark_circle,
   'exclamationmark.triangle': CupertinoIcons.exclamationmark_triangle,
@@ -140,6 +143,8 @@ final _symbols = <String, IconData>{
   'list.bullet.clipboard': CupertinoIcons.doc_on_clipboard,
   'lock': CupertinoIcons.lock,
   'magnifyingglass': CupertinoIcons.search,
+  'mappin': CupertinoIcons.location,
+  'megaphone': Icons.campaign_outlined,
   'nosign': CupertinoIcons.nosign,
   'pencil': CupertinoIcons.pencil,
   'person.2': CupertinoIcons.person_2,
@@ -152,6 +157,8 @@ final _symbols = <String, IconData>{
       CupertinoIcons.person_crop_circle_badge_checkmark,
   'person.crop.circle.badge.minus':
       CupertinoIcons.person_crop_circle_badge_minus,
+  'person.crop.circle.badge.checkmark':
+      CupertinoIcons.person_crop_circle_badge_checkmark,
   'play.fill': CupertinoIcons.play_fill,
   'plus': CupertinoIcons.plus,
   'qrcode': CupertinoIcons.qrcode,
@@ -164,6 +171,8 @@ final _symbols = <String, IconData>{
   'tray.and.arrow.up': CupertinoIcons.tray_arrow_up,
   'wifi.slash': CupertinoIcons.wifi_slash,
   'xmark': CupertinoIcons.xmark,
+  'xmark.circle': CupertinoIcons.xmark_circle,
+  'flag.2.crossed': Icons.flag_outlined,
 };
 
 // Cupertino draws these glyphs smaller than the SF Symbols they stand in for.

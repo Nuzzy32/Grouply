@@ -11,6 +11,7 @@ import 'chat_screens.dart';
 
 part 'groups_screens.dart';
 part 'org_screens.dart';
+part 'org_work_screens.dart';
 part 'project_screens.dart';
 part 'task_screens.dart';
 
@@ -83,12 +84,13 @@ abstract class _WorkspaceState<T extends _WorkspaceScreen> extends State<T> {
     String action,
     JsonMap payload, {
     bool inlineError = false,
+    String success = 'Perubahan tersimpan.',
   }) async {
     if (busy || store.loading) return null;
     setState(() => busy = true);
     try {
       final result = await store.mutate(action, payload);
-      feedback('Perubahan tersimpan.');
+      feedback(success);
       return result;
     } catch (error) {
       feedback(error.toString(), kind: GLToastKind.err);

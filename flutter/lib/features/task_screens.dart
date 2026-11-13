@@ -74,10 +74,10 @@ String? _taskProjectLock(JsonMap project, [String verb = 'mengubah tugas']) =>
   if (project == null) {
     return ('Tidak bisa mengedit', 'Proyek tidak ditemukan.');
   }
-  if (!_coordinator(store, store.group(project.text('groupID')))) {
+  if (!store.canManageTasks(project)) {
     return (
       'Tidak bisa mengedit',
-      'Hanya koordinator yang bisa mengedit detail tugas.',
+      'Hanya koordinator atau koordinator sie yang bisa mengedit detail tugas.',
     );
   }
   final status = project.text('status');
@@ -920,7 +920,7 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
         ),
       ),
     );
-    final canReassign = _coordinator(store, group) && status != 'in_review';
+    final canReassign = store.canManageTasks(project) && status != 'in_review';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: 12,
@@ -1981,7 +1981,7 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
   );
 
   Future<void> _actions(JsonMap task, JsonMap project, JsonMap group) async {
-    final coord = _coordinator(store, group);
+    final coord = store.canManageTasks(project);
     final status = task.text('status');
     final active = project.text('status') == 'active';
     final lock = _taskEditLock(store, task);
@@ -2004,7 +2004,7 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
             'reassign',
             'Alihkan pelaksana',
             !coord
-                ? 'Khusus koordinator'
+                ? 'Khusus koordinator atau koordinator sie'
                 : status == 'in_review'
                 ? 'Terkunci selama review'
                 : status == 'done'
@@ -2046,7 +2046,7 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
         if (editLock != null) {
           await _info(editLock.$1, editLock.$2);
         } else {
-          await _showTaskSheet(this, project, group, current);
+          await _showTaskSheet(this, project, group, task: current);
         }
       case 'reassign':
         await _openReassign(current, project, group);
@@ -2083,9 +2083,9 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
   ) async {
     final lock = _taskProjectLock(project);
     if (lock != null) return feedback(lock, kind: GLToastKind.err);
-    if (!_coordinator(store, group)) {
+    if (!store.canManageTasks(project)) {
       return feedback(
-        'Hanya koordinator yang bisa mengalihkan tugas.',
+        'Hanya koordinator atau koordinator sie yang bisa mengalihkan tugas.',
         kind: GLToastKind.err,
       );
     }
@@ -2483,12 +2483,16 @@ class _TaskMemberChip extends StatelessWidget {
 
 /// Opens the Swift `TaskEditor` sheet. Creates a task when [task] is null,
 /// otherwise edits it. Resolves to the store result after a successful save.
+/// [title] and [meetingID] prefill a new task made from a meeting
+/// ("Jadikan tugas", Tahap 2 §5.2).
 Future<JsonMap?> _showTaskSheet(
   _WorkspaceState state,
   JsonMap project,
-  JsonMap group, [
+  JsonMap group, {
   JsonMap? task,
-]) => showGLSheet<JsonMap>(
+  String? title,
+  String? meetingID,
+}) => showGLSheet<JsonMap>(
   state.context,
   title: task == null ? 'Buat tugas' : 'Edit tugas',
   builder: (context) => _TaskEditorSheet(
@@ -2496,6 +2500,8 @@ Future<JsonMap?> _showTaskSheet(
     project: project,
     group: group,
     task: task,
+    initialTitle: title,
+    meetingID: meetingID,
   ),
 );
 
@@ -2505,16 +2511,21 @@ class _TaskEditorSheet extends StatefulWidget {
     required this.project,
     required this.group,
     this.task,
+    this.initialTitle,
+    this.meetingID,
   });
   final GrouplyStore store;
   final JsonMap project, group;
   final JsonMap? task;
+  final String? initialTitle, meetingID;
   @override
   State<_TaskEditorSheet> createState() => _TaskEditorSheetState();
 }
 
 class _TaskEditorSheetState extends State<_TaskEditorSheet> {
-  late final title = TextEditingController(text: widget.task?.text('title'));
+  late final title = TextEditingController(
+    text: widget.task?.text('title') ?? widget.initialTitle,
+  );
   late final description = TextEditingController(
     text: widget.task?.text('description'),
   );
@@ -2819,6 +2830,7 @@ class _TaskEditorSheetState extends State<_TaskEditorSheet> {
         'assigneeID': a,
         'reviewerID': r,
         'dueAt': _taskEndOfDay(dueAt).toUtc().toIso8601String(),
+        'meetingID': ?widget.meetingID,
       };
       success =
           'Tugas dibuat. ${a == store.currentUserID ? 'Ditugaskan ke kamu.' : '${_taskUserName(store, a, 'Anggota')} akan diberi tahu.'}';
