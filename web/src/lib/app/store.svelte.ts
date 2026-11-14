@@ -203,3 +203,18 @@ export function flash(text: string, kind: typeof toast.kind = 'ok') {
 	toast.kind = kind;
 	toast.id++;
 }
+
+type Ask = { title: string; text: string; ok?: string; destructive?: boolean; info?: boolean };
+/** Dialog konfirmasi bersama (dirender di layout). `info` hanya punya tombol "Mengerti". */
+export const confirmState = $state({ ask: null as Ask | null, resolve: (_ok: boolean) => {} });
+export function ask(options: Ask): Promise<boolean> {
+	confirmState.resolve(false);
+	return new Promise((resolve) => {
+		confirmState.ask = options;
+		confirmState.resolve = (ok) => {
+			confirmState.ask = null;
+			confirmState.resolve = () => {};
+			resolve(ok);
+		};
+	});
+}

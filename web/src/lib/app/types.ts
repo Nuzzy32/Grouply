@@ -30,6 +30,7 @@ export interface Project {
 	status: 'active' | 'completed' | 'archived';
 	previousStatus: 'active' | 'completed' | null;
 	leadID: string;
+	periodLabel: string;
 }
 
 export interface Submission {
@@ -68,6 +69,17 @@ export interface Message {
 	targetTaskID: string | null;
 }
 
+export interface Invite {
+	id: string;
+	groupID: string;
+	code: string;
+	createdAt: string;
+	expiresAt: string;
+	maxUses: number;
+	useCount: number;
+	revoked: boolean;
+}
+
 export interface Snapshot {
 	currentUserID: string;
 	users: User[];
@@ -76,6 +88,7 @@ export interface Snapshot {
 	tasks: Task[];
 	messages: Message[];
 	reports: { id: string; messageID: string; kind: string; targetID: string }[];
+	invites: Invite[];
 	blockedUserIDs: string[];
 	readMessageIDs: string[];
 }

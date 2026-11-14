@@ -5,7 +5,8 @@
 	import ThemeToggle from '#lib/ThemeToggle.svelte';
 	import { groupIcon, initials, tint } from '#lib/app/format.ts';
 	import { myGroups, unreadCount } from '#lib/app/derive.ts';
-	import { flash, header, store, toast } from '#lib/app/store.svelte.ts';
+	import { confirmState, flash, header, store, toast } from '#lib/app/store.svelte.ts';
+	import Modal from '#lib/app/ui/Modal.svelte';
 	import Search from '#lib/app/ui/Search.svelte';
 	import TaskDrawer from '#lib/app/ui/TaskDrawer.svelte';
 	import '#lib/app/app.css';
@@ -154,6 +155,20 @@
 		{#key taskID}<TaskDrawer {taskID} />{/key}
 	{/if}
 	{#if searching}<Search onclose={() => (searching = false)} />{/if}
+	{#if confirmState.ask}
+		{@const a = confirmState.ask}
+		<Modal title={a.title} width={460} onclose={() => confirmState.resolve(false)}>
+			<p class="confirm-text">{a.text}</p>
+			{#snippet footer()}
+				{#if a.info}
+					<button class="btn btn-primary" onclick={() => confirmState.resolve(false)}>Mengerti</button>
+				{:else}
+					<button class="btn btn-ghost" onclick={() => confirmState.resolve(false)}>Batal</button>
+					<button class="btn {a.destructive ? 'btn-danger' : 'btn-primary'}" onclick={() => confirmState.resolve(true)}>{a.ok ?? 'Lanjutkan'}</button>
+				{/if}
+			{/snippet}
+		</Modal>
+	{/if}
 	{#if toastVisible}
 		{#key toast.id}
 			<div class="toast {toast.kind}" role="status">
@@ -448,6 +463,12 @@
 		font-size: 16px;
 		font-weight: 700;
 		color: var(--ink);
+	}
+	.confirm-text {
+		margin: 0;
+		font-size: 15px;
+		line-height: 1.55;
+		color: var(--text3);
 	}
 	.action {
 		flex: none;

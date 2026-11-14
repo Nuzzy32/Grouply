@@ -7,6 +7,7 @@
 	import { flash, store } from '../store.svelte.ts';
 	import Composer from './Composer.svelte';
 	import Modal from './Modal.svelte';
+	import TaskManage from './TaskManage.svelte';
 	import Thread from './Thread.svelte';
 
 	let { taskID }: { taskID: string } = $props();
@@ -158,6 +159,7 @@
 					{#if isOverdue(new Date(task.dueAt), task.status, now)}<span class="chip big flag" style="background:var(--coral)"><Icon name="error" size={17} />Terlambat</span>{/if}
 					{#if task.status === 'in_review' && waitHours > 48}<span class="chip big flag" style="background:var(--lavender)"><Icon name="pending_actions" size={17} />Menunggu {waitHours} jam</span>{/if}
 				</div>
+				<TaskManage {task} {project} />
 				<button class="close" bind:this={closeButton} aria-label="Tutup (Esc)" title="Tutup (Esc)" onclick={() => closeTask()}><Icon name="close" size={21} /></button>
 			</div>
 			<h2>{task.title}</h2>

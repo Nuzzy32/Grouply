@@ -4,9 +4,10 @@
 	import Icon from '#lib/Icon.svelte';
 	import { unreadCount } from '#lib/app/derive.ts';
 	import { dueFromInput, groupIcon, initials, shortDate, tint } from '#lib/app/format.ts';
-	import { PROJECT_STATUS, projectStats } from '#lib/app/project.ts';
-	import { flash, header, store } from '#lib/app/store.svelte.ts';
+	import { inviteStatus, memberLock, PROJECT_STATUS, projectStats } from '#lib/app/project.ts';
+	import { ask, flash, header, store } from '#lib/app/store.svelte.ts';
 	import DueField from '#lib/app/ui/DueField.svelte';
+	import Menu from '#lib/app/ui/Menu.svelte';
 	import Modal from '#lib/app/ui/Modal.svelte';
 	import type { Project } from '#lib/app/types.ts';
 
@@ -34,12 +35,18 @@
 			.sort((a, b) => Number(b.id === group?.coordinatorID) - Number(a.id === group?.coordinatorID) || a.name.localeCompare(b.name, 'id'))
 	);
 
-	let modal = $state<'project' | 'invite' | null>(null);
+	let modal = $state<'project' | 'invite' | 'settings' | null>(null);
 	let title = $state('');
 	let description = $state('');
 	let due = $state('');
 	let error = $state('');
 	let inviteCode = $state('');
+	let inviteID = $state('');
+	// Kode mentah hanya ada di respons generateInvite; status terbaru diambil dari snapshot.
+	const currentInvite = $derived(snap.invites.find((i) => i.id === inviteID));
+	let groupName = $state('');
+	let groupDesc = $state('');
+	const nameOf = (id: string) => user(id)?.name ?? 'Anggota';
 
 	function newProject() {
 		const d = new Date();
@@ -84,14 +91,119 @@
 	}
 
 	async function invite() {
+		if (!group!.organizationID && group!.memberIDs.length >= 8) return flash('Grup sudah penuh (maksimal 8 anggota).', 'err');
 		error = '';
-		inviteCode = '';
+		inviteCode = inviteID = '';
 		modal = 'invite';
 		try {
-			const result = await store.mutate<{ invite: { code: string } }>('generateInvite', { groupID: group!.id });
+			const result = await store.mutate<{ invite: { id: string; code: string } }>('generateInvite', { groupID: group!.id });
 			inviteCode = result.invite.code;
+			inviteID = result.invite.id;
 		} catch (e) {
 			error = (e as Error).message;
+		}
+	}
+
+	async function revoke() {
+		try {
+			await store.mutate('revokeInvite', { id: inviteID });
+			flash(`Kode ${inviteCode.slice(0, 8)}… dinonaktifkan`, 'info');
+		} catch (e) {
+			flash((e as Error).message, 'err');
+		}
+	}
+
+	function openSettings() {
+		groupName = group!.name;
+		groupDesc = group!.description;
+		error = '';
+		modal = 'settings';
+	}
+
+	async function saveSettings() {
+		error = '';
+		const name = groupName.trim();
+		const desc = groupDesc.trim();
+		if (!isCoord) return void (error = 'Hanya koordinator yang bisa mengubah pengaturan grup.');
+		if (name.length < 3) return void (error = 'Nama grup minimal 3 karakter.');
+		if (name.length > 40) return void (error = 'Nama grup maksimal 40 karakter.');
+		if (desc.length > 140) return void (error = 'Deskripsi maksimal 140 karakter.');
+		try {
+			await store.mutate('updateGroup', { id: group!.id, name, course: group!.course, description: desc });
+			modal = null;
+			flash('Pengaturan grup disimpan');
+		} catch (e) {
+			error = (e as Error).message;
+		}
+	}
+
+	async function run(action: string, payload: Record<string, unknown>, done: string, kind: 'ok' | 'info' = 'ok') {
+		try {
+			await store.mutate(action, payload);
+			flash(done, kind);
+			return true;
+		} catch (e) {
+			flash((e as Error).message, 'err');
+			return false;
+		}
+	}
+
+	async function transfer(id: string) {
+		const name = nameOf(id);
+		const ok = await ask({
+			title: `Jadikan ${name} koordinator?`,
+			text: `${name} akan bisa mengelola anggota, proyek, dan tugas. Kamu tetap jadi anggota grup.`,
+			ok: 'Jadikan koordinator'
+		});
+		if (ok) await run('transferCoordinator', { groupID: group!.id, to: id }, `${name} sekarang koordinator`);
+	}
+
+	async function remove(id: string) {
+		const name = nameOf(id);
+		const lock = memberLock(snap, group!.id, id);
+		if (lock) return flash(lock, 'err');
+		const ok = await ask({
+			title: `Keluarkan ${name}?`,
+			text: `${name} tidak bisa lagi membuka proyek dan chat grup ini. Hasil kerja dan tugas yang sudah selesai tetap tercatat atas nama ${name}.`,
+			ok: 'Keluarkan',
+			destructive: true
+		});
+		if (ok) await run('removeMember', { groupID: group!.id, userID: id }, `${name} dikeluarkan dari grup`, 'info');
+	}
+
+	async function leave() {
+		const g = group!;
+		if (isCoord && g.memberIDs.length > 1) {
+			await ask({
+				title: 'Serahkan peran koordinator dulu',
+				text: 'Grup harus selalu punya koordinator. Pilih anggota lain sebagai koordinator sebelum kamu keluar.',
+				info: true
+			});
+			return;
+		}
+		const lock = memberLock(snap, g.id, me);
+		if (lock) return flash(lock, 'err');
+		const last = g.memberIDs.length === 1;
+		const ok = await ask(
+			last
+				? {
+						title: 'Kamu anggota terakhir',
+						text: `Kalau kamu keluar, ${g.name} tidak punya anggota lagi dan tidak bisa dibuka siapa pun. Undangannya ikut dicabut.`,
+						ok: 'Keluar & hapus grup',
+						destructive: true
+					}
+				: {
+						title: 'Keluar dari grup?',
+						text: `Kamu tidak bisa lagi membuka proyek dan chat ${g.name}. Hasil kerja dan tugas yang sudah selesai tetap tercatat atas nama kamu.`,
+						ok: 'Keluar',
+						destructive: true
+					}
+		);
+		if (!ok) return;
+		const name = g.name;
+		if (await run('leaveGroup', { id: g.id }, last ? 'Grup dihapus' : `Kamu keluar dari ${name}`, 'info')) {
+			modal = null;
+			await goto('/app/grup');
 		}
 	}
 
@@ -132,10 +244,15 @@
 					{#if group.description}<p>{group.description}</p>{/if}
 					<span class="summary"><Icon name="insights" size={18} />{projects.filter((p) => p.status === 'active').length} proyek aktif · {openTasks.length} tugas berjalan</span>
 				</div>
-				<a class="btn btn-primary chat" href="/app/chat/{group.id}">
-					<Icon name="chat_bubble" size={19} />Buka chat grup
-					{#if unread}<span class="badge">{unread}</span>{/if}
-				</a>
+				<div class="hero-actions">
+					<a class="btn btn-primary chat" href="/app/chat/{group.id}">
+						<Icon name="chat_bubble" size={19} />Buka chat grup
+						{#if unread}<span class="badge">{unread}</span>{/if}
+					</a>
+					{#if !group.closed}
+						<button class="settings" aria-label="Pengaturan grup" title="Pengaturan grup" onclick={openSettings}><Icon name="settings" size={20} /></button>
+					{/if}
+				</div>
 			</div>
 
 			<div class="section-head">
@@ -199,11 +316,21 @@
 					<span class="av" style="--s:40px;font-size:13px" style:background={tint(user(m.id)?.tint)}>{initials(m.name)}</span>
 					<span class="m-text"><b>{m.id === me ? `${m.name} (kamu)` : m.name}</b><span>{m.active} tugas aktif</span></span>
 					{#if m.id === group.coordinatorID}<span class="chip coord"><Icon name="shield_person" size={15} />Koordinator</span>{/if}
+					{#if isCoord && m.id !== me && m.id !== group.coordinatorID}
+						<Menu
+							label="Aksi untuk {m.name}"
+							items={[
+								{ label: 'Jadikan koordinator', icon: 'shield_person', run: () => transfer(m.id) },
+								{ label: 'Keluarkan dari grup', icon: 'person_remove', danger: true, run: () => remove(m.id) }
+							]}
+						/>
+					{/if}
 				</div>
 			{/each}
 			{#if isCoord}
 				<button class="btn btn-ghost invite" onclick={invite}><Icon name="person_add" size={19} />Undang anggota</button>
 			{/if}
+			<button class="btn btn-text leave" onclick={leave}><Icon name="logout" size={18} />Keluar dari grup</button>
 		</aside>
 	</div>
 {/if}
@@ -232,14 +359,42 @@
 			</button>
 		{/snippet}
 	</Modal>
+{:else if modal === 'settings' && group}
+	<Modal title="Pengaturan grup" sub={group.course} busy={store.busy} onclose={() => (modal = null)}>
+		<form id="settings-form" class="form" onsubmit={(e) => (e.preventDefault(), saveSettings())} novalidate>
+			<label class="field">
+				<span class="label-row"><span>Nama grup</span><small>{groupName.trim().length}/40</small></span>
+				<input class="input" bind:value={groupName} maxlength="40" disabled={!isCoord} />
+			</label>
+			<label class="field">
+				<span class="label-row"><span>Deskripsi</span><small>{groupDesc.trim().length}/140</small></span>
+				<textarea class="input" bind:value={groupDesc} rows="3" maxlength="140" placeholder="Tujuan atau catatan singkat grup" disabled={!isCoord}></textarea>
+			</label>
+			{#if !isCoord}<p class="hint lock"><Icon name="lock" size={17} />Hanya koordinator yang bisa mengubah pengaturan grup.</p>{/if}
+			{#if error}<div class="notice error" role="alert">{error}</div>{/if}
+		</form>
+		<button class="btn btn-text leave" onclick={leave}><Icon name="logout" size={18} />Keluar dari grup</button>
+		{#snippet footer()}
+			<button class="btn btn-ghost" type="button" disabled={store.busy} onclick={() => (modal = null)}>{isCoord ? 'Batal' : 'Tutup'}</button>
+			{#if isCoord}
+				<button class="btn btn-primary" form="settings-form" disabled={store.busy}>{store.busy ? 'Menyimpan…' : 'Simpan'}</button>
+			{/if}
+		{/snippet}
+	</Modal>
 {:else if modal === 'invite'}
 	<Modal title="Undang anggota" sub="Kode berlaku 7 hari dan hanya bisa dipakai sekali." busy={store.busy} onclose={() => (modal = null)}>
 		{#if inviteCode}
-			<div class="code-box">
+			{@const st = currentInvite ? inviteStatus(currentInvite) : { label: 'Undangan aktif', valid: true }}
+			<div class="invite-status">
+				<span class="chip" style:background={st.valid ? 'var(--mint)' : 'var(--chip)'}>{st.label}</span>
+				{#if currentInvite}<small>Berlaku sampai {new Date(currentInvite.expiresAt).toLocaleString('id-ID', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).replace('.', ':')} · {currentInvite.useCount}/{currentInvite.maxUses} pemakaian</small>{/if}
+			</div>
+			<div class="code-box" class:void={!st.valid}>
 				<code>{inviteCode}</code>
 				<button class="btn btn-primary" onclick={copyCode}><Icon name="content_copy" size={18} />Salin</button>
 			</div>
 			<p class="hint">Bagikan kode ini ke anggota. Mereka menempelkannya di Grup → Gabung dengan kode. Buat kode baru untuk tiap anggota.</p>
+			{#if st.valid}<button class="btn btn-text revoke" disabled={store.busy} onclick={revoke}>Nonaktifkan kode</button>{/if}
 		{:else if error}
 			<div class="notice error" role="alert">{error}</div>
 		{:else}
@@ -324,6 +479,54 @@
 		flex: none;
 		height: 46px;
 		font-size: 14px;
+	}
+	.hero-actions {
+		flex: none;
+		display: flex;
+		gap: 8px;
+	}
+	.settings {
+		width: 46px;
+		height: 46px;
+		border: none;
+		border-radius: 50%;
+		background: var(--chip);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+	.settings:hover {
+		background: var(--border);
+	}
+	.leave {
+		align-self: flex-start;
+		margin-top: 6px;
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		color: var(--danger);
+	}
+	.invite-status {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+	}
+	.invite-status small {
+		font-size: 13px;
+		color: var(--secondary);
+	}
+	.code-box.void code {
+		text-decoration: line-through;
+		opacity: 0.5;
+	}
+	.revoke {
+		align-self: flex-start;
+		color: var(--danger);
+	}
+	.hint.lock {
+		display: flex;
+		align-items: center;
+		gap: 6px;
 	}
 	.badge {
 		min-width: 22px;

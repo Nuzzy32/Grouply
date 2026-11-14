@@ -4,7 +4,8 @@
 	import { dateInput, dueFromInput, dueLabel, groupIcon, initials, isOverdue, STATUS, tint } from '#lib/app/format.ts';
 	import { canManageTasks, PROJECT_STATUS } from '#lib/app/project.ts';
 	import { openTask } from '#lib/app/nav.ts';
-	import { flash, header, store } from '#lib/app/store.svelte.ts';
+	import { ask, flash, header, store } from '#lib/app/store.svelte.ts';
+	import Menu from '#lib/app/ui/Menu.svelte';
 	import DueField from '#lib/app/ui/DueField.svelte';
 	import Modal from '#lib/app/ui/Modal.svelte';
 	import PulseRing from '#lib/app/ui/PulseRing.svelte';
@@ -50,6 +51,126 @@
 		['needs_revision', 'Revisi'],
 		['done', 'Selesai']
 	];
+
+	// Kelola proyek (khusus koordinator grup), aturan dan teks sama dengan Flutter.
+	const isCoord = $derived(group?.coordinatorID === me);
+	const restorable = $derived(!project?.periodLabel && !group?.closed);
+	let editing = $state(false);
+	let editTitle = $state('');
+	let editDesc = $state('');
+	let editDue = $state('');
+	let editError = $state('');
+
+	async function run(action: string, done: string) {
+		try {
+			await store.mutate(action, { id: project!.id });
+			flash(done);
+		} catch (e) {
+			flash((e as Error).message, 'err');
+		}
+	}
+
+	function openEdit() {
+		if (project!.status === 'archived')
+			return void ask({ title: 'Proyek diarsipkan', text: 'Proyek ini telah diarsipkan. Pulihkan proyek dulu untuk mengubah detailnya.', info: true });
+		editTitle = project!.title;
+		editDesc = project!.description;
+		editDue = dateInput(new Date(project!.dueAt));
+		editError = '';
+		editing = true;
+	}
+
+	async function saveEdit() {
+		editError = '';
+		const title = editTitle.trim();
+		const desc = editDesc.trim();
+		const at = dueFromInput(editDue);
+		const unchanged = editDue === dateInput(new Date(project!.dueAt));
+		const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+		if (title.length < 3) return void (editError = 'Nama proyek minimal 3 karakter.');
+		if (title.length > 60) return void (editError = 'Nama proyek maksimal 60 karakter.');
+		if (desc.length > 300) return void (editError = 'Deskripsi maksimal 300 karakter.');
+		if (!at || (!unchanged && at < today)) return void (editError = 'Pilih deadline yang valid, mulai hari ini.');
+		try {
+			await store.mutate('updateProject', {
+				id: project!.id,
+				title,
+				description: desc,
+				dueAt: (unchanged ? new Date(project!.dueAt) : at).toISOString()
+			});
+			editing = false;
+			flash('Perubahan proyek disimpan');
+		} catch (e) {
+			editError = (e as Error).message;
+		}
+	}
+
+	async function complete() {
+		if (project!.status === 'archived') return flash('Pulihkan proyek dari arsip dulu.', 'err');
+		const open = tasks.filter((t) => t.status !== 'done');
+		if (!tasks.length)
+			return void ask({ title: 'Belum bisa ditandai selesai', text: 'Proyek ini belum punya tugas. Tambahkan dan selesaikan tugas dulu.', info: true });
+		if (open.length) {
+			const parts = (['in_review', 'needs_revision', 'in_progress', 'todo'] as TaskStatus[])
+				.map((s) => [open.filter((t) => t.status === s).length, STATUS[s].label.toLowerCase()] as const)
+				.filter(([n]) => n)
+				.map(([n, l]) => `${n} ${l}`)
+				.join(', ');
+			return void ask({
+				title: 'Belum bisa ditandai selesai',
+				text: `${open.length} dari ${tasks.length} tugas belum disetujui (${parts}). Proyek bisa ditandai selesai setelah semua tugas berstatus Selesai. Tugas tidak akan disetujui otomatis.`,
+				info: true
+			});
+		}
+		const ok = await ask({
+			title: 'Tandai proyek selesai?',
+			text: `Semua ${tasks.length} tugas sudah disetujui. Proyek pindah ke daftar Selesai di grup.`,
+			ok: 'Tandai selesai'
+		});
+		if (ok) await run('completeProject', 'Proyek selesai. Kerja bagus, tim!');
+	}
+
+	async function reopen() {
+		if (!isCoord) return flash('Hanya koordinator yang bisa membuka kembali proyek.', 'err');
+		const ok = await ask({
+			title: 'Buka kembali proyek?',
+			text: 'Proyek kembali berstatus Aktif. Tugas bisa ditambah, diedit, dan dialihkan lagi. Semua riwayat tugas tetap tersimpan.',
+			ok: 'Buka kembali'
+		});
+		if (ok) await run('reopenProject', 'Proyek aktif kembali');
+	}
+
+	async function archive() {
+		const ok = await ask({
+			title: 'Arsipkan proyek?',
+			text: 'Proyek tidak lagi muncul di Beranda dan daftar aktif. Tugas, hasil kerja, dan diskusinya tetap tersimpan dan bisa dibuka dari filter Arsip di grup.',
+			ok: 'Arsipkan'
+		});
+		if (ok) await run('archiveProject', 'Proyek diarsipkan');
+	}
+
+	async function restore() {
+		if (!isCoord) return flash('Hanya koordinator yang bisa memulihkan proyek.', 'err');
+		const back = project!.previousStatus === 'completed' ? 'Selesai' : 'Aktif';
+		await run('restoreProject', `Proyek dipulihkan · status ${back}`);
+	}
+
+	const projectMenu = $derived.by(() => {
+		if (!project) return [];
+		const lock = isCoord ? undefined : 'Hanya koordinator yang bisa mengubah proyek.';
+		const archivedLock = project.status === 'archived' ? 'Pulihkan proyek dari arsip dulu.' : undefined;
+		return [
+			{ label: 'Edit proyek', sub: 'Nama, deskripsi, deadline', icon: 'edit', run: openEdit, locked: lock },
+			project.status === 'completed'
+				? { label: 'Buka kembali proyek', sub: 'Status kembali Aktif, riwayat tetap ada', icon: 'replay', run: reopen, locked: lock }
+				: { label: 'Tandai proyek selesai', sub: 'Bisa setelah semua tugas disetujui', icon: 'task_alt', run: complete, locked: lock ?? archivedLock },
+			...(project.status === 'archived'
+				? restorable
+					? [{ label: 'Pulihkan proyek', sub: 'Kembalikan ke daftar proyek', icon: 'unarchive', run: restore, locked: lock }]
+					: []
+				: [{ label: 'Arsipkan proyek', sub: 'Riwayat tetap tersimpan', icon: 'inventory_2', run: archive, locked: lock }])
+		];
+	});
 
 	// Buat tugas
 	let modal = $state(false);
@@ -139,9 +260,15 @@
 	{@const st = PROJECT_STATUS[project.status]}
 	<div class="page">
 		{#if project.status === 'archived'}
-			<div class="banner" style="background:var(--chip)"><Icon name="inventory_2" />Proyek ini telah diarsipkan. Informasi dan riwayatnya tetap dapat dilihat.</div>
+			<div class="banner" style="background:var(--chip)">
+				<Icon name="inventory_2" /><span>Proyek ini telah diarsipkan. Informasi dan riwayatnya tetap dapat dilihat.</span>
+				{#if restorable}<button class="banner-btn" class:locked={!isCoord} onclick={restore}>{#if !isCoord}<Icon name="lock" size={16} />{/if}Pulihkan Proyek</button>{/if}
+			</div>
 		{:else if project.status === 'completed'}
-			<div class="banner" style="background:var(--mint)"><Icon name="task_alt" />Proyek ini sudah selesai. Semua tugas hanya bisa dilihat.</div>
+			<div class="banner" style="background:var(--mint)">
+				<Icon name="task_alt" /><span>Proyek ini sudah selesai. Semua tugas hanya bisa dilihat.</span>
+				{#if !group.closed}<button class="banner-btn" class:locked={!isCoord} onclick={reopen}>{#if !isCoord}<Icon name="lock" size={16} />{/if}Buka Kembali Proyek</button>{/if}
+			</div>
 		{/if}
 
 		<div class="top">
@@ -150,7 +277,10 @@
 					<a class="group" href="/app/grup/{group.id}">
 						<span class="gicon" style:background={tint(group.tint)}><Icon name={groupIcon(group.icon)} size={13} /></span>{group.name}
 					</a>
-					<span class="chip p-status" style:background={st.bg}><Icon name={st.icon} size={15} />{st.label}</span>
+					<span class="head-right">
+						<span class="chip p-status" style:background={st.bg}><Icon name={st.icon} size={15} />{st.label}</span>
+						{#if !group.closed}<Menu label="Aksi proyek" items={projectMenu} />{/if}
+					</span>
 				</div>
 				<h1>{project.title}</h1>
 				<span class="due"><Icon name="event" size={18} />Deadline {new Date(project.dueAt).toLocaleString('id-ID', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).replace('.', ':')}</span>
@@ -263,6 +393,30 @@
 	</div>
 {/if}
 
+{#if editing && project}
+	<Modal title="Edit proyek" sub={group?.name} busy={store.busy} onclose={() => (editing = false)}>
+		<form id="edit-project" class="form" onsubmit={(e) => (e.preventDefault(), saveEdit())} novalidate>
+			<label class="field">
+				<span class="label-row"><span>Nama proyek <em>*</em></span><small>{editTitle.trim().length}/60</small></span>
+				<input class="input" bind:value={editTitle} maxlength="60" />
+			</label>
+			<label class="field">
+				<span class="label-row"><span>Deskripsi</span><small>{editDesc.trim().length}/300</small></span>
+				<textarea class="input" bind:value={editDesc} rows="3" maxlength="300"></textarea>
+			</label>
+			<div class="field">
+				<span>Deadline <em>*</em></span>
+				<DueField bind:value={editDue} label="Pilih tanggal deadline proyek" />
+			</div>
+			{#if editError}<div class="notice error" role="alert">{editError}</div>{/if}
+		</form>
+		{#snippet footer()}
+			<button class="btn btn-ghost" type="button" disabled={store.busy} onclick={() => (editing = false)}>Batal</button>
+			<button class="btn btn-primary" form="edit-project" disabled={store.busy}>{store.busy ? 'Menyimpan…' : 'Simpan perubahan'}</button>
+		{/snippet}
+	</Modal>
+{/if}
+
 {#if modal && project && group}
 	<Modal title="Buat tugas" sub="{project.title} · Deadline proyek {new Date(project.dueAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}" width={620} busy={store.busy} onclose={() => (modal = false)}>
 		<form id="task-form" class="form" onsubmit={(e) => (e.preventDefault(), createTask())} novalidate>
@@ -328,9 +482,34 @@
 		display: flex;
 		align-items: center;
 		gap: 10px;
-		padding: 12px 16px;
+		padding: 10px 10px 10px 16px;
 		border-radius: 18px;
 		font-size: 14px;
+	}
+	.banner span {
+		flex: 1;
+	}
+	.banner-btn {
+		flex: none;
+		height: 36px;
+		padding: 0 14px;
+		border: none;
+		border-radius: 18px;
+		background: var(--ink);
+		color: var(--on-ink);
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		font-size: 13px;
+		font-weight: 600;
+	}
+	.banner-btn.locked {
+		opacity: 0.55;
+	}
+	.head-right {
+		display: flex;
+		align-items: center;
+		gap: 8px;
 	}
 	.top {
 		display: grid;

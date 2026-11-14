@@ -65,6 +65,13 @@ textarea.input {
 .btn-primary:hover:not(:disabled) {
 	opacity: 0.88;
 }
+.btn-danger {
+	background: var(--danger);
+	color: light-dark(#fff, #1a1b1d);
+}
+.btn-danger:hover:not(:disabled) {
+	opacity: 0.88;
+}
 .btn-ghost {
 	background: var(--surface);
 	box-shadow: inset 0 0 0 1px var(--border);
