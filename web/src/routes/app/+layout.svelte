@@ -6,6 +6,7 @@
 	import { groupIcon, initials, tint } from '#lib/app/format.ts';
 	import { myGroups, unreadCount } from '#lib/app/derive.ts';
 	import { flash, header, store, toast } from '#lib/app/store.svelte.ts';
+	import Search from '#lib/app/ui/Search.svelte';
 	import TaskDrawer from '#lib/app/ui/TaskDrawer.svelte';
 	import '#lib/app/app.css';
 
@@ -19,6 +20,8 @@
 	let width = $state(1440);
 	const compact = $derived(width < 1100);
 	let menu = $state(false);
+	let searching = $state(false);
+	const mac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
 	let signOutError = $state('');
 
 	const me = $derived(store.snap?.users.find((u) => u.id === store.userID));
@@ -52,7 +55,17 @@
 	}
 </script>
 
-<svelte:window bind:innerWidth={width} onkeydown={(e) => e.key === 'Escape' && (menu = false)} />
+<svelte:window
+	bind:innerWidth={width}
+	onkeydown={(e) => {
+		if (e.key === 'Escape') menu = false;
+		// ⌘K / Ctrl+K membuka pencarian dari mana pun.
+		if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k' && store.snap) {
+			e.preventDefault();
+			searching = !searching;
+		}
+	}}
+/>
 
 {#if !store.ready || (store.userID && !store.snap && !store.error)}
 	<div class="center"><span class="spin" aria-label="Memuat"></span></div>
@@ -68,6 +81,11 @@
 	<div class="shell">
 		<aside class:compact>
 			<a href="/app" class="brand" aria-label="Beranda GROUPLY"><img src="/brand.png" alt="" width="36" height="36" />{#if !compact}<span>GROUPLY</span>{/if}</a>
+
+			<button class="search" onclick={() => (searching = true)} aria-label="Cari tugas, proyek, atau grup" title={compact ? 'Cari (⌘K)' : undefined}>
+				<Icon name="search" size={20} />
+				{#if !compact}<span>Cari tugas, proyek…</span><kbd>{mac ? '⌘K' : 'Ctrl K'}</kbd>{/if}
+			</button>
 
 			<nav aria-label="Navigasi aplikasi">
 				{#each NAV as item (item.href)}
@@ -98,6 +116,7 @@
 			<div class="account">
 				{#if menu}
 					<div class="menu" role="menu">
+						<a role="menuitem" class="item" href="/app/profil" onclick={() => (menu = false)}><Icon name="person" size={18} />Profil dan akun</a>
 						<button role="menuitem" class="item" onclick={signOut}><Icon name="logout" size={18} />Keluar</button>
 					</div>
 				{/if}
@@ -134,6 +153,7 @@
 	{#if taskID}
 		{#key taskID}<TaskDrawer {taskID} />{/key}
 	{/if}
+	{#if searching}<Search onclose={() => (searching = false)} />{/if}
 	{#if toastVisible}
 		{#key toast.id}
 			<div class="toast {toast.kind}" role="status">
@@ -188,6 +208,37 @@
 	}
 	.brand img {
 		border-radius: 11px;
+	}
+	.search {
+		height: 42px;
+		padding: 0 8px 0 12px;
+		border: none;
+		border-radius: 14px;
+		background: var(--surface);
+		box-shadow: inset 0 0 0 1px var(--border);
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		font-size: 14px;
+		color: var(--secondary);
+		text-align: left;
+	}
+	.search span {
+		flex: 1;
+	}
+	.compact .search {
+		width: 46px;
+		padding: 0;
+		justify-content: center;
+	}
+	kbd {
+		padding: 2px 6px;
+		border-radius: 6px;
+		background: var(--muted);
+		font-family: inherit;
+		font-size: 11px;
+		font-weight: 600;
+		color: var(--text2);
 	}
 	nav {
 		display: flex;

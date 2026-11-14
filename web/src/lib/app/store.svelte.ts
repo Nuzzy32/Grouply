@@ -166,6 +166,20 @@ class Store {
 		}
 	}
 
+	/** Akun terhapus tidak bisa memuat snapshot lagi, jadi tanpa refresh: langsung tutup sesi lokal. */
+	async deleteAccount() {
+		if (this.busy) throw new AppError('Tunggu proses sebelumnya selesai.');
+		this.busy = true;
+		try {
+			const { error } = await supabase.rpc('grouply_mutate', { action: 'deleteAccount', payload: {} });
+			if (error) throw serverError(error, 'Akun belum dapat dihapus. Periksa koneksi lalu coba lagi.');
+		} finally {
+			this.busy = false;
+		}
+		this.#disconnect();
+		await supabase.auth.signOut({ scope: 'local' });
+	}
+
 	async signOut() {
 		this.#disconnect();
 		const { error } = await supabase.auth.signOut();
