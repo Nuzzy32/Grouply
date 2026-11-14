@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<title>GROUPLY · Kerja kelompok yang beneran jalan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..600,0..1,0&display=block" rel="stylesheet">
+<style>html{scroll-behavior:smooth}body{margin:0;background:#F8F9F7;font-family:"Plus Jakarta Sans",-apple-system,system-ui,sans-serif;-webkit-font-smoothing:antialiased;color:#202124}a{color:#202124;text-decoration:none}a:hover{color:#3c4043}*{box-sizing:border-box}button{font-family:inherit;color:#202124;cursor:pointer}@keyframes lpFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}@keyframes lpUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}@keyframes lpProg{from{width:0}to{width:100%}}@keyframes lpFade{from{opacity:0}to{opacity:1}}@keyframes lpPulse{0%{box-shadow:0 0 0 0 rgba(98,196,132,.55)}100%{box-shadow:0 0 0 16px rgba(98,196,132,0)}}@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}</style>
+</helmet>
+<div style="min-height:100vh;overflow-x:hidden">
+  <header style="position:fixed;top:0;left:0;right:0;z-index:50;display:flex;justify-content:center;padding:14px 20px;pointer-events:none">
+    <nav aria-label="Navigasi utama" style="pointer-events:auto;width:100%;max-width:1180px;height:60px;display:flex;align-items:center;gap:8px;padding:0 10px 0 14px;border-radius:30px;background:{{ navBg }};box-shadow:{{ navShadow }};backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);transition:background .3s,box-shadow .3s">
+      <a href="#top" style="display:flex;align-items:center;gap:10px;margin-right:auto"><img src="assets/brand.png" alt="" style="width:34px;height:34px;border-radius:11px;object-fit:cover"><span style="font-size:14px;font-weight:800;letter-spacing:.12em">GROUPLY</span></a>
+      <sc-if value="{{ wideNav }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;gap:2px">
+          <a href="#fitur" style="height:40px;padding:0 14px;border-radius:20px;display:flex;align-items:center;font-size:14px;font-weight:600" style-hover="background:#ECEEEB">Fitur</a>
+          <a href="#tampilan" style="height:40px;padding:0 14px;border-radius:20px;display:flex;align-items:center;font-size:14px;font-weight:600" style-hover="background:#ECEEEB">Tampilan</a>
+          <a href="#demo" style="height:40px;padding:0 14px;border-radius:20px;display:flex;align-items:center;font-size:14px;font-weight:600" style-hover="background:#ECEEEB">Demo</a>
+          <a href="#faq" style="height:40px;padding:0 14px;border-radius:20px;display:flex;align-items:center;font-size:14px;font-weight:600" style-hover="background:#ECEEEB">FAQ</a>
+        </div>
+      </sc-if>
+      <div style="display:flex;gap:6px;margin-left:auto">
+        <a href="Grouply Web.dc.html" style="height:42px;padding:0 16px;border-radius:21px;display:flex;align-items:center;font-size:14px;font-weight:600" style-hover="background:#ECEEEB">Masuk</a>
+        <a href="Grouply Web.dc.html" style="height:42px;padding:0 18px;border-radius:21px;background:#202124;color:#fff;display:flex;align-items:center;gap:6px;font-size:14px;font-weight:600" style-hover="background:#3c4043;color:#fff">Mulai sekarang</a>
+      </div>
+    </nav>
+  </header>
+
+  <section id="top" onMouseMove="{{ onHeroMove }}" onMouseLeave="{{ onHeroLeave }}" style="position:relative;padding:148px 20px 40px">
+    <div aria-hidden="true" style="position:absolute;top:40px;left:50%;width:min(1000px,100%);height:560px;transform:translateX(-50%);pointer-events:none">
+      <span style="position:absolute;left:4%;top:60px;width:420px;height:420px;max-width:60%;border-radius:50%;background:#DED2FF;filter:blur(100px);opacity:.6"></span>
+      <span style="position:absolute;right:4%;top:0;width:380px;height:380px;max-width:55%;border-radius:50%;background:#C9F2D6;filter:blur(100px);opacity:.7"></span>
+      <span style="position:absolute;left:40%;top:260px;width:300px;height:300px;max-width:40%;border-radius:50%;background:#F9E9BE;filter:blur(100px);opacity:.55"></span>
+    </div>
+    <div style="position:relative;max-width:900px;margin:0 auto;text-align:center;display:flex;flex-direction:column;align-items:center;gap:22px;opacity:{{ rv.hero.op }};transform:{{ rv.hero.tf }};transition:opacity .9s ease,transform .9s cubic-bezier(.2,.8,.2,1)">
+      <a href="#demo" style="height:38px;padding:0 14px 0 5px;border-radius:19px;background:#fff;box-shadow:0 0 0 1px #E8E9E7;display:flex;align-items:center;gap:10px;font-size:14px;font-weight:600" style-hover="box-shadow:0 0 0 1px #C4C7C5"><span style="height:28px;padding:0 10px;border-radius:14px;background:#C9F2D6;font-size:12px;font-weight:700;display:flex;align-items:center">Baru</span>GROUPLY sekarang bisa dibuka di laptop<span style="font-family:'Material Symbols Rounded';font-size:18px">arrow_forward</span></a>
+      <h1 style="margin:0;font-size:clamp(44px,7.4vw,88px);font-weight:800;letter-spacing:-.05em;line-height:1;text-wrap:balance">Kerja kelompok yang <span style="background:linear-gradient(transparent 60%,#C9F2D6 60%,#C9F2D6 92%,transparent 92%);padding:0 .06em">beneran jalan.</span></h1>
+      <p style="margin:0;max-width:640px;font-size:clamp(17px,2vw,20px);line-height:1.55;color:#3c4043;text-wrap:pretty">Bagi tugas, kirim hasil, review bareng, dan pantau progres tim dalam satu tempat. Nggak perlu lagi ngejar anggota lewat chat.</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;padding-top:4px">
+        <a href="Grouply Web.dc.html" style="height:56px;padding:0 26px;border-radius:28px;background:#202124;color:#fff;display:flex;align-items:center;gap:8px;font-size:16px;font-weight:600;box-shadow:0 14px 30px -12px rgba(32,33,36,.5);transition:transform .2s" style-hover="transform:translateY(-2px);color:#fff">Mulai sekarang<span style="font-family:'Material Symbols Rounded';font-size:20px">arrow_forward</span></a>
+        <a href="#demo" style="height:56px;padding:0 22px 0 8px;border-radius:28px;background:#fff;box-shadow:0 0 0 1px #E8E9E7;display:flex;align-items:center;gap:10px;font-size:16px;font-weight:600;transition:transform .2s" style-hover="transform:translateY(-2px)"><span style="width:40px;height:40px;border-radius:20px;background:#DED2FF;font-family:'Material Symbols Rounded';font-size:22px;font-variation-settings:'FILL' 1;display:flex;align-items:center;justify-content:center">play_arrow</span>Lihat demo</a>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:center;font-size:14px;color:#4d5155">
+        <span>Tersedia di</span>
+        <span style="display:flex;align-items:center;gap:5px;font-weight:600;color:#202124"><span style="font-family:'Material Symbols Rounded';font-size:18px">phone_iphone</span>iOS</span>
+        <span style="display:flex;align-items:center;gap:5px;font-weight:600;color:#202124"><span style="font-family:'Material Symbols Rounded';font-size:18px">android</span>Android</span>
+        <span style="display:flex;align-items:center;gap:5px;font-weight:600;color:#202124"><span style="font-family:'Material Symbols Rounded';font-size:18px">laptop_mac</span>Web</span>
+      </div>
+    </div>
+    <div style="position:relative;max-width:1140px;margin:64px auto 0;opacity:{{ rv.hero.op }};transform:{{ rv.heroFrame }};transition:opacity 1.1s ease .15s,transform 1.1s cubic-bezier(.2,.8,.2,1) .15s">
+      <div style="background:#fff;border-radius:24px;box-shadow:0 50px 100px -40px rgba(30,50,45,.4),0 0 0 1px #E8E9E7;overflow:hidden">
+        <div style="height:42px;display:flex;align-items:center;gap:7px;padding:0 16px;border-bottom:1px solid #EEF0EE;background:#FBFBFA">
+          <span style="width:11px;height:11px;border-radius:6px;background:#E2E4E1"></span><span style="width:11px;height:11px;border-radius:6px;background:#E2E4E1"></span><span style="width:11px;height:11px;border-radius:6px;background:#E2E4E1"></span>
+          <span style="margin:0 auto;height:26px;padding:0 14px;border-radius:13px;background:#F0F3F1;display:flex;align-items:center;gap:6px;font-size:12px;color:#4d5155"><span style="font-family:'Material Symbols Rounded';font-size:14px">lock</span>app.grouply.id/proyek/perpustakaan</span>
+        </div>
+        <div style="display:flex;height:500px;background:#F8F9F7;overflow:hidden">
+          <div style="flex:none;width:60px;border-right:1px solid #EEF0EE;display:flex;flex-direction:column;align-items:center;gap:8px;padding:14px 0">
+            <img src="assets/brand.png" alt="" style="width:30px;height:30px;border-radius:10px;margin-bottom:8px">
+            <span style="width:38px;height:38px;border-radius:19px;font-family:'Material Symbols Rounded';font-size:20px;display:flex;align-items:center;justify-content:center">home</span>
+            <span style="width:38px;height:38px;border-radius:19px;background:#202124;color:#fff;font-family:'Material Symbols Rounded';font-size:20px;font-variation-settings:'FILL' 1;display:flex;align-items:center;justify-content:center">group</span>
+            <span style="width:38px;height:38px;border-radius:19px;font-family:'Material Symbols Rounded';font-size:20px;display:flex;align-items:center;justify-content:center">chat_bubble</span>
+            <span style="width:38px;height:38px;border-radius:19px;font-family:'Material Symbols Rounded';font-size:20px;display:flex;align-items:center;justify-content:center">task_alt</span>
+          </div>
+          <div style="flex:1;min-width:0;padding:18px 22px;display:flex;flex-direction:column;gap:14px;text-align:left">
+            <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#62676B">Grup<span style="font-family:'Material Symbols Rounded';font-size:14px">chevron_right</span>Basis Data · Kelompok 3<span style="font-family:'Material Symbols Rounded';font-size:14px">chevron_right</span><b style="color:#202124">Sistem Informasi Perpustakaan</b></div>
+            <div style="display:flex;gap:14px;flex-wrap:wrap">
+              <div style="flex:1 1 300px;background:#fff;border-radius:20px;padding:16px 18px;display:flex;flex-direction:column;gap:6px">
+                <span style="align-self:flex-start;height:22px;padding:0 9px;border-radius:11px;background:#D8EAF4;font-size:11px;font-weight:600;display:flex;align-items:center">Aktif</span>
+                <span style="font-size:22px;font-weight:800;letter-spacing:-.03em;line-height:1.15">Sistem Informasi Perpustakaan</span>
+                <span style="font-size:12px;color:#62676B">Deadline Sab, 24 Okt · 23:59 · 5 anggota</span>
+              </div>
+              <div style="flex:1 1 300px;background:#fff;border-radius:20px;padding:14px 18px;display:flex;align-items:center;gap:16px">
+                <div style="flex:none;width:84px;height:84px;border-radius:42px;background:conic-gradient(#62C484 0 29%,#F0F3F1 29% 30%,#A893EE 30% 43%,#F0F3F1 43% 44%,#86B8D6 44% 57%,#F0F3F1 57% 58%,#E08C94 58% 71%,#F0F3F1 71% 72%,#E6C25E 72% 99%,#F0F3F1 99%);display:flex;align-items:center;justify-content:center"><span style="width:60px;height:60px;border-radius:30px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:17px;font-weight:800">29%<span style="font-size:9px;font-weight:600;color:#62676B">2 dari 7</span></span></div>
+                <div style="flex:1;display:flex;flex-direction:column;gap:4px;font-size:11px;color:#3c4043">
+                  <span style="font-size:13px;font-weight:700;color:#202124">Group Pulse</span>
+                  <span style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:4px;background:#62C484"></span>Selesai<b style="margin-left:auto">2</b></span>
+                  <span style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:4px;background:#A893EE"></span>Menunggu review<b style="margin-left:auto">1</b></span>
+                  <span style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:4px;background:#E6C25E"></span>Belum dimulai<b style="margin-left:auto">2</b></span>
+                </div>
+              </div>
+            </div>
+            <div style="flex:1;min-height:0;display:grid;grid-template-columns:repeat(5,minmax(150px,1fr));gap:10px">
+              <div style="background:#F0F3F1;border-radius:16px;padding:10px;display:flex;flex-direction:column;gap:8px">
+                <span style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700"><span style="width:10px;height:10px;border-radius:5px;background:#E6C25E"></span>Belum dimulai</span>
+                <div style="background:#fff;border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;font-weight:600">Kamus data</span><span style="display:flex;gap:4px"><span style="width:20px;height:20px;border-radius:10px;background:#C9F2D6;font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center">RA</span><span style="width:20px;height:20px;border-radius:10px;background:#F9E9BE;font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center">NA</span></span></div>
+                <div style="background:#fff;border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;font-weight:600">Slide presentasi</span><span style="display:flex;gap:4px"><span style="width:20px;height:20px;border-radius:10px;background:#D8EAF4;font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center">DI</span><span style="width:20px;height:20px;border-radius:10px;background:#DED2FF;font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center">AL</span></span></div>
+              </div>
+              <div style="background:#F0F3F1;border-radius:16px;padding:10px;display:flex;flex-direction:column;gap:8px">
+                <span style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700"><span style="width:10px;height:10px;border-radius:5px;background:#86B8D6"></span>Dikerjakan</span>
+                <div style="background:#fff;border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;font-weight:600">Normalisasi ke 3NF</span><span style="font-size:10px;color:#62676B">Besok, 23:59</span></div>
+              </div>
+              <div style="background:#F0F3F1;border-radius:16px;padding:10px;display:flex;flex-direction:column;gap:8px">
+                <span style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700"><span style="width:10px;height:10px;border-radius:5px;background:#A893EE"></span>Review</span>
+                <div style="background:#fff;border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:6px;box-shadow:inset 0 0 0 2px #202124"><span style="font-size:12px;font-weight:600">Draft diagram ERD</span><span style="align-self:flex-start;height:18px;padding:0 6px;border-radius:9px;background:#DED2FF;font-size:9px;font-weight:600;display:flex;align-items:center">Revisi 1</span></div>
+              </div>
+              <div style="background:#F0F3F1;border-radius:16px;padding:10px;display:flex;flex-direction:column;gap:8px">
+                <span style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700"><span style="width:10px;height:10px;border-radius:5px;background:#E08C94"></span>Revisi</span>
+                <div style="background:#fff;border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;font-weight:600">Tulis script DDL SQL</span><span style="font-size:10px;color:#62676B">1 catatan revisi</span></div>
+              </div>
+              <div style="background:#F0F3F1;border-radius:16px;padding:10px;display:flex;flex-direction:column;gap:8px">
+                <span style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700"><span style="width:10px;height:10px;border-radius:5px;background:#62C484"></span>Selesai</span>
+                <div style="background:#fff;border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:6px;opacity:.75"><span style="font-size:12px;font-weight:600">Studi literatur</span></div>
+                <div style="background:#fff;border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:6px;opacity:.75"><span style="font-size:12px;font-weight:600">Narasi use case</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <sc-if value="{{ showFloat }}" hint-placeholder-val="{{ true }}">
+        <div aria-hidden="true" style="position:absolute;left:-36px;top:150px;transform:{{ par.a }};transition:transform .25s ease-out">
+          <div style="width:290px;background:#fff;border-radius:20px;padding:12px 12px 12px 14px;display:flex;align-items:center;gap:12px;box-shadow:0 24px 50px -20px rgba(0,0,0,.3),0 0 0 1px #E8E9E7;animation:lpFloat 6s ease-in-out infinite">
+            <span style="flex:none;width:40px;height:40px;border-radius:14px;background:#DED2FF;font-family:'Material Symbols Rounded';font-size:20px;display:flex;align-items:center;justify-content:center">upload</span>
+            <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;text-align:left"><span style="font-size:12px;color:#4d5155">Raka mengirim hasil · 15:20</span><span style="font-size:14px;font-weight:700">Draft diagram ERD</span></span>
+            <span style="flex:none;height:30px;padding:0 10px;border-radius:15px;box-shadow:inset 0 0 0 1.5px #202124;font-size:11px;font-weight:600;display:flex;align-items:center">Lihat</span>
+          </div>
+        </div>
+        <div aria-hidden="true" style="position:absolute;right:-30px;top:84px;transform:{{ par.b }};transition:transform .25s ease-out">
+          <div style="background:#202124;color:#fff;border-radius:18px;padding:12px 16px;display:flex;align-items:center;gap:10px;font-size:14px;font-weight:600;box-shadow:0 24px 50px -16px rgba(0,0,0,.45);animation:lpFloat 7s ease-in-out .8s infinite"><span style="font-family:'Material Symbols Rounded';font-size:20px;color:#C9F2D6;font-variation-settings:'FILL' 1">check_circle</span>Disetujui. Tugas selesai.</div>
+        </div>
+        <div aria-hidden="true" style="position:absolute;right:48px;bottom:-26px;transform:{{ par.c }};transition:transform .25s ease-out">
+          <div style="display:flex;align-items:flex-end;gap:8px;animation:lpFloat 6.5s ease-in-out .4s infinite">
+            <span style="width:34px;height:34px;border-radius:17px;background:#F9E9BE;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 3px #fff">NA</span>
+            <span style="background:#fff;border-radius:18px 18px 18px 6px;padding:10px 14px;font-size:14px;box-shadow:0 20px 40px -18px rgba(0,0,0,.3),0 0 0 1px #E8E9E7">Fine dipisah jadi entity sendiri ya 👌</span>
+          </div>
+        </div>
+      </sc-if>
+    </div>
+  </section>
+
+  <section id="fitur" data-reveal="feat" style="scroll-margin-top:90px;padding:110px 20px 40px">
+    <div style="max-width:1140px;margin:0 auto;display:flex;flex-direction:column;gap:44px">
+      <div style="display:flex;flex-direction:column;gap:14px;max-width:720px;opacity:{{ rv.feat.op }};transform:{{ rv.feat.tf }};transition:opacity .8s ease,transform .8s cubic-bezier(.2,.8,.2,1)">
+        <span style="font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#4d5155">Fitur</span>
+        <h2 style="margin:0;font-size:clamp(34px,4.6vw,56px);font-weight:800;letter-spacing:-.04em;line-height:1.05;text-wrap:balance">Semua yang dibutuhkan kelompok, tanpa drama.</h2>
+      </div>
+      <div style="display:grid;grid-template-columns:{{ bentoCols }};gap:16px">
+        <div style="grid-column:{{ bentoSpan }};background:#C9F2D6;border-radius:32px;padding:30px;display:flex;gap:28px;flex-wrap:wrap;align-items:center;opacity:{{ rv.feat.op }};transform:{{ rv.feat.tf }};transition:opacity .8s ease .08s,transform .8s cubic-bezier(.2,.8,.2,1) .08s">
+          <div style="flex:1 1 260px;display:flex;flex-direction:column;gap:10px"><span style="font-size:24px;font-weight:800;letter-spacing:-.025em;line-height:1.15">Satu tugas, satu pelaksana, satu reviewer.</span><span style="font-size:16px;line-height:1.55;color:#2f3a33">Setiap tugas jelas siapa yang mengerjakan, siapa yang memeriksa, dan kapan deadline-nya. Nggak ada lagi "ini tugas siapa, ya?"</span></div>
+          <div style="flex:1 1 280px;background:#fff;border-radius:22px;padding:16px;display:flex;flex-direction:column;gap:12px;box-shadow:0 20px 40px -24px rgba(0,0,0,.3)">
+            <span style="align-self:flex-start;height:26px;padding:0 10px 0 7px;border-radius:13px;background:#D8EAF4;font-size:12px;font-weight:600;display:flex;align-items:center;gap:4px"><span style="font-family:'Material Symbols Rounded';font-size:15px">autorenew</span>Sedang dikerjakan</span>
+            <span style="font-size:16px;font-weight:700">Normalisasi tabel ke 3NF</span>
+            <span style="display:flex;align-items:center;gap:8px;font-size:13px;color:#3c4043"><span style="width:30px;height:30px;border-radius:15px;background:#DED2FF;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center">AL</span><span style="font-family:'Material Symbols Rounded';font-size:16px;color:#62676B">arrow_forward</span><span style="width:30px;height:30px;border-radius:15px;background:#F9E9BE;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center">NA</span>Alex → Nadia<span style="margin-left:auto;display:flex;align-items:center;gap:4px"><span style="font-family:'Material Symbols Rounded';font-size:16px">schedule</span>Besok</span></span>
+          </div>
+        </div>
+        <div style="background:#DED2FF;border-radius:32px;padding:30px;display:flex;flex-direction:column;gap:20px;opacity:{{ rv.feat.op }};transform:{{ rv.feat.tf }};transition:opacity .8s ease .16s,transform .8s cubic-bezier(.2,.8,.2,1) .16s">
+          <div style="display:flex;flex-direction:column;gap:10px"><span style="font-size:24px;font-weight:800;letter-spacing:-.025em;line-height:1.15">Selesai artinya sudah direview.</span><span style="font-size:16px;line-height:1.55;color:#36304a">Tugas baru Selesai setelah reviewer menyetujui. Setiap revisi tercatat.</span></div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div style="background:rgba(255,255,255,.7);border-radius:16px;padding:10px 12px;display:flex;align-items:center;gap:10px;font-size:13px"><b>Revisi 1</b><span style="margin-left:auto;height:24px;padding:0 9px 0 6px;border-radius:12px;background:#F6CED1;font-size:11px;font-weight:600;display:flex;align-items:center;gap:3px"><span style="font-family:'Material Symbols Rounded';font-size:14px">undo</span>Perlu revisi</span></div>
+            <div style="background:#fff;border-radius:16px;padding:10px 12px;display:flex;align-items:center;gap:10px;font-size:13px;box-shadow:0 14px 30px -18px rgba(0,0,0,.35)"><b>Revisi 2</b><span style="margin-left:auto;height:24px;padding:0 9px 0 6px;border-radius:12px;background:#C9F2D6;font-size:11px;font-weight:600;display:flex;align-items:center;gap:3px"><span style="font-family:'Material Symbols Rounded';font-size:14px">check_circle</span>Disetujui</span></div>
+          </div>
+        </div>
+        <div style="background:#D8EAF4;border-radius:32px;padding:30px;display:flex;flex-direction:column;gap:20px;opacity:{{ rv.feat.op }};transform:{{ rv.feat.tf }};transition:opacity .8s ease .24s,transform .8s cubic-bezier(.2,.8,.2,1) .24s">
+          <div style="display:flex;flex-direction:column;gap:10px"><span style="font-size:24px;font-weight:800;letter-spacing:-.025em;line-height:1.15">Chat yang nyambung ke tugas.</span><span style="font-size:16px;line-height:1.55;color:#2c3a42">Kiriman dan review otomatis muncul di chat grup. Klik sekali, tugasnya langsung terbuka.</span></div>
+          <div style="background:#fff;border-radius:18px;padding:10px 10px 10px 12px;display:flex;align-items:center;gap:10px;box-shadow:0 14px 30px -18px rgba(0,0,0,.35)">
+            <span style="flex:none;width:34px;height:34px;border-radius:12px;background:#C9F2D6;font-family:'Material Symbols Rounded';font-size:18px;display:flex;align-items:center;justify-content:center">check_circle</span>
+            <span style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-size:11px;color:#4d5155">Alex menyetujui · 16:00</span><span style="font-size:13px;font-weight:700">Rekrut 5 partisipan</span></span>
+            <span style="flex:none;height:28px;padding:0 10px;border-radius:14px;box-shadow:inset 0 0 0 1.5px #202124;font-size:11px;font-weight:600;display:flex;align-items:center">Lihat tugas</span>
+          </div>
+        </div>
+        <div style="grid-column:{{ bentoSpan }};background:#F9E9BE;border-radius:32px;padding:30px;display:flex;gap:28px;flex-wrap:wrap;align-items:center;opacity:{{ rv.feat.op }};transform:{{ rv.feat.tf }};transition:opacity .8s ease .32s,transform .8s cubic-bezier(.2,.8,.2,1) .32s">
+          <div style="flex:1 1 260px;display:flex;flex-direction:column;gap:10px"><span style="font-size:24px;font-weight:800;letter-spacing:-.025em;line-height:1.15">Group Pulse: progres tim, bukan ranking.</span><span style="font-size:16px;line-height:1.55;color:#4a3f22">Lihat berapa tugas yang selesai, menunggu review, atau belum dimulai. Klik anggota untuk melihat tugasnya, tanpa papan peringkat.</span></div>
+          <div style="flex:1 1 300px;background:#fff;border-radius:22px;padding:16px 18px;display:flex;flex-direction:column;gap:14px;box-shadow:0 20px 40px -24px rgba(0,0,0,.3)">
+            <div style="display:flex;justify-content:space-between;gap:6px">
+              <span style="display:flex;flex-direction:column;align-items:center;gap:4px;font-size:12px;font-weight:600"><span style="position:relative;width:42px;height:42px;border-radius:21px;background:#DED2FF;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2.5px #fff,0 0 0 4.5px #202124">AL<span style="position:absolute;right:-8px;bottom:-4px;height:18px;padding:0 5px;border-radius:9px;background:#fff;box-shadow:0 0 0 1px #E8E9E7;font-size:10px;display:flex;align-items:center">0/2</span></span>Alex</span>
+              <span style="display:flex;flex-direction:column;align-items:center;gap:4px;font-size:12px"><span style="position:relative;width:42px;height:42px;border-radius:21px;background:#C9F2D6;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center">RA<span style="position:absolute;right:-8px;bottom:-4px;height:18px;padding:0 5px;border-radius:9px;background:#fff;box-shadow:0 0 0 1px #E8E9E7;font-size:10px;display:flex;align-items:center">0/2</span></span>Raka</span>
+              <span style="display:flex;flex-direction:column;align-items:center;gap:4px;font-size:12px"><span style="position:relative;width:42px;height:42px;border-radius:21px;background:#F9E9BE;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center">NA<span style="position:absolute;right:-8px;bottom:-4px;height:18px;padding:0 5px;border-radius:9px;background:#fff;box-shadow:0 0 0 1px #E8E9E7;font-size:10px;display:flex;align-items:center">1/1</span></span>Nadia</span>
+              <span style="display:flex;flex-direction:column;align-items:center;gap:4px;font-size:12px"><span style="position:relative;width:42px;height:42px;border-radius:21px;background:#D8EAF4;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center">DI<span style="position:absolute;right:-8px;bottom:-4px;height:18px;padding:0 5px;border-radius:9px;background:#fff;box-shadow:0 0 0 1px #E8E9E7;font-size:10px;display:flex;align-items:center">0/1</span></span>Dimas</span>
+            </div>
+            <div style="background:#F0F3F1;border-radius:14px;padding:10px 12px;display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;font-weight:600">Tugasmu · 0 dari 2 selesai</span><span style="height:6px;border-radius:3px;background:#fff;overflow:hidden"><span style="display:block;width:12%;height:100%;background:#202124;border-radius:3px"></span></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section id="tampilan" data-reveal="show" style="scroll-margin-top:90px;padding:90px 20px 40px">
+    <div style="max-width:1140px;margin:0 auto;display:flex;flex-direction:column;gap:40px">
+      <div style="display:flex;flex-direction:column;gap:14px;max-width:720px;opacity:{{ rv.show.op }};transform:{{ rv.show.tf }};transition:opacity .8s ease,transform .8s cubic-bezier(.2,.8,.2,1)">
+        <span style="font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#4d5155">Tampilan produk</span>
+        <h2 style="margin:0;font-size:clamp(34px,4.6vw,56px);font-weight:800;letter-spacing:-.04em;line-height:1.05;text-wrap:balance">Satu tempat untuk seluruh kerja kelompok.</h2>
+      </div>
+      <div style="display:grid;grid-template-columns:{{ showCols }};gap:28px;align-items:start;opacity:{{ rv.show.op }};transform:{{ rv.show.tf }};transition:opacity .9s ease .1s,transform .9s cubic-bezier(.2,.8,.2,1) .1s">
+        <div role="tablist" aria-label="Tampilan produk" style="display:flex;flex-direction:column;gap:6px">
+          <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="4">
+            <button role="tab" aria-selected="{{ t.on }}" onClick="{{ t.go }}" style="text-align:left;border:none;background:{{ t.bg }};box-shadow:{{ t.shadow }};border-radius:22px;padding:16px 18px;display:flex;gap:14px;transition:background .3s,box-shadow .3s" style-hover="background:#fff">
+              <span style="flex:none;width:42px;height:42px;border-radius:14px;background:{{ t.iconBg }};color:{{ t.iconFg }};font-family:'Material Symbols Rounded';font-size:21px;display:flex;align-items:center;justify-content:center;transition:background .3s,color .3s">{{ t.icon }}</span>
+              <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:0">
+                <span style="font-size:17px;font-weight:700;letter-spacing:-.01em;line-height:1.3;padding-top:9px">{{ t.title }}</span>
+                <span style="display:grid;grid-template-rows:{{ t.rows }};transition:grid-template-rows .4s cubic-bezier(.2,.8,.2,1)"><span style="overflow:hidden"><span style="display:block;padding-top:6px;font-size:15px;line-height:1.5;color:#3c4043;opacity:{{ t.textOp }};transition:opacity .4s">{{ t.text }}</span></span></span>
+                <sc-if value="{{ t.showProg }}" hint-placeholder-val="{{ false }}"><span style="display:block;height:3px;margin-top:12px;border-radius:2px;background:#ECEEEB;overflow:hidden">{{ progEl }}</span></sc-if>
+              </span>
+            </button>
+          </sc-for>
+        </div>
+        <div style="background:#fff;border-radius:24px;box-shadow:0 50px 100px -44px rgba(30,50,45,.4),0 0 0 1px #E8E9E7;overflow:hidden;min-width:0">
+          <div style="height:40px;display:flex;align-items:center;gap:7px;padding:0 16px;border-bottom:1px solid #EEF0EE;background:#FBFBFA">
+            <span style="width:11px;height:11px;border-radius:6px;background:#E2E4E1"></span><span style="width:11px;height:11px;border-radius:6px;background:#E2E4E1"></span><span style="width:11px;height:11px;border-radius:6px;background:#E2E4E1"></span>
+            <span style="margin:0 auto;height:24px;padding:0 14px;border-radius:12px;background:#F0F3F1;display:flex;align-items:center;gap:6px;font-size:12px;color:#4d5155"><span style="font-family:'Material Symbols Rounded';font-size:14px">lock</span>{{ showUrl }}</span>
+          </div>
+          <div style="display:flex;height:480px;background:#F8F9F7;overflow:hidden">
+            <div style="flex:none;width:58px;border-right:1px solid #EEF0EE;display:flex;flex-direction:column;align-items:center;gap:8px;padding:14px 0">
+              <img src="assets/brand.png" alt="" style="width:28px;height:28px;border-radius:9px;margin-bottom:8px">
+              <span style="width:36px;height:36px;border-radius:18px;background:{{ sb.home.bg }};color:{{ sb.home.fg }};font-family:'Material Symbols Rounded';font-size:19px;display:flex;align-items:center;justify-content:center;transition:background .3s,color .3s">home</span>
+              <span style="width:36px;height:36px;border-radius:18px;font-family:'Material Symbols Rounded';font-size:19px;display:flex;align-items:center;justify-content:center">group</span>
+              <span style="width:36px;height:36px;border-radius:18px;background:{{ sb.chat.bg }};color:{{ sb.chat.fg }};font-family:'Material Symbols Rounded';font-size:19px;display:flex;align-items:center;justify-content:center;transition:background .3s,color .3s">chat_bubble</span>
+              <span style="width:36px;height:36px;border-radius:18px;background:{{ sb.tasks.bg }};color:{{ sb.tasks.fg }};font-family:'Material Symbols Rounded';font-size:19px;display:flex;align-items:center;justify-content:center;transition:background .3s,color .3s">task_alt</span>
+            </div>
+            <div style="flex:1;min-width:0;position:relative">
+              <sc-if value="{{ mHome }}" hint-placeholder-val="{{ true }}">
+                <div style="position:absolute;inset:0;padding:18px 20px;display:flex;flex-direction:column;gap:14px;animation:lpFade .45s ease">
+                  <div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:12px;color:#62676B">Jumat, 16 Oktober</span><span style="font-size:24px;font-weight:800;letter-spacing:-.03em">Halo, Alex</span></div>
+                  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
+                    <div style="background:#F9E9BE;border-radius:20px;padding:14px 16px 6px;display:flex;flex-direction:column;animation:lpUp .5s ease .05s both">
+                      <span style="display:flex;justify-content:space-between;align-items:center;font-size:15px;font-weight:700;padding-bottom:4px">Perlu perhatian<span style="width:24px;height:24px;border-radius:12px;background:#202124;color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center">2</span></span>
+                      <span style="display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid rgba(32,33,36,.1)"><span style="width:30px;height:30px;border-radius:15px;background:rgba(255,255,255,.7);font-family:'Material Symbols Rounded';font-size:16px;display:flex;align-items:center;justify-content:center">undo</span><span style="display:flex;flex-direction:column"><span style="font-size:11px;font-weight:600;color:#4d5155">Revisi diminta oleh Dimas</span><span style="font-size:13px;font-weight:600">Tulis script DDL SQL</span></span></span>
+                      <span style="display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid rgba(32,33,36,.1)"><span style="width:30px;height:30px;border-radius:15px;background:rgba(255,255,255,.7);font-family:'Material Symbols Rounded';font-size:16px;display:flex;align-items:center;justify-content:center">error</span><span style="display:flex;flex-direction:column"><span style="font-size:11px;font-weight:600;color:#4d5155">Terlambat sejak 15 Okt</span><span style="font-size:13px;font-weight:600">Script wawancara</span></span></span>
+                    </div>
+                    <div style="background:#DED2FF;border-radius:20px;padding:14px 16px 6px;display:flex;flex-direction:column;animation:lpUp .5s ease .12s both">
+                      <span style="display:flex;justify-content:space-between;align-items:center;font-size:15px;font-weight:700;padding-bottom:4px">Menunggu review kamu<span style="width:24px;height:24px;border-radius:12px;background:#202124;color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center">1</span></span>
+                      <span style="display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid rgba(32,33,36,.1)"><span style="width:30px;height:30px;border-radius:15px;background:#C9F2D6;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center">RA</span><span style="display:flex;flex-direction:column;gap:3px"><span style="font-size:13px;font-weight:600">Draft diagram ERD</span><span style="align-self:flex-start;height:20px;padding:0 7px;border-radius:10px;background:#fff;box-shadow:inset 0 0 0 1.5px #202124;font-size:10px;font-weight:600;display:flex;align-items:center">Menunggu 52 jam</span></span></span>
+                    </div>
+                  </div>
+                  <div style="background:#fff;border-radius:20px;padding:12px 16px 4px;display:flex;flex-direction:column;animation:lpUp .5s ease .2s both">
+                    <span style="font-size:15px;font-weight:700;padding-bottom:4px">Deadline 7 hari ke depan</span>
+                    <span style="display:flex;align-items:center;gap:12px;padding:9px 0;border-top:1px solid #EEF0EE"><span style="width:40px;height:42px;border-radius:12px;background:#F0F3F1;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:15px;font-weight:700;line-height:1">17<span style="font-size:9px;color:#62676B">Sab</span></span><span style="flex:1;display:flex;flex-direction:column"><span style="font-size:13px;font-weight:600">Normalisasi tabel ke 3NF</span><span style="font-size:11px;color:#62676B">Besok, 23:59</span></span><span style="height:22px;padding:0 8px;border-radius:11px;background:#D8EAF4;font-size:10px;font-weight:600;display:flex;align-items:center">Sedang dikerjakan</span></span>
+                    <span style="display:flex;align-items:center;gap:12px;padding:9px 0;border-top:1px solid #EEF0EE"><span style="width:40px;height:42px;border-radius:12px;background:#F0F3F1;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:15px;font-weight:700;line-height:1">21<span style="font-size:9px;color:#62676B">Rab</span></span><span style="flex:1;display:flex;flex-direction:column"><span style="font-size:13px;font-weight:600">Ringkasan temuan sesi 1</span><span style="font-size:11px;color:#62676B">Rab, 23:59</span></span><span style="height:22px;padding:0 8px;border-radius:11px;background:#F9E9BE;font-size:10px;font-weight:600;display:flex;align-items:center">Belum dimulai</span></span>
+                  </div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ mChat }}" hint-placeholder-val="{{ false }}">
+                <div style="position:absolute;inset:0;display:flex;animation:lpFade .45s ease">
+                  <div style="flex:none;width:200px;border-right:1px solid #EEF0EE;padding:14px 8px;display:flex;flex-direction:column;gap:4px">
+                    <span style="font-size:15px;font-weight:700;padding:0 6px 8px">Chat grup</span>
+                    <span style="display:flex;align-items:center;gap:8px;padding:8px;border-radius:14px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08)"><span style="flex:none;width:32px;height:32px;border-radius:12px;background:#C9F2D6;font-family:'Material Symbols Rounded';font-size:17px;display:flex;align-items:center;justify-content:center">database</span><span style="min-width:0;display:flex;flex-direction:column"><span style="font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Basis Data · K3</span><span style="font-size:10px;color:#62676B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Nadia: Nanti malam call…</span></span></span>
+                    <span style="display:flex;align-items:center;gap:8px;padding:8px"><span style="flex:none;width:32px;height:32px;border-radius:12px;background:#DED2FF;font-family:'Material Symbols Rounded';font-size:17px;display:flex;align-items:center;justify-content:center">interests</span><span style="min-width:0;display:flex;flex-direction:column"><span style="font-size:12px;font-weight:600">UI/UX Research</span><span style="font-size:10px;color:#62676B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Nadia: Sesi 1 lancar…</span></span></span>
+                  </div>
+                  <div style="flex:1;min-width:0;padding:14px 18px;display:flex;flex-direction:column;gap:8px;justify-content:flex-end">
+                    <span style="align-self:center;height:22px;padding:0 10px;border-radius:11px;background:#ECEEEB;font-size:10px;font-weight:600;color:#4d5155;display:flex;align-items:center">Hari ini</span>
+                    <div style="align-self:center;width:100%;max-width:400px;background:#fff;border-radius:16px;box-shadow:inset 0 0 0 1px #E8E9E7;padding:10px;display:flex;align-items:center;gap:10px;animation:lpUp .5s ease .05s both"><span style="flex:none;width:32px;height:32px;border-radius:11px;background:#F6CED1;font-family:'Material Symbols Rounded';font-size:16px;display:flex;align-items:center;justify-content:center">undo</span><span style="flex:1;display:flex;flex-direction:column"><span style="font-size:10px;color:#4d5155">Dimas meminta revisi · 08:40</span><span style="font-size:12px;font-weight:700">Tulis script DDL SQL</span></span><span style="height:26px;padding:0 9px;border-radius:13px;box-shadow:inset 0 0 0 1.5px #202124;font-size:10px;font-weight:600;display:flex;align-items:center">Lihat tugas</span></div>
+                    <div style="display:flex;gap:6px;align-items:flex-end;max-width:75%;animation:lpUp .5s ease .15s both"><span style="flex:none;width:24px;height:24px;border-radius:12px;background:#D8EAF4;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center">DI</span><span style="background:#fff;border-radius:16px 16px 16px 6px;padding:7px 11px;font-size:12px;box-shadow:0 1px 1.5px rgba(0,0,0,.06)">Lex, cek feedback-ku di tugas DDL ya. Minor kok.</span></div>
+                    <div style="align-self:flex-end;max-width:70%;background:#DED2FF;border-radius:16px 16px 6px 16px;padding:7px 11px;font-size:12px;animation:lpUp .5s ease .25s both">Oke, nanti malam aku benerin.</div>
+                    <div style="display:flex;gap:6px;align-items:flex-end;max-width:75%;animation:lpUp .5s ease .35s both"><span style="flex:none;width:24px;height:24px;border-radius:12px;background:#F6CED1;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center">SI</span><span style="background:#fff;border-radius:16px 16px 16px 6px;padding:7px 11px;font-size:12px;box-shadow:0 1px 1.5px rgba(0,0,0,.06)">Template slide aku taruh sini: <u style="color:#1F4F86">canva.com/design/perpus-k3</u></span></div>
+                    <div style="margin-top:6px;height:38px;border-radius:19px;background:#fff;box-shadow:inset 0 0 0 1px #E8E9E7;display:flex;align-items:center;padding:0 4px 0 14px;font-size:12px;color:#80868B">Tulis pesan ke grup…<span style="margin-left:auto;width:30px;height:30px;border-radius:15px;background:#B4B8BC;color:#fff;font-family:'Material Symbols Rounded';font-size:17px;display:flex;align-items:center;justify-content:center">arrow_upward</span></div>
+                  </div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ mReview }}" hint-placeholder-val="{{ false }}">
+                <div style="position:absolute;inset:0;display:flex;animation:lpFade .45s ease">
+                  <div style="flex:1;min-width:0;padding:16px;display:flex;flex-direction:column;gap:8px;opacity:.45">
+                    <span style="height:16px;width:50%;border-radius:8px;background:#E8E9E7"></span><span style="height:80px;border-radius:16px;background:#fff"></span><span style="height:60px;border-radius:16px;background:#fff"></span><span style="height:60px;border-radius:16px;background:#fff"></span>
+                  </div>
+                  <div style="flex:none;width:min(380px,100%);background:#F8F9F7;border-left:1px solid #E8E9E7;box-shadow:-24px 0 40px -24px rgba(0,0,0,.25);padding:16px 18px;display:flex;flex-direction:column;gap:10px;animation:lpUp .5s ease both">
+                    <span style="align-self:flex-start;height:24px;padding:0 9px 0 6px;border-radius:12px;background:#DED2FF;font-size:11px;font-weight:600;display:flex;align-items:center;gap:3px"><span style="font-family:'Material Symbols Rounded';font-size:14px">visibility</span>Menunggu review</span>
+                    <span style="font-size:20px;font-weight:800;letter-spacing:-.02em">Draft diagram ERD</span>
+                    <span style="display:flex;background:#ECEEEB;border-radius:12px;padding:3px;gap:2px;font-size:11px;font-weight:600"><span style="flex:1;height:28px;border-radius:9px;display:flex;align-items:center;justify-content:center">Ringkasan</span><span style="flex:1;height:28px;border-radius:9px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08);display:flex;align-items:center;justify-content:center">Hasil kerja</span><span style="flex:1;height:28px;border-radius:9px;display:flex;align-items:center;justify-content:center">Diskusi</span></span>
+                    <div style="background:#fff;border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:8px">
+                      <span style="display:flex;justify-content:space-between;align-items:center"><span style="display:flex;flex-direction:column"><b style="font-size:13px">Revisi 1</b><span style="font-size:10px;color:#62676B">Raka · Rab 14 Okt, 15:20</span></span><span style="height:22px;padding:0 8px;border-radius:11px;background:#DED2FF;font-size:10px;font-weight:600;display:flex;align-items:center">Menunggu review</span></span>
+                      <span style="font-size:12px;line-height:1.45">ERD v1 dengan 9 entity. Relasi Member–Loan 1:N. Tolong cek apakah Fine perlu jadi entity sendiri.</span>
+                      <span style="height:32px;border-radius:10px;background:#F0F3F1;display:flex;align-items:center;gap:6px;padding:0 10px;font-size:11px;font-weight:500"><span style="font-family:'Material Symbols Rounded';font-size:15px">link</span>drive.google.com/file/d/erd-v1</span>
+                    </div>
+                    <div style="margin-top:auto;display:flex;gap:8px"><span style="flex:1;height:40px;border-radius:13px;box-shadow:inset 0 0 0 1.5px #202124;background:#fff;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:5px"><span style="font-family:'Material Symbols Rounded';font-size:16px">undo</span>Minta revisi</span><span style="flex:1;height:40px;border-radius:13px;background:#202124;color:#fff;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:5px"><span style="font-family:'Material Symbols Rounded';font-size:16px">check_circle</span>Setujui</span></div>
+                  </div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ mTasks }}" hint-placeholder-val="{{ false }}">
+                <div style="position:absolute;inset:0;padding:18px 20px;display:flex;flex-direction:column;gap:12px;animation:lpFade .45s ease">
+                  <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:10px;flex-wrap:wrap"><span style="font-size:22px;font-weight:800;letter-spacing:-.03em">Tugas Saya</span><span style="display:flex;gap:6px"><span style="height:28px;padding:0 10px;border-radius:14px;background:#202124;color:#fff;font-size:11px;font-weight:600;display:flex;align-items:center">Semua · 5</span><span style="height:28px;padding:0 10px;border-radius:14px;box-shadow:inset 0 0 0 1.5px #202124;font-size:11px;font-weight:600;display:flex;align-items:center">Perlu review · 1</span></span></div>
+                  <span style="font-size:11px;font-weight:700;letter-spacing:.05em;color:#4d5155">PERLU TINDAKAN</span>
+                  <div style="background:#fff;border-radius:16px;padding:2px 10px;display:flex;flex-direction:column;font-size:12px">
+                    <span style="display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr) 120px 80px;gap:10px;align-items:center;min-height:42px;animation:lpUp .45s ease .05s both"><b style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Tulis script DDL SQL</b><span style="color:#62676B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Perpustakaan</span><span style="justify-self:start;height:22px;padding:0 8px;border-radius:11px;background:#F6CED1;font-size:10px;font-weight:600;display:flex;align-items:center">Perlu revisi</span><span>Sen, 12:00</span></span>
+                    <span style="display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr) 120px 80px;gap:10px;align-items:center;min-height:42px;border-top:1px solid #F0F3F1;animation:lpUp .45s ease .12s both"><b style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Draft diagram ERD</b><span style="color:#62676B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Perpustakaan</span><span style="justify-self:start;height:22px;padding:0 8px;border-radius:11px;background:#DED2FF;font-size:10px;font-weight:600;display:flex;align-items:center">Menunggu review</span><span>Min, 23:59</span></span>
+                  </div>
+                  <span style="font-size:11px;font-weight:700;letter-spacing:.05em;color:#4d5155">SEDANG BERJALAN</span>
+                  <div style="background:#fff;border-radius:16px;padding:2px 10px;display:flex;flex-direction:column;font-size:12px">
+                    <span style="display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr) 120px 80px;gap:10px;align-items:center;min-height:42px;animation:lpUp .45s ease .2s both"><b style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Normalisasi tabel ke 3NF</b><span style="color:#62676B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Perpustakaan</span><span style="justify-self:start;height:22px;padding:0 8px;border-radius:11px;background:#D8EAF4;font-size:10px;font-weight:600;display:flex;align-items:center">Dikerjakan</span><span>Besok</span></span>
+                    <span style="display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr) 120px 80px;gap:10px;align-items:center;min-height:42px;border-top:1px solid #F0F3F1;animation:lpUp .45s ease .28s both"><b style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Ringkasan temuan sesi 1</b><span style="color:#62676B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Usability Test</span><span style="justify-self:start;height:22px;padding:0 8px;border-radius:11px;background:#F9E9BE;font-size:10px;font-weight:600;display:flex;align-items:center">Belum dimulai</span><span>21 Okt</span></span>
+                  </div>
+                </div>
+              </sc-if>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section id="demo" data-reveal="demo" style="scroll-margin-top:90px;padding:90px 20px 40px">
+    <div style="max-width:1140px;margin:0 auto;background:#fff;border-radius:40px;padding:clamp(24px,4vw,48px);display:flex;flex-direction:column;gap:30px;box-shadow:0 1px 2px rgba(0,0,0,.04);opacity:{{ rv.demo.op }};transform:{{ rv.demo.tf }};transition:opacity .9s ease,transform .9s cubic-bezier(.2,.8,.2,1)">
+      <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:20px;flex-wrap:wrap">
+        <div style="display:flex;flex-direction:column;gap:12px;max-width:640px">
+          <span style="font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#4d5155">Demo produk</span>
+          <h2 style="margin:0;font-size:clamp(30px,4vw,48px);font-weight:800;letter-spacing:-.04em;line-height:1.08;text-wrap:balance">Ikuti satu tugas dari dibuat sampai disetujui.</h2>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <button onClick="{{ prev }}" aria-label="Langkah sebelumnya" style="width:46px;height:46px;border-radius:23px;border:none;background:#F0F3F1;font-family:'Material Symbols Rounded';font-size:22px;opacity:{{ prevOp }}" style-hover="background:#E8E9E7">chevron_left</button>
+          <button onClick="{{ togglePlay }}" style="height:46px;padding:0 20px 0 14px;border-radius:23px;border:none;background:#202124;color:#fff;font-size:15px;font-weight:600;display:flex;align-items:center;gap:6px" style-hover="background:#3c4043"><span style="font-family:'Material Symbols Rounded';font-size:22px;font-variation-settings:'FILL' 1">{{ playIcon }}</span>{{ playLabel }}</button>
+          <button onClick="{{ next }}" aria-label="Langkah berikutnya" style="width:46px;height:46px;border-radius:23px;border:none;background:#F0F3F1;font-family:'Material Symbols Rounded';font-size:22px;opacity:{{ nextOp }}" style-hover="background:#E8E9E7">chevron_right</button>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;min-height:76px">
+        <span style="font-size:13px;font-weight:700;color:#4d5155">{{ stepNum }}</span>
+        <span aria-live="polite" style="font-size:24px;font-weight:800;letter-spacing:-.02em">{{ stepLabel }}</span>
+        <span style="font-size:16px;line-height:1.5;color:#3c4043">{{ stepSub }}</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div style="overflow-x:auto;margin:0 -4px;padding:0 4px 4px">
+          <div style="position:relative;min-width:760px">
+            <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px">
+              <sc-for list="{{ boardCols }}" as="c" hint-placeholder-count="5">
+                <div style="background:#F0F3F1;border-radius:20px;padding:10px;display:flex;flex-direction:column;gap:8px;min-height:330px">
+                  <span style="display:flex;align-items:center;gap:7px;padding:4px 4px 2px;font-size:13px;font-weight:700"><span style="width:10px;height:10px;border-radius:5px;background:{{ c.dot }}"></span>{{ c.label }}</span>
+                  <div style="height:112px;border-radius:16px;border:1.5px dashed {{ c.slotBd }};transition:border-color .4s"></div>
+                  <sc-for list="{{ c.others }}" as="o" hint-placeholder-count="1">
+                    <div style="background:#fff;border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:8px;opacity:.7"><span style="font-size:13px;font-weight:600">{{ o.t }}</span><span style="width:22px;height:22px;border-radius:11px;background:{{ o.bg }};font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center">{{ o.ini }}</span></div>
+                  </sc-for>
+                </div>
+              </sc-for>
+            </div>
+            <div style="position:absolute;top:42px;left:{{ demoCard.left }};width:calc((100% - 40px) / 5);padding:0 10px;transition:left .8s cubic-bezier(.65,0,.25,1)">
+              <div style="position:relative;height:112px;background:#fff;border-radius:16px;padding:10px 12px;display:flex;flex-direction:column;gap:7px;box-shadow:{{ demoCard.ring }};transition:box-shadow .4s">
+                {{ cardKeyEl }}
+                <span style="align-self:flex-start;max-width:100%;height:24px;padding:0 8px 0 6px;border-radius:12px;background:{{ demoCard.chipBg }};font-size:11px;font-weight:600;display:flex;align-items:center;gap:3px;white-space:nowrap;transition:background .4s"><span style="font-family:'Material Symbols Rounded';font-size:14px">{{ demoCard.chipIcon }}</span>{{ demoCard.chipLabel }}</span>
+                <span style="font-size:14px;font-weight:700;line-height:1.25">Draft diagram ERD</span>
+                <span style="font-size:11px;color:#4d5155;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ demoCard.meta }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:{{ demoCols }};gap:16px;align-items:stretch;min-width:0">
+          <div style="background:#F8F9F7;border-radius:22px;padding:14px;display:flex;flex-direction:column;gap:8px;min-height:250px;min-width:0">
+            <span style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700"><span style="width:26px;height:26px;border-radius:9px;background:#C9F2D6;font-family:'Material Symbols Rounded';font-size:15px;display:flex;align-items:center;justify-content:center">database</span>Chat · Basis Data K3</span>
+            <div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;gap:8px">
+              <sc-for list="{{ feed }}" as="f" hint-placeholder-count="2">
+                <sc-if value="{{ f.act }}" hint-placeholder-val="{{ true }}"><div style="background:#fff;border-radius:14px;box-shadow:inset 0 0 0 1px #E8E9E7;padding:8px 10px;display:flex;align-items:center;gap:8px;animation:lpUp .4s ease both"><span style="flex:none;width:28px;height:28px;border-radius:10px;background:{{ f.bg }};font-family:'Material Symbols Rounded';font-size:15px;display:flex;align-items:center;justify-content:center">{{ f.icon }}</span><span style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-size:11px;color:#4d5155">{{ f.who }} {{ f.text }} · {{ f.time }}</span><span style="font-size:12px;font-weight:700">Draft diagram ERD</span></span></div></sc-if>
+                <sc-if value="{{ f.msg }}" hint-placeholder-val="{{ false }}"><div style="display:flex;gap:6px;align-items:flex-end;animation:lpUp .4s ease both"><span style="flex:none;width:24px;height:24px;border-radius:12px;background:{{ f.bg }};font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center">{{ f.ini }}</span><span style="background:#fff;border-radius:14px 14px 14px 5px;padding:7px 10px;font-size:12px;line-height:1.4;box-shadow:0 1px 1.5px rgba(0,0,0,.06)">{{ f.text }}</span></div></sc-if>
+              </sc-for>
+            </div>
+          </div>
+          <div style="background:#F9E9BE;border-radius:22px;padding:20px;display:flex;flex-direction:column;justify-content:center;gap:12px;min-width:0">
+            <span style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><span style="font-size:14px;font-weight:700">Group Pulse</span><span style="font-size:22px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.03em">{{ pulsePct }}</span></span>
+            <span style="height:8px;border-radius:4px;background:rgba(255,255,255,.7);overflow:hidden"><span style="display:block;height:100%;width:{{ pulsePct }};background:#202124;border-radius:4px;transition:width .9s cubic-bezier(.2,.8,.2,1)"></span></span>
+            <span style="display:flex;justify-content:space-between;font-size:12px;color:#4a3f22"><span>{{ pulseLabel }}</span><span>Raka {{ rakaRatio }}</span></span>
+          </div>
+        </div>
+      </div>
+      <div style="position:relative;padding-top:6px">
+        <div style="position:absolute;left:18px;right:18px;top:24px;height:2px;background:#E8E9E7"><span style="display:block;height:100%;width:{{ stepPct }};background:#202124;transition:width .6s cubic-bezier(.2,.8,.2,1)"></span></div>
+        <div style="position:relative;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px">
+          <sc-for list="{{ steps }}" as="x" hint-placeholder-count="6">
+            <button onClick="{{ x.go }}" aria-current="{{ x.on }}" style="border:none;background:none;padding:0;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center">
+              <span style="width:38px;height:38px;border-radius:19px;background:{{ x.dotBg }};color:{{ x.dotFg }};box-shadow:{{ x.dotRing }};font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;transition:background .3s,color .3s">{{ x.n }}</span>
+              <span style="font-size:13px;font-weight:{{ x.fw }};color:{{ x.fg }};line-height:1.3;transition:color .3s">{{ x.label }}</span>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="faq" data-reveal="faq" style="scroll-margin-top:90px;padding:90px 20px 40px">
+    <div style="max-width:1140px;margin:0 auto;display:grid;grid-template-columns:{{ faqCols }};gap:40px;opacity:{{ rv.faq.op }};transform:{{ rv.faq.tf }};transition:opacity .8s ease,transform .8s cubic-bezier(.2,.8,.2,1)">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <span style="font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#4d5155">FAQ</span>
+        <h2 style="margin:0;font-size:clamp(32px,4vw,48px);font-weight:800;letter-spacing:-.04em;line-height:1.08">Pertanyaan yang sering muncul.</h2>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <sc-for list="{{ faqs }}" as="f" hint-placeholder-count="4">
+          <div style="background:#fff;border-radius:22px;box-shadow:0 1px 2px rgba(0,0,0,.04)">
+            <button onClick="{{ f.toggle }}" aria-expanded="{{ f.open }}" style="width:100%;text-align:left;border:none;background:none;min-height:64px;padding:16px 20px;display:flex;align-items:center;gap:14px;font-size:17px;font-weight:700"><span style="flex:1">{{ f.q }}</span><span style="flex:none;width:34px;height:34px;border-radius:17px;background:#F0F3F1;font-family:'Material Symbols Rounded';font-size:20px;display:flex;align-items:center;justify-content:center">{{ f.icon }}</span></button>
+            <div style="display:grid;grid-template-rows:{{ f.rows }};transition:grid-template-rows .35s cubic-bezier(.2,.8,.2,1)"><div style="overflow:hidden"><p style="margin:0;padding:0 20px 18px;font-size:15px;line-height:1.6;color:#3c4043;opacity:{{ f.op }};transition:opacity .35s">{{ f.a }}</p></div></div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </section>
+
+  <section data-reveal="cta" style="padding:90px 20px 30px">
+    <div style="position:relative;overflow:hidden;max-width:1140px;margin:0 auto;background:#202124;color:#fff;border-radius:40px;padding:clamp(36px,6vw,80px) clamp(24px,5vw,64px);display:flex;flex-direction:column;align-items:center;gap:22px;text-align:center;opacity:{{ rv.cta.op }};transform:{{ rv.cta.tf }};transition:opacity .9s ease,transform .9s cubic-bezier(.2,.8,.2,1)">
+      <span aria-hidden="true" style="position:absolute;left:-80px;top:-80px;width:320px;height:320px;border-radius:50%;background:#DED2FF;filter:blur(110px);opacity:.35"></span>
+      <span aria-hidden="true" style="position:absolute;right:-60px;bottom:-100px;width:320px;height:320px;border-radius:50%;background:#C9F2D6;filter:blur(110px);opacity:.3"></span>
+      <h2 style="position:relative;margin:0;max-width:760px;font-size:clamp(34px,5vw,60px);font-weight:800;letter-spacing:-.045em;line-height:1.04;text-wrap:balance">Mulai kelompok berikutnya dengan lebih tenang.</h2>
+      <p style="position:relative;margin:0;max-width:560px;font-size:18px;line-height:1.55;color:#D5D8DB">Buat grup, bagikan kode undangan, dan bagi tugas pertama dalam beberapa menit.</p>
+      <div style="position:relative;display:flex;gap:10px;flex-wrap:wrap;justify-content:center">
+        <a href="Grouply Web.dc.html" style="height:56px;padding:0 26px;border-radius:28px;background:#fff;color:#202124;display:flex;align-items:center;gap:8px;font-size:16px;font-weight:700;transition:transform .2s" style-hover="transform:translateY(-2px);color:#202124">Mulai sekarang<span style="font-family:'Material Symbols Rounded';font-size:20px">arrow_forward</span></a>
+        <a href="#demo" style="height:56px;padding:0 24px;border-radius:28px;box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.4);color:#fff;display:flex;align-items:center;font-size:16px;font-weight:600" style-hover="color:#fff;box-shadow:inset 0 0 0 1.5px #fff">Lihat demo lagi</a>
+      </div>
+      <div style="position:relative;display:flex;gap:18px;flex-wrap:wrap;justify-content:center;font-size:14px;color:#D5D8DB;padding-top:6px">
+        <span style="display:flex;align-items:center;gap:6px"><span style="font-family:'Material Symbols Rounded';font-size:18px">phone_iphone</span>iOS</span>
+        <span style="display:flex;align-items:center;gap:6px"><span style="font-family:'Material Symbols Rounded';font-size:18px">android</span>Android</span>
+        <span style="display:flex;align-items:center;gap:6px"><span style="font-family:'Material Symbols Rounded';font-size:18px">laptop_mac</span>Web</span>
+      </div>
+    </div>
+  </section>
+
+  <footer style="padding:30px 20px 40px">
+    <div style="max-width:1140px;margin:0 auto;display:flex;align-items:center;gap:16px;flex-wrap:wrap;font-size:14px;color:#62676B">
+      <span style="display:flex;align-items:center;gap:10px;color:#202124"><img src="assets/brand.png" alt="" style="width:28px;height:28px;border-radius:9px"><b style="letter-spacing:.12em;font-size:13px">GROUPLY</b></span>
+      <span>© 2026 GROUPLY</span>
+      <div style="display:flex;gap:4px;margin-left:auto">
+        <a href="#" style="height:36px;padding:0 10px;border-radius:18px;display:flex;align-items:center;color:#4d5155" style-hover="background:#ECEEEB">Privasi</a>
+        <a href="#" style="height:36px;padding:0 10px;border-radius:18px;display:flex;align-items:center;color:#4d5155" style-hover="background:#ECEEEB">Ketentuan</a>
+        <a href="#" style="height:36px;padding:0 10px;border-radius:18px;display:flex;align-items:center;color:#4d5155" style-hover="background:#ECEEEB">Kontak</a>
+      </div>
+    </div>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;showcaseAutoplay&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Animasi&quot;},&quot;demoSpeed&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;lambat&quot;,&quot;normal&quot;,&quot;cepat&quot;],&quot;default&quot;:&quot;normal&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Animasi&quot;},&quot;floatingCards&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Animasi&quot;}}">
+const ST = {
+  todo: { label: 'Belum dimulai', bg: '#F9E9BE', icon: 'radio_button_unchecked', dot: '#E6C25E' },
+  in_progress: { label: 'Sedang dikerjakan', bg: '#D8EAF4', icon: 'autorenew', dot: '#86B8D6' },
+  in_review: { label: 'Menunggu review', bg: '#DED2FF', icon: 'visibility', dot: '#A893EE' },
+  needs_revision: { label: 'Perlu revisi', bg: '#F6CED1', icon: 'undo', dot: '#E08C94' },
+  done: { label: 'Selesai', bg: '#C9F2D6', icon: 'check_circle', dot: '#62C484' },
+};
+const COLS = ['todo', 'in_progress', 'in_review', 'needs_revision', 'done'];
+const COL_LABEL = ['Belum dimulai', 'Dikerjakan', 'Review', 'Revisi', 'Selesai'];
+const A = (icon, bg, who, text, time) => ({ act: true, msg: false, icon, bg, who, text, time });
+const M = (ini, bg, who, text, time) => ({ act: false, msg: true, ini, bg, who, text, time });
+const STEPS = [
+  { col: 0, st: 'todo', label: 'Alex membuat tugas', sub: 'Raka jadi pelaksana, Nadia jadi reviewer, deadline hari Minggu.', meta: 'Raka → Nadia · Minggu', feed: [A('add_task', '#D8EAF4', 'Alex', 'membuat tugas untuk Raka', '09:12')] },
+  { col: 1, st: 'in_progress', label: 'Raka mulai mengerjakan', sub: 'Statusnya langsung berubah, jadi seluruh tim tahu tugas ini sedang jalan.', meta: 'Dikerjakan Raka', feed: [M('RA', '#C9F2D6', 'Raka', 'Siap, aku kerjain malam ini.', '09:15')] },
+  { col: 2, st: 'in_review', label: 'Raka mengirim hasil', sub: 'Catatan dan link Drive terkirim. Nadia diberi tahu untuk mereview.', meta: 'Revisi 1 · menunggu Nadia', feed: [A('upload', '#DED2FF', 'Raka', 'mengirim hasil', '20:40')] },
+  { col: 3, st: 'needs_revision', label: 'Nadia meminta revisi', sub: 'Catatan revisi tersimpan di tugas, nggak tenggelam di chat.', meta: 'Catatan: pisahkan entity Fine', feed: [A('undo', '#F6CED1', 'Nadia', 'meminta revisi', '21:05'), M('NA', '#F9E9BE', 'Nadia', 'Fine dipisah jadi entity sendiri ya, sisanya udah oke.', '21:06')] },
+  { col: 2, st: 'in_review', label: 'Raka mengirim revisi 2', sub: 'Revisi pertama tetap ada di riwayat. Nadia mereview lagi.', meta: 'Revisi 2 · menunggu Nadia', feed: [A('upload', '#DED2FF', 'Raka', 'mengirim revisi 2', '22:18')] },
+  { col: 4, st: 'done', label: 'Nadia menyetujui', sub: 'Tugas baru dianggap Selesai setelah disetujui reviewer. Progres tim ikut naik.', meta: 'Disetujui Nadia', feed: [A('check_circle', '#C9F2D6', 'Nadia', 'menyetujui', '22:30')] },
+];
+const OTHERS = [[['Slide presentasi', 'DI', '#D8EAF4']], [['Normalisasi ke 3NF', 'AL', '#DED2FF']], [], [], [['Studi literatur', 'NA', '#F9E9BE'], ['Narasi use case', 'SI', '#F6CED1']]];
+const TABS = [
+  { icon: 'home', title: 'Beranda yang tahu prioritasmu', text: 'Revisi yang diminta, review yang menunggu, dan deadline minggu ini selalu muncul paling atas.', url: 'beranda' },
+  { icon: 'chat_bubble', title: 'Chat grup yang terhubung ke tugas', text: 'Kiriman, review, dan revisi muncul sebagai kartu aktivitas di chat. Satu klik untuk buka tugasnya.', url: 'chat/basis-data-k3' },
+  { icon: 'rate_review', title: 'Review dengan riwayat lengkap', text: 'Reviewer menyetujui atau meminta revisi dengan catatan. Setiap revisi tersimpan rapi.', url: 'tugas/draft-erd' },
+  { icon: 'task_alt', title: 'Semua tugasmu di satu tabel', text: 'Lintas grup dan proyek, dikelompokkan dari yang perlu tindakan sampai yang sudah selesai.', url: 'tugas-saya' },
+];
+const FAQ = [
+  ['Siapa yang bisa menyetujui tugas?', 'Hanya reviewer yang ditunjuk untuk tugas itu. Pelaksana tidak bisa menyetujui hasil kerjanya sendiri, jadi setiap tugas yang Selesai memang sudah diperiksa orang lain.'],
+  ['Apa bedanya chat grup dan diskusi tugas?', 'Chat grup untuk obrolan umum kelompok. Diskusi tugas menempel di satu tugas, jadi pertanyaan soal tugas itu nggak tenggelam di chat.'],
+  ['Bagaimana cara anggota bergabung?', 'Koordinator membuat kode undangan, lalu membagikannya. Kode berlaku 7 hari dan bisa dinonaktifkan kapan saja.'],
+  ['Bisa dipakai di HP dan laptop sekaligus?', 'Bisa. GROUPLY tersedia di iOS, Android, dan Web dengan data yang sama, jadi kamu bisa mulai di HP lalu lanjut review di laptop.'],
+];
+
+class Component extends DCLogic {
+  state = { seen: {}, mx: 0, my: 0, scrolled: false, tab: 0, cyc: 0, manual: false, step: 0, playing: false, started: false, faq: 0, vw: typeof window !== 'undefined' ? window.innerWidth : 1440 };
+
+  componentDidMount() {
+    this._rm = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    this._sc = () => { const s = window.scrollY > 8; if (s !== this.state.scrolled) this.setState({ scrolled: s }); };
+    this._rs = () => this.setState({ vw: window.innerWidth });
+    window.addEventListener('scroll', this._sc, { passive: true });
+    window.addEventListener('resize', this._rs);
+    this._t0 = setTimeout(() => this.reveal('hero'), 60);
+    if ('IntersectionObserver' in window) {
+      this._io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { this._io.unobserve(e.target); this.reveal(e.target.getAttribute('data-reveal')); } }), { threshold: .15 });
+      this._t1 = setTimeout(() => document.querySelectorAll('[data-reveal]').forEach(el => this._io.observe(el)), 120);
+    } else ['feat', 'show', 'demo', 'faq', 'cta'].forEach(k => this.reveal(k));
+  }
+  componentWillUnmount() {
+    window.removeEventListener('scroll', this._sc); window.removeEventListener('resize', this._rs);
+    if (this._io) this._io.disconnect();
+    [this._t0, this._t1, this._dt, this._st].forEach(t => clearTimeout(t));
+    if (this._raf) cancelAnimationFrame(this._raf);
+  }
+  componentDidUpdate() {
+    const s = this.state, cur = { step: s.step, playing: s.playing, tab: s.tab, manual: s.manual, auto: this.props.showcaseAutoplay };
+    const prev = this._prev || {}; this._prev = cur;
+    if (prev.step !== cur.step || prev.playing !== cur.playing) { clearTimeout(this._dt); if (s.playing) this._dt = setTimeout(() => this.advance(), this.dur()); }
+    if (prev.tab !== cur.tab || prev.manual !== cur.manual || prev.auto !== cur.auto) this.schedTab();
+  }
+  reveal(k) {
+    if (!k || this.state.seen[k]) return;
+    this.setState(s => ({ seen: Object.assign({}, s.seen, { [k]: true }) }));
+    if (k === 'demo' && !this.state.started && !this._rm) this.setState({ playing: true, started: true });
+    if (k === 'show') this.schedTab();
+  }
+  dur() { return { lambat: 3400, normal: 2400, cepat: 1400 }[this.props.demoSpeed || 'normal'] || 2400; }
+  advance() { this.setState(s => s.step >= STEPS.length - 1 ? { playing: false } : { step: s.step + 1, playing: s.step + 1 < STEPS.length - 1 }); }
+  autoOn() { return this.props.showcaseAutoplay !== false && !this.state.manual && !this._rm && !!this.state.seen.show; }
+  schedTab() { clearTimeout(this._st); if (this.autoOn()) this._st = setTimeout(() => this.setState(s => ({ tab: (s.tab + 1) % TABS.length, cyc: s.cyc + 1 })), 6000); }
+
+  renderVals() {
+    const s = this.state, vw = s.vw, wide = vw >= 960;
+    const rv = k => ({ op: s.seen[k] ? 1 : 0, tf: s.seen[k] ? 'none' : 'translateY(28px)' });
+    const par = k => 'translate3d(' + (s.mx * k).toFixed(1) + 'px,' + (s.my * k * .7).toFixed(1) + 'px,0)';
+    const st = STEPS[s.step], stInfo = ST[st.st], auto = this.autoOn();
+    const feed = STEPS.slice(0, s.step + 1).reduce((a, x) => a.concat(x.feed), []).slice(-5);
+    const done = 2 + (s.step === STEPS.length - 1 ? 1 : 0), total = 6;
+    return {
+      navBg: s.scrolled ? 'rgba(255,255,255,.82)' : 'rgba(255,255,255,0)', navShadow: s.scrolled ? '0 10px 30px -18px rgba(0,0,0,.3), 0 0 0 1px #E8E9E7' : 'none',
+      wideNav: vw >= 820, showFloat: this.props.floatingCards !== false && vw >= 1100,
+      rv: { hero: rv('hero'), feat: rv('feat'), show: rv('show'), demo: rv('demo'), faq: rv('faq'), cta: rv('cta') },
+      heroFrame: s.seen.hero ? 'perspective(1600px) rotateX(0deg)' : 'perspective(1600px) rotateX(14deg) translateY(40px)',
+      par: { a: par(-16), b: par(14), c: par(9) },
+      onHeroMove: e => {
+        if (this._rm) return;
+        const r = e.currentTarget.getBoundingClientRect(), mx = ((e.clientX - r.left) / r.width - .5) * 2, my = ((e.clientY - r.top) / r.height - .5) * 2;
+        if (this._raf) return;
+        this._raf = requestAnimationFrame(() => { this._raf = null; this.setState({ mx, my }); });
+      },
+      onHeroLeave: () => this.setState({ mx: 0, my: 0 }),
+      bentoCols: wide ? 'repeat(3,minmax(0,1fr))' : 'minmax(0,1fr)', bentoSpan: wide ? 'span 2' : 'auto',
+      tabs: TABS.map((t, i) => {
+        const on = s.tab === i;
+        return { icon: t.icon, title: t.title, text: t.text, on, notOn: !on, showProg: on && auto, bg: on ? '#fff' : 'transparent', shadow: on ? '0 18px 40px -24px rgba(0,0,0,.3), 0 0 0 1px #E8E9E7' : 'none',
+          iconBg: on ? '#202124' : '#ECEEEB', iconFg: on ? '#fff' : '#202124', rows: on ? '1fr' : '0fr', textOp: on ? 1 : 0,
+          go: () => this.setState({ tab: i, manual: true, cyc: s.cyc + 1 }) };
+      }),
+      progEl: React.createElement('span', { key: s.tab + '-' + s.cyc, style: { display: 'block', height: '100%', background: '#202124', borderRadius: 2, animation: 'lpProg 6s linear forwards' } }),
+      showUrl: 'app.grouply.id/' + TABS[s.tab].url, mHome: s.tab === 0, mChat: s.tab === 1, mReview: s.tab === 2, mTasks: s.tab === 3,
+      sb: ['home', 'chat', 'review', 'tasks'].reduce((o, k, i) => { const on = (i === 0 && s.tab === 0) || (i === 1 && s.tab === 1) || (i === 3 && (s.tab === 2 || s.tab === 3)); o[k] = { bg: on ? '#202124' : 'transparent', fg: on ? '#fff' : '#202124' }; return o; }, {}),
+      showCols: wide ? 'minmax(0,380px) minmax(0,1fr)' : 'minmax(0,1fr)',
+      steps: STEPS.map((x, i) => ({ n: String(i + 1), label: x.label, on: i === s.step, past: i < s.step, dotBg: i <= s.step ? '#202124' : '#fff', dotFg: i <= s.step ? '#fff' : '#62676B', dotRing: i <= s.step ? 'none' : 'inset 0 0 0 1.5px #C4C7C5', fw: i === s.step ? 700 : 500, fg: i <= s.step ? '#202124' : '#62676B', go: () => this.setState({ step: i, playing: false, started: true }) })),
+      stepNum: 'Langkah ' + (s.step + 1) + ' dari ' + STEPS.length, stepLabel: st.label, stepSub: st.sub, stepPct: ((s.step) / (STEPS.length - 1) * 100) + '%',
+      demoCard: { left: 'calc(' + st.col + ' * ((100% - 40px) / 5 + 10px))', chipBg: stInfo.bg, chipIcon: stInfo.icon, chipLabel: stInfo.label, meta: st.meta, ring: st.st === 'done' ? '0 0 0 2px #62C484, 0 18px 36px -16px rgba(0,0,0,.35)' : '0 0 0 2px #202124, 0 18px 36px -16px rgba(0,0,0,.35)' },
+      cardKeyEl: React.createElement('span', { key: 'p' + s.step, 'aria-hidden': true, style: { position: 'absolute', inset: 0, borderRadius: 16, animation: s.step === STEPS.length - 1 ? 'lpPulse 1s ease-out 2' : 'none', pointerEvents: 'none' } }),
+      boardCols: COLS.map((k, i) => ({ label: COL_LABEL[i], dot: ST[k].dot, here: STEPS[s.step].col === i, slotBd: STEPS[s.step].col === i ? 'transparent' : '#D5D8DB', others: OTHERS[i].map(o => ({ t: o[0], ini: o[1], bg: o[2] })) })),
+      feed, pulsePct: Math.round(done / total * 100) + '%', pulseLabel: done + ' dari ' + total + ' tugas selesai', rakaRatio: s.step === STEPS.length - 1 ? '1/1' : '0/1',
+      playIcon: s.playing ? 'pause' : (s.step === STEPS.length - 1 ? 'replay' : 'play_arrow'), playLabel: s.playing ? 'Jeda' : (s.step === STEPS.length - 1 ? 'Putar ulang' : 'Putar'),
+      togglePlay: () => this.setState(x => x.playing ? { playing: false } : (x.step === STEPS.length - 1 ? { step: 0, playing: true, started: true } : { playing: true, started: true })),
+      prev: () => this.setState(x => ({ step: Math.max(0, x.step - 1), playing: false })), next: () => this.setState(x => ({ step: Math.min(STEPS.length - 1, x.step + 1), playing: false })),
+      prevOp: s.step === 0 ? .4 : 1, nextOp: s.step === STEPS.length - 1 ? .4 : 1,
+      demoCols: wide ? 'minmax(0,1.7fr) minmax(0,1fr)' : 'minmax(0,1fr)',
+      faqs: FAQ.map((f, i) => ({ q: f[0], a: f[1], open: s.faq === i, rows: s.faq === i ? '1fr' : '0fr', icon: s.faq === i ? 'remove' : 'add', op: s.faq === i ? 1 : 0, toggle: () => this.setState(x => ({ faq: x.faq === i ? -1 : i })) })),
+      faqCols: wide ? 'minmax(0,1fr) minmax(0,1.4fr)' : 'minmax(0,1fr)',
+    };
+  }
+}
+
+</script>
+</body>
+</html>
