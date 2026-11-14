@@ -92,3 +92,13 @@ export function activityStyle(verb: string): { icon: string; bg: string } {
 	if (verb.startsWith('mengalihkan')) return { icon: 'swap_horiz', bg: 'var(--sky)' };
 	return { icon: 'edit', bg: 'var(--butter)' };
 }
+
+/** Nilai <input type="date"> (yyyy-mm-dd, waktu lokal). */
+export const dateInput = (d: Date) =>
+	`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+/** Deadline jatuh pukul 23:59 waktu lokal pada hari yang dipilih, sama dengan Flutter. */
+export function dueFromInput(value: string): Date | null {
+	const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+	return m ? new Date(+m[1], +m[2] - 1, +m[3], 23, 59) : null;
+}

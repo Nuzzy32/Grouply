@@ -127,13 +127,13 @@
 			<section class="card">
 				<h2>Proyek aktif<a class="link" href="/app/grup">Semua grup</a></h2>
 				{#each projects as { p, done, total } (p.id)}
-					<div class="project">
+					<a class="project" href="/app/proyek/{p.id}">
 						<span class="text"><b>{p.title}</b><small class="muted">{groupName(p.groupID)} · Deadline {shortDate(new Date(p.dueAt))}</small></span>
 						<span class="progress">
 							<span class="bar"><span style:width="{total ? (done / total) * 100 : 0}%"></span></span>
 							<small>{done}/{total}</small>
 						</span>
-					</div>
+					</a>
 				{:else}
 					<p class="none">Belum ada proyek aktif.</p>
 				{/each}
@@ -321,11 +321,16 @@
 		color: var(--secondary);
 	}
 	.project {
+		border-radius: 12px;
+		transition: background 0.15s;
 		display: flex;
 		flex-direction: column;
 		gap: 8px;
 		padding: 12px 0;
 		border-top: 1px solid var(--line);
+	}
+	.project:hover b {
+		text-decoration: underline;
 	}
 	.progress {
 		display: flex;

@@ -5,7 +5,7 @@
 	import ThemeToggle from '#lib/ThemeToggle.svelte';
 	import { groupIcon, initials, tint } from '#lib/app/format.ts';
 	import { myGroups, unreadCount } from '#lib/app/derive.ts';
-	import { header, store } from '#lib/app/store.svelte.ts';
+	import { flash, header, store, toast } from '#lib/app/store.svelte.ts';
 	import '#lib/app/app.css';
 
 	let { children } = $props();
@@ -32,6 +32,14 @@
 	];
 	const active = (href: string) =>
 		href === '/app' ? page.url.pathname === '/app' : page.url.pathname.startsWith(href);
+
+	let toastVisible = $state(false);
+	$effect(() => {
+		if (!toast.id) return;
+		toastVisible = true;
+		const t = setTimeout(() => (toastVisible = false), 2800);
+		return () => clearTimeout(t);
+	});
 
 	async function signOut() {
 		menu = false;
@@ -109,12 +117,26 @@
 						</li>
 					{/each}
 				</ol>
+				{#if header.action}
+					{@const a = header.action}
+					<button class="action" class:locked={!!a.locked} onclick={() => (a.locked ? flash(a.locked, 'err') : a.run())}>
+						<Icon name={a.locked ? 'lock' : a.icon} size={19} />{a.label}
+					</button>
+				{/if}
 				<ThemeToggle />
 			</header>
 			{#if signOutError}<div class="notice error banner" role="alert">{signOutError}</div>{/if}
 			<div class="content">{@render children()}</div>
 		</div>
 	</div>
+	{#if toastVisible}
+		{#key toast.id}
+			<div class="toast {toast.kind}" role="status">
+				<Icon name={toast.kind === 'err' ? 'error' : toast.kind === 'info' ? 'info' : 'check_circle'} size={20} fill />
+				{toast.text}
+			</div>
+		{/key}
+	{/if}
 {/if}
 
 <style>
@@ -370,6 +392,61 @@
 		font-size: 16px;
 		font-weight: 700;
 		color: var(--ink);
+	}
+	.action {
+		flex: none;
+		height: 42px;
+		padding: 0 18px 0 14px;
+		border: none;
+		border-radius: 21px;
+		background: var(--ink);
+		color: var(--on-ink);
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		font-size: 14px;
+		font-weight: 600;
+		transition: opacity 0.15s;
+	}
+	.action:hover {
+		opacity: 0.88;
+	}
+	.action.locked {
+		opacity: 0.55;
+	}
+	.toast {
+		position: fixed;
+		left: 50%;
+		bottom: 28px;
+		z-index: 100;
+		max-width: calc(100% - 32px);
+		transform: translateX(-50%);
+		padding: 12px 18px 12px 14px;
+		border-radius: 18px;
+		background: #202124;
+		color: #fff;
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		font-size: 14px;
+		font-weight: 600;
+		box-shadow: 0 20px 40px -16px rgba(0, 0, 0, 0.45);
+		animation: toast-in 0.2s ease both;
+	}
+	.toast :global(.ms) {
+		color: #c9f2d6;
+	}
+	.toast.err :global(.ms) {
+		color: #f6ced1;
+	}
+	.toast.info :global(.ms) {
+		color: #d8eaf4;
+	}
+	@keyframes toast-in {
+		from {
+			opacity: 0;
+			transform: translate(-50%, 6px);
+		}
 	}
 	.banner {
 		margin: 12px 24px 0;

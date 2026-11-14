@@ -178,5 +178,14 @@ class Store {
 
 export const store = new Store();
 
-/** Breadcrumb di header aplikasi; diisi oleh tiap halaman. */
-export const header = $state({ crumbs: [] as { label: string; href?: string }[] });
+type HeaderAction = { label: string; icon: string; run: () => void; locked?: string };
+/** Breadcrumb dan tombol aksi di header aplikasi; diisi oleh tiap halaman. */
+export const header = $state({ crumbs: [] as { label: string; href?: string }[], action: null as HeaderAction | null });
+
+/** Toast di bawah layar (2,8 detik), seperti desain Grouply Web. */
+export const toast = $state({ text: '', kind: 'ok' as 'ok' | 'err' | 'info', id: 0 });
+export function flash(text: string, kind: typeof toast.kind = 'ok') {
+	toast.text = text;
+	toast.kind = kind;
+	toast.id++;
+}
