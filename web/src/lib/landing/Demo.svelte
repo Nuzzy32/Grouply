@@ -522,12 +522,7 @@
 		display: flex;
 		justify-content: space-between;
 		font-size: 12px;
-		color: #4a3f22;
-	}
-	@media (prefers-color-scheme: dark) {
-		.pulse-foot {
-			color: var(--text2);
-		}
+		color: light-dark(#4a3f22, var(--text2));
 	}
 
 	.steps {

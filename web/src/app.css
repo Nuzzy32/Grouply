@@ -1,31 +1,39 @@
-/* Token Soft Future, sama dengan docs/DESIGN_SYSTEM.md dan docs/DARK_THEME.md. Gelap ikut sistem. */
+/* Token Soft Future, sama dengan docs/DESIGN_SYSTEM.md dan docs/DARK_THEME.md.
+   light-dark(terang, gelap) mengikuti color-scheme: sistem secara default, atau pilihan
+   pengguna lewat data-theme (lihat ThemeToggle.svelte dan skrip di app.html). */
 :root {
 	color-scheme: light dark;
-
-	--background: #f8f9f7;
-	--surface: #ffffff;
-	--ink: #202124;
-	--on-ink: #ffffff;
-	--secondary: #62676b;
-	--text2: #4d5155;
-	--text3: #3c4043;
-	--muted: #f0f3f1;
-	--border: #e8e9e7;
-	--chip: #eceeeb;
-	--placeholder: #9aa0a6;
-	--disabled: #c4c7c5;
-	--hairline: #d5d8db;
-	--lavender: #ded2ff;
-	--mint: #c9f2d6;
-	--sky: #d8eaf4;
-	--butter: #f9e9be;
-	--coral: #f6ced1;
-	--danger: #a8231b;
-	--link: #1f4f86;
-	--line: #eef0ee;
-	--chrome: #fbfbfa;
-	--dot: #e2e4e1;
-	--nav-glass: rgba(255, 255, 255, 0.82);
+}
+:root[data-theme='light'] {
+	color-scheme: light;
+}
+:root[data-theme='dark'] {
+	color-scheme: dark;
+}
+:root {
+	--background: light-dark(#f8f9f7, #121314);
+	--surface: light-dark(#ffffff, #1c1e20);
+	--ink: light-dark(#202124, #ecedee);
+	--on-ink: light-dark(#ffffff, #1a1b1d);
+	--secondary: light-dark(#62676b, #a3a8ad);
+	--text2: light-dark(#4d5155, #c2c6ca);
+	--text3: light-dark(#3c4043, #d5d8db);
+	--muted: light-dark(#f0f3f1, #222527);
+	--border: light-dark(#e8e9e7, #2e3134);
+	--chip: light-dark(#eceeeb, #26292b);
+	--placeholder: light-dark(#9aa0a6, #868c93);
+	--disabled: light-dark(#c4c7c5, #4a4f53);
+	--hairline: light-dark(#d5d8db, #3a3e42);
+	--lavender: light-dark(#ded2ff, #3a3354);
+	--mint: light-dark(#c9f2d6, #1f3d2b);
+	--sky: light-dark(#d8eaf4, #1e3442);
+	--butter: light-dark(#f9e9be, #413720);
+	--coral: light-dark(#f6ced1, #47282b);
+	--danger: light-dark(#a8231b, #ff8a80);
+	--link: light-dark(#1f4f86, #8ab4f8);
+	--line: light-dark(#eef0ee, #26292b);
+	--chrome: light-dark(#fbfbfa, #18191b);
+	--nav-glass: light-dark(rgba(255, 255, 255, 0.82), rgba(28, 30, 32, 0.82));
 
 	/* Warna ring status: sama di kedua mode. */
 	--ring-todo: #e6c25e;
@@ -43,35 +51,6 @@
 	--ease-in-out: cubic-bezier(0.65, 0, 0.25, 1);
 
 	--font: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
-}
-
-@media (prefers-color-scheme: dark) {
-	:root {
-		--background: #121314;
-		--surface: #1c1e20;
-		--ink: #ecedee;
-		--on-ink: #1a1b1d;
-		--secondary: #a3a8ad;
-		--text2: #c2c6ca;
-		--text3: #d5d8db;
-		--muted: #222527;
-		--border: #2e3134;
-		--chip: #26292b;
-		--placeholder: #868c93;
-		--disabled: #4a4f53;
-		--hairline: #3a3e42;
-		--lavender: #3a3354;
-		--mint: #1f3d2b;
-		--sky: #1e3442;
-		--butter: #413720;
-		--coral: #47282b;
-		--danger: #ff8a80;
-		--link: #8ab4f8;
-		--line: #26292b;
-		--chrome: #18191b;
-		--dot: #3a3e42;
-		--nav-glass: rgba(28, 30, 32, 0.82);
-	}
 }
 
 *,

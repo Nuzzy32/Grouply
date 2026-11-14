@@ -86,7 +86,10 @@ def setup():
     (ROOT / "flutter/dart_defines.local.json").write_text(
         json.dumps({"SUPABASE_URL": "http://localhost:55321", "SUPABASE_ANON_KEY": key}, indent=2) + "\n"
     )
-    print("PASS: 3 akun lokal tersedia; konfigurasi publik ditulis ke Config/Local.xcconfig dan flutter/dart_defines.local.json.")
+    (ROOT / "web/.env").write_text(
+        "PUBLIC_SUPABASE_URL=http://localhost:55321\nPUBLIC_SUPABASE_PUBLISHABLE_KEY=" + key + "\n"
+    )
+    print("PASS: 3 akun lokal tersedia; konfigurasi publik ditulis ke Config/Local.xcconfig, flutter/dart_defines.local.json, dan web/.env.")
     print("Kredensial pengujian disimpan privat di " + str(ACCOUNT_FILE))
 
 

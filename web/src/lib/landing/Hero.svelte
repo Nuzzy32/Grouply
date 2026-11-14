@@ -2,7 +2,7 @@
 	import Icon from '#lib/Icon.svelte';
 	import { reducedMotion, reveal } from '#lib/reveal.ts';
 	import AppFrame from './AppFrame.svelte';
-	import { APP_URL } from './links';
+	import { SIGN_IN_URL, SIGN_UP_URL } from './links';
 
 	let frame = 0;
 	// Parallax kartu mengambang: tulis variabel CSS langsung, tanpa re-render.
@@ -52,7 +52,7 @@
 			ngejar anggota lewat chat.
 		</p>
 		<div class="ctas">
-			<a class="btn-primary" href={APP_URL}>Mulai sekarang<Icon name="arrow_forward" /></a>
+			<a class="btn-primary" href={SIGN_UP_URL}>Mulai sekarang<Icon name="arrow_forward" /></a>
 			<a class="btn-ghost" href="#demo">
 				<span class="play"><Icon name="play_arrow" size={22} fill /></span>Lihat demo
 			</a>

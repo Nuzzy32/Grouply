@@ -21,7 +21,7 @@
 <!-- Tiruan jendela browser berisi aplikasi web Grouply (dekorasi, bukan aplikasi sungguhan). -->
 <div class="frame">
 	<div class="bar">
-		<span class="dot"></span><span class="dot"></span><span class="dot"></span>
+		<span class="dot" style="background:#ff5f57"></span><span class="dot" style="background:#febc2e"></span><span class="dot" style="background:#28c840"></span>
 		<span class="url"><Icon name="lock" size={14} />{url}</span>
 	</div>
 	<div class="body" style:height="{height}px">
@@ -58,7 +58,8 @@
 		width: 11px;
 		height: 11px;
 		border-radius: 50%;
-		background: var(--dot);
+		/* Tombol jendela macOS: merah, kuning, hijau; sama di kedua mode. */
+		box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.12);
 	}
 	.url {
 		margin: 0 auto;

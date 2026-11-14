@@ -1,11 +1,12 @@
 <script lang="ts">
 	import Icon from '#lib/Icon.svelte';
+	import ThemeToggle from '#lib/ThemeToggle.svelte';
 	import { reveal } from '#lib/reveal.ts';
 	import Demo from '#lib/landing/Demo.svelte';
 	import Features from '#lib/landing/Features.svelte';
 	import Hero from '#lib/landing/Hero.svelte';
 	import Showcase from '#lib/landing/Showcase.svelte';
-	import { APP_URL } from '#lib/landing/links.ts';
+	import { SIGN_IN_URL, SIGN_UP_URL } from '#lib/landing/links.ts';
 
 	const FAQ = [
 		['Siapa yang bisa menyetujui tugas?', 'Hanya reviewer yang ditunjuk untuk tugas itu. Pelaksana tidak bisa menyetujui hasil kerjanya sendiri, jadi setiap tugas yang Selesai memang sudah diperiksa orang lain.'],
@@ -39,8 +40,9 @@
 			<a href="#faq">FAQ</a>
 		</div>
 		<div class="auth">
-			<a href={APP_URL} class="ghost">Masuk</a>
-			<a href={APP_URL} class="solid">Mulai sekarang</a>
+			<ThemeToggle />
+			<a href={SIGN_IN_URL} class="ghost">Masuk</a>
+			<a href={SIGN_UP_URL} class="solid">Mulai sekarang</a>
 		</div>
 	</nav>
 </header>
@@ -80,7 +82,7 @@
 			<h2>Mulai kelompok berikutnya dengan lebih tenang.</h2>
 			<p>Buat grup, bagikan kode undangan, dan bagi tugas pertama dalam beberapa menit.</p>
 			<div class="cta-actions">
-				<a href={APP_URL} class="light">Mulai sekarang<Icon name="arrow_forward" /></a>
+				<a href={SIGN_UP_URL} class="light">Mulai sekarang<Icon name="arrow_forward" /></a>
 				<a href="#demo" class="line">Lihat demo lagi</a>
 			</div>
 			<div class="cta-platforms">
@@ -298,6 +300,7 @@
 		overflow: hidden;
 		background: #202124;
 		color: #fff;
+		box-shadow: 0 0 0 1px light-dark(transparent, var(--border));
 		border-radius: 40px;
 		padding: clamp(36px, 6vw, 80px) clamp(24px, 5vw, 64px);
 		display: flex;
@@ -305,11 +308,6 @@
 		align-items: center;
 		gap: 22px;
 		text-align: center;
-	}
-	@media (prefers-color-scheme: dark) {
-		.cta {
-			box-shadow: 0 0 0 1px var(--border);
-		}
 	}
 	.glow {
 		position: absolute;

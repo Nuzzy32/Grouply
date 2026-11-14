@@ -16,11 +16,23 @@
 		<!-- Hanya ikon yang dipakai (urut abjad, syarat icon_names). Tambah nama di sini saat memakai ikon baru. -->
 		<link
 			rel="stylesheet"
-			href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..600,0..1,0&icon_names=add,add_task,android,arrow_forward,arrow_upward,autorenew,chat_bubble,check_circle,chevron_left,chevron_right,database,error,group,home,interests,laptop_mac,link,lock,pause,phone_iphone,play_arrow,radio_button_unchecked,rate_review,remove,replay,schedule,task_alt,undo,upload,visibility&display=block"
+			href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..600,0..1,0&icon_names=add,add_task,android,apartment,arrow_back,arrow_forward,arrow_upward,autorenew,chat_bubble,check_circle,chevron_left,chevron_right,dark_mode,database,edit,error,expand_less,group,groups,home,interests,laptop_mac,light_mode,link,lock,logout,pause,phone_iphone,play_arrow,radio_button_unchecked,rate_review,remove,replay,schedule,swap_horiz,task_alt,undo,upload,visibility,visibility_off&display=block"
 		/>
-		<!-- Animasi reveal hanya menyembunyikan konten bila JS jalan. -->
+		<!-- Sebelum render: tema pilihan pengguna (tanpa kedip) dan penanda JS untuk animasi reveal. -->
 		<script>
-			document.documentElement.classList.add('js');
+			(function () {
+				var root = document.documentElement;
+				root.classList.add('js');
+				try {
+					var t = localStorage.getItem('grouply-theme');
+					if (t === 'light' || t === 'dark') {
+						root.dataset.theme = t;
+						document.querySelectorAll('meta[name=theme-color]').forEach(function (m) {
+							m.content = t === 'dark' ? '#121314' : '#F8F9F7';
+						});
+					}
+				} catch (e) {}
+			})();
 		</script>
 		%sveltekit.head%
 	</head>

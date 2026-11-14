@@ -141,11 +141,6 @@
 	.col {
 		flex-direction: column;
 	}
-	@media (prefers-color-scheme: dark) {
-		.tile {
-			--tint: var(--text2) !important;
-		}
-	}
 	.copy {
 		flex: 1 1 260px;
 		display: flex;
@@ -166,7 +161,7 @@
 		margin: 0;
 		font-size: 16px;
 		line-height: 1.55;
-		color: var(--tint);
+		color: light-dark(var(--tint), var(--text2));
 	}
 	.mock {
 		background: var(--surface);

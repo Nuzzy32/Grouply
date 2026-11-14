@@ -1,2 +1,3 @@
-// ponytail: aplikasi web belum ada, jadi tautan ini 404 sampai rute /app dibuat.
-export const APP_URL = '/app';
+// Belum masuk: /app mengarahkan ke /masuk.
+export const SIGN_IN_URL = '/masuk';
+export const SIGN_UP_URL = '/masuk?mode=daftar';
