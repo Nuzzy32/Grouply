@@ -134,12 +134,30 @@ Review tambahan menutup pesan gagal yang terlihat lintas persona, koordinator de
 - Flutter: tombol **Laporkan** di layar rapat, pengajuan, dan pengumuman memakai lembar laporan yang sama dengan chat; berubah menjadi "Sudah kamu laporkan" setelah terkirim.
 - Verifikasi lokal: `organization_work` **142 PASS** (22 baru), `workflow` 40, `milestone_e` 54, `organization` 66; uji kunci `billing_local.py` **12/12**, `moderation_local.py` 5/5; smoke, advisors, dan lint bersih; `flutter analyze` bersih, `flutter test` **168 lulus**; keempat tes localhost lulus 3/3 run, termasuk laporan pengumuman dan peninjauan operator lewat HTTP.
 
+## Organization Plan Tahap 3a — backend lokal, 13 November 2026
+
+- Migration `20261113115440_org_plan.sql`:
+  - Tabel tertutup `proker_templates` (empat template bawaan generik), `project_plan_items`, `organization_periods`; `projects.period_id`, `groups.closed_at`.
+  - Aksi di `private.mutate_orgplan`: `applyTemplate`, `createTemplate`, `deleteTemplate`, `deletePlanItem`, `closeCommittee`, `reopenCommittee`, `setCoordinator`, `closePeriod`. `createTask` menerima `planItemID`.
+  - Kepanitiaan tertutup hanya mengizinkan chat, keluar, mengeluarkan anggota, serah coordinator, dan melapor (`group_closed` untuk sisanya), di `mutate_workflow`, `mutate_orgwork`, dan `mutate_orgplan`.
+  - RPC baca `grouply_templates`, `grouply_template`, `grouply_org_archive`, `grouply_report`; snapshot mendapat `closed`, `periodLabel`, `planItems`, `organizations[].periods`; template bisa dilaporkan (`removed` = template dihapus).
+  - `private.mutate`, `mutate_workflow`, `mutate_orgwork`, `mutate_org`, `org_overview`, `snapshot`, `report_content`, dan `grouply_moderation` didefinisikan ulang dari salinan persis versi sebelumnya; perubahan dicatat di komentar tiap fungsi.
+- Verifikasi lokal:
+  - Suite SQL: `organization_plan` **107 PASS** (baru); `workflow` 40, `milestone_e` 54, `organization` 66, `organization_work` 142 tetap lulus.
+  - Uji kunci: `billing_local.py check-locks` **16/16** (empat baru), `moderation_local.py` 5/5. Uji mutasi: menghapus penjaga butir rencana yang sudah dipakai membuat uji kunci dan suite SQL gagal; setelah dipulihkan, lulus lagi.
+  - Smoke HTTP, advisors (warn), dan lint bersih; keempat tes integrasi Flutter yang sudah ada tetap lulus terhadap backend baru.
+- Review client menemukan bahwa serah terima tidak menjangkau divisi yang tidak diikuti Ketua. Backend menambah RPC `grouply_org_members` (Ketua saja) dan aksi `removeClosedMember`; kolom "Revisi" di rekap kini menghitung pengiriman setelah yang pertama.
+- Client Flutter Tahap 3a (file baru `features/org_plan_screens.dart`, `core/lpj_export.dart`): template (daftar, detail, pakai, simpan dari pratinjau, laporkan), bagian Rencana di proyek/sie, tutup/buka kepanitiaan, Serah terima (ganti coordinator per divisi, kursi di kepanitiaan tertutup, tutup periode), Arsip, dan Rekap LPJ dengan PDF/CSV (paket `pdf` 3.12, font Noto Sans dibundel ±1,2 MB, CSV ber-BOM dengan pengaman rumus). Review sebelum digabung juga memperbaiki PDF yang gagal untuk notulen panjang, tombol Rekap yang ditolak untuk proker periode lama, dan tombol yang pasti ditolak server di grup tertutup.
+- Verifikasi Flutter di hasil gabungan: `flutter analyze` bersih; `flutter test` **195 lulus** dengan 5 tes opt-in localhost dilewati. Dengan `GROUPLY_LOCAL_INTEGRATION=1`, kelima tes localhost lulus 3/3 run; tes Tahap 3a mencakup template bawaan dan buatan sendiri, butir rencana yang hanya bisa dipakai sekali, tutup kepanitiaan, rekap, tutup periode termasuk penolakan retry, arsip, daftar anggota serah terima, dan mengeluarkan anggota kepanitiaan tertutup.
+- Belum diuji: build APK/iOS, lembar Bagikan di perangkat nyata, tampilan PDF di pembaca PDF, cloud. Fresh database replay belum dijalankan; migration diterapkan incremental.
+
 ## Premium tanpa AI — Template Proker
 
 - Flutter menampilkan **Gunakan Template** untuk koordinator grup atau sie di proyek organisasi. Template **Persiapan Seminar** menghasilkan tiga draf. Saran pelaksana memakai pemetaan peran dan jumlah tugas aktif. Koordinator dapat mengubah atau melepas pilihan sebelum menerbitkan tugas.
 - Migration `20261113173427_premium_task_batch.sql` menambah `publishTaskBatch` untuk satu proyek, maksimal 20 tugas. Aksi memakai validasi dan efek `createTask`, dengan pemeriksaan paket aktif untuk penerbitan baru. Hasil disimpan bersama tugas dalam satu transaksi. Flutter menyimpan permintaan yang belum terkonfirmasi di secure storage agar percobaan ulang memakai ID yang sama.
 - Verifikasi lokal: `flutter analyze` bersih, **178 tes Flutter lulus** termasuk 4 integrasi Supabase localhost, empat suite SQL lama **302 pemeriksaan lulus**, dan suite batch **12 pemeriksaan lulus**. Uji kunci organisasi **12/12**, advisors dan lint bersih. Integrasi menguji dua permintaan batch bersamaan lewat HTTP dan memeriksa tugas terlihat oleh pelaksana.
 - Build iOS Simulator berhasil. Build Android belum terverifikasi karena resolusi dependensi Gradle belum berhasil. Alur UI diuji melalui widget test dan belum dijalankan di simulator, perangkat fisik, atau cloud. Tahap berikutnya dan pilot ada di [rencana Premium](PLAN-premium-tanpa-ai.md).
+- Setelah digabung dengan Tahap 3a (14 November 2026): `flutter analyze` bersih, **210 tes Flutter lulus** dengan `GROUPLY_LOCAL_INTEGRATION=1`, tujuh suite SQL lulus (termasuk `organization_plan` 107 dan `meeting_follow_ups` 15), dan `check-locks` **17/17**. Kelas layar template Premium diganti nama menjadi `_SeminarTemplateScreen` agar tidak bentrok dengan `TemplateScreen` Tahap 3a. Dua jalur template (Premium per proyek dan template organisasi Tahap 3a) serta dua draf LPJ masih berdampingan dan perlu diputuskan.
 
 ## Target cloud dan rilis yang belum tersedia
 

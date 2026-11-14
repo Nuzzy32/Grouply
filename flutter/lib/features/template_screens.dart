@@ -1,11 +1,11 @@
 part of 'workspace_screens.dart';
 
-class _TemplateScreen extends StatefulWidget {
-  const _TemplateScreen({required this.store, required this.projectID});
+class _SeminarTemplateScreen extends StatefulWidget {
+  const _SeminarTemplateScreen({required this.store, required this.projectID});
   final GrouplyStore store;
   final String projectID;
   @override
-  State<_TemplateScreen> createState() => _TemplateState();
+  State<_SeminarTemplateScreen> createState() => _SeminarTemplateState();
 }
 
 class _TemplateDraft {
@@ -22,7 +22,7 @@ class _TemplateDraft {
   }
 }
 
-class _TemplateState extends State<_TemplateScreen> {
+class _SeminarTemplateState extends State<_SeminarTemplateScreen> {
   static const roles = ['Acara', 'Keuangan', 'Publikasi'];
   final mapping = <String, Set<String>>{for (final role in roles) role: {}};
   final drafts = <_TemplateDraft>[];

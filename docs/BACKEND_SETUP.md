@@ -45,7 +45,7 @@ Tes integrasi native membaca path akun lokal melalui scheme environment `GROUPLY
 Migration canonical ada di `supabase/migrations/`. Jangan menyalin contoh DDL dari dokumen produk sebagai migration kedua.
 
 ```sh
-for suite in workflow milestone_e organization organization_work; do
+for suite in workflow milestone_e organization organization_work organization_plan; do
   docker exec -i supabase_db_Grouply psql -U postgres -d postgres \
     -v ON_ERROR_STOP=1 < supabase/tests/$suite.sql
 done
@@ -67,7 +67,7 @@ python3 scripts/billing_local.py deactivate <organization-id>
 
 `--until` berarti akhir hari itu (23:59 WIB). Paket berakhir mengembalikan organisasi ke batas gratis (8 anggota per divisi, tanpa Dashboard dan divisi baru); data dan pekerjaan berjalan tidak dihapus. Fitur Tahap 2 (kepanitiaan, rapat, persetujuan, pengumuman) juga berhenti menerima yang baru, tetapi yang sudah ada tetap bisa diselesaikan. Desain lengkap: `docs/DESIGN-org-tahap1.md` dan `docs/DESIGN-org-tahap2.md`.
 
-`billing_local.py check-locks` menjalankan dua belas interleaving dua sesi: enam dari Tahap 1, ditambah pengaju dikeluarkan atau menghapus akun saat penyetuju memutuskan, jabatan penyetuju dicabut saat ia memutuskan, koordinator sie membuat tugas saat dikeluarkan, dan operator meninjau laporan konten organisasi saat pelapornya menghapus akun (dua urutan).
+`billing_local.py check-locks` menjalankan enam belas interleaving dua sesi: enam dari Tahap 1, ditambah pengaju dikeluarkan atau menghapus akun saat penyetuju memutuskan, jabatan penyetuju dicabut saat ia memutuskan, koordinator sie membuat tugas saat dikeluarkan, operator meninjau laporan konten organisasi saat pelapornya menghapus akun (dua urutan), tutup periode menunggu tugas baru dan penghapusan akun anggota, dua orang memakai butir rencana yang sama, dan tutup kepanitiaan menunggu pengajuan baru.
 
 Suite SQL memakai transaksi rollback untuk fixture. `supabase db reset --local --no-seed` hanya untuk database lokal Grouply yang datanya boleh dihapus; reset akan menghapus akun dan grup pengujian lokal. Setelah reset jalankan `setup` lagi.
 

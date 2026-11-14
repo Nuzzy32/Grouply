@@ -23,6 +23,7 @@ const demoPersonas = [
 class DemoBackend implements GrouplyBackend {
   DemoBackend({DateTime Function()? clock}) : _clock = clock ?? DateTime.now {
     _seed();
+    _seedTemplates();
     _actor = '';
   }
 
@@ -38,7 +39,11 @@ class DemoBackend implements GrouplyBackend {
       organizations = [],
       meetings = [],
       approvals = [],
-      announcements = [];
+      announcements = [],
+      templateRows = [],
+      planItems = [],
+      periods = [],
+      templateUses = [];
   String _actor = '';
   Map<String, List<String>> _blocks = {}, _reads = {};
   final _taskBatchReceipts = <(String, String, String), (String, JsonMap)>{};
@@ -106,8 +111,12 @@ class DemoBackend implements GrouplyBackend {
     'taskBatchAvailable': taskBatchAvailable,
     'meetingFollowUpsAvailable': true,
     'users': _copy(users),
-    'groups': _copy(groups),
-    'projects': _copy(projects),
+    'groups': [
+      for (final row in _copy(groups) as List)
+        {...row as JsonMap, 'closed': row['closedAt'] != null}
+          ..remove('closedAt'),
+    ],
+    'projects': _snapshotProjects(),
     'tasks': _copy(tasks),
     'messages': _copy(messages),
     'invites': _copy(invites),
@@ -137,6 +146,10 @@ class DemoBackend implements GrouplyBackend {
       'meetings': meetings,
       'approvals': approvals,
       'announcements': announcements,
+      'templates': templateRows,
+      'planItems': planItems,
+      'periods': periods,
+      'templateUses': templateUses,
       'blocks': _blocks,
       'reads': _reads,
     });
@@ -161,6 +174,10 @@ class DemoBackend implements GrouplyBackend {
       meetings = rows('meetings');
       approvals = rows('approvals');
       announcements = rows('announcements');
+      templateRows = rows('templates');
+      planItems = rows('planItems');
+      periods = rows('periods');
+      templateUses = rows('templateUses');
       Map<String, List<String>> lists(String key) => (saved[key] as Map).map(
         (id, value) => MapEntry(id as String, (value as List).cast<String>()),
       );
@@ -804,6 +821,10 @@ class DemoBackend implements GrouplyBackend {
     }
     final now = _clock().toUtc();
     final stamp = now.toIso8601String();
+    if (!_closedAllowed.contains(action) &&
+        group(_targetGroup(action, payload))?['closedAt'] != null) {
+      throw _code('group_closed');
+    }
     switch (action) {
       case 'createGroup':
         final id = _demoID();
@@ -897,6 +918,8 @@ class DemoBackend implements GrouplyBackend {
           row['status'] = 'archived';
         } else {
           if (status != 'archived') _demoFail('Proyek belum diarsipkan.');
+          // A project labelled by a closed period stays in that archive.
+          if (row['periodID'] != null) throw _code('project_read_only');
           row['status'] = row['previousStatus'] ?? 'active';
           row['previousStatus'] = null;
         }
@@ -997,7 +1020,17 @@ class DemoBackend implements GrouplyBackend {
           payload.text('assigneeID'),
           payload.text('reviewerID'),
         );
+        final itemID = payload['planItemID'];
+        JsonMap? item;
+        if (itemID != null) {
+          item = itemID is String ? _find(planItems, itemID) : null;
+          if (item == null || item['projectID'] != parent['id']) {
+            throw _code('invalid_input');
+          }
+          if (item['taskID'] != null) throw _code('plan_item_used');
+        }
         final id = _demoID();
+        item?['taskID'] = id;
         final row = <String, dynamic>{
           'id': id,
           'projectID': parent.text('id'),
@@ -1438,6 +1471,13 @@ class DemoBackend implements GrouplyBackend {
             final row? => row['requesterID'] != actor && _seesApproval(row),
             null => false,
           },
+          'template' => switch (_find(templateRows, target)) {
+            final row? =>
+              row['organizationID'] != null &&
+                  row['createdBy'] != actor &&
+                  _orgMembers(row.text('organizationID')).contains(actor),
+            null => false,
+          },
           _ => throw _code('invalid_input'),
         };
         if (!allowed) throw _code('forbidden');
@@ -1553,6 +1593,16 @@ class DemoBackend implements GrouplyBackend {
       case 'deleteAnnouncement':
       case 'markAnnouncementRead':
         return _workMutate(action, payload);
+      case 'applyTemplate':
+      case 'createTemplate':
+      case 'deleteTemplate':
+      case 'deletePlanItem':
+      case 'closeCommittee':
+      case 'reopenCommittee':
+      case 'setCoordinator':
+      case 'removeClosedMember':
+      case 'closePeriod':
+        return _planMutate(action, payload);
       default:
         _demoFail('Tindakan tidak dikenal: $action.');
     }
@@ -1665,6 +1715,16 @@ class DemoBackend implements GrouplyBackend {
                 'memberCount': row.ids('memberIDs').length,
                 'isMember': row.ids('memberIDs').contains(_actor),
                 'isCommittee': row['isCommittee'] == true,
+                'closed': row['closedAt'] != null,
+              },
+          ],
+          'periods': [
+            for (final row in _orgPeriods(org.text('id')))
+              {
+                'id': row['id'],
+                'label': row['label'],
+                'startedAt': row['startedAt'],
+                'closedAt': row['closedAt'],
               },
           ],
           'approvals': _snapshotApprovals(org),
@@ -1727,6 +1787,13 @@ class DemoBackend implements GrouplyBackend {
     if (!allowed) throw _code('forbidden');
     switch (action) {
       case 'updateOrganization':
+        if (periods.any(
+          (row) =>
+              row['organizationID'] == orgID &&
+              row['label'] == payload.text('periodLabel').trim(),
+        )) {
+          throw _code('period_exists');
+        }
         org.addAll({
           'name': _demoText(payload, 'name', 80),
           'description': _demoText(
@@ -1742,9 +1809,14 @@ class DemoBackend implements GrouplyBackend {
         final committee = payload['committee'] ?? false;
         if (committee is! bool) throw _code('invalid_input');
         if (!_planActive(org)) throw _code('plan_inactive');
-        // Divisions and committees each have their own cap of 30.
+        // Divisions and committees each have their own cap of 30; closed
+        // committees do not count (Tahap 3 §4.1).
         if (_divisions(orgID)
-                .where((row) => (row['isCommittee'] == true) == committee)
+                .where(
+                  (row) =>
+                      (row['isCommittee'] == true) == committee &&
+                      row['closedAt'] == null,
+                )
                 .length >=
             30) {
           throw _code('invalid_input');
@@ -1807,88 +1879,96 @@ class DemoBackend implements GrouplyBackend {
 
     final divisions = [
       for (final division in _divisions(id))
-        {
-          'id': division['id'],
-          'name': division['name'],
-          'isCommittee': division['isCommittee'] == true,
-          'coordinatorID': division.text('coordinatorID'),
-          'memberCount': division.ids('memberIDs').length,
-          'projects': [
-            for (final project in projects.where(
-              (p) => p['groupID'] == division['id'] && p['status'] == 'active',
-            ))
-              () {
-                final list = tasks
-                    .where((t) => t['projectID'] == project['id'])
-                    .toList();
-                var overdue = 0, idle = 0, pending = 0;
-                for (final task in list) {
-                  final status = task.text('status');
-                  final due = task.date('dueAt');
-                  final submitted = _submissions(task).lastOrNull;
-                  final last =
-                      [
-                        for (final s in _submissions(task)) s.date('createdAt'),
-                        for (final m in messages)
-                          if (m['taskID'] == task['id']) m.date('createdAt'),
-                      ].nonNulls.fold<DateTime?>(
-                        null,
-                        (a, b) => a == null || b.isAfter(a) ? b : a,
-                      );
-                  final late = status != 'done' && due!.isBefore(now);
-                  final review =
-                      status == 'in_review' &&
-                      submitted != null &&
-                      now.difference(submitted.date('createdAt')!) > stale;
-                  final quiet =
-                      [
-                        'todo',
-                        'in_progress',
-                        'needs_revision',
-                      ].contains(status) &&
-                      last != null &&
-                      now.difference(last) > stale;
-                  if (late) overdue++;
-                  if (review) pending++;
-                  if (quiet) idle++;
-                  // One row per task, by priority: overdue, review, idle.
-                  if (late) {
-                    attention.add((
-                      0,
-                      due,
-                      row(task, division, 'overdue', now.difference(due)),
-                    ));
-                  } else if (review) {
-                    final at = submitted.date('createdAt')!;
-                    attention.add((
-                      1,
-                      at,
-                      row(task, division, 'review_pending', now.difference(at)),
-                    ));
-                  } else if (quiet) {
-                    attention.add((
-                      2,
-                      last,
-                      row(task, division, 'idle', now.difference(last)),
-                    ));
+        if (division['closedAt'] == null)
+          {
+            'id': division['id'],
+            'name': division['name'],
+            'isCommittee': division['isCommittee'] == true,
+            'coordinatorID': division.text('coordinatorID'),
+            'memberCount': division.ids('memberIDs').length,
+            'projects': [
+              for (final project in projects.where(
+                (p) =>
+                    p['groupID'] == division['id'] && p['status'] == 'active',
+              ))
+                () {
+                  final list = tasks
+                      .where((t) => t['projectID'] == project['id'])
+                      .toList();
+                  var overdue = 0, idle = 0, pending = 0;
+                  for (final task in list) {
+                    final status = task.text('status');
+                    final due = task.date('dueAt');
+                    final submitted = _submissions(task).lastOrNull;
+                    final last =
+                        [
+                          for (final s in _submissions(task))
+                            s.date('createdAt'),
+                          for (final m in messages)
+                            if (m['taskID'] == task['id']) m.date('createdAt'),
+                        ].nonNulls.fold<DateTime?>(
+                          null,
+                          (a, b) => a == null || b.isAfter(a) ? b : a,
+                        );
+                    final late = status != 'done' && due!.isBefore(now);
+                    final review =
+                        status == 'in_review' &&
+                        submitted != null &&
+                        now.difference(submitted.date('createdAt')!) > stale;
+                    final quiet =
+                        [
+                          'todo',
+                          'in_progress',
+                          'needs_revision',
+                        ].contains(status) &&
+                        last != null &&
+                        now.difference(last) > stale;
+                    if (late) overdue++;
+                    if (review) pending++;
+                    if (quiet) idle++;
+                    // One row per task, by priority: overdue, review, idle.
+                    if (late) {
+                      attention.add((
+                        0,
+                        due,
+                        row(task, division, 'overdue', now.difference(due)),
+                      ));
+                    } else if (review) {
+                      final at = submitted.date('createdAt')!;
+                      attention.add((
+                        1,
+                        at,
+                        row(
+                          task,
+                          division,
+                          'review_pending',
+                          now.difference(at),
+                        ),
+                      ));
+                    } else if (quiet) {
+                      attention.add((
+                        2,
+                        last,
+                        row(task, division, 'idle', now.difference(last)),
+                      ));
+                    }
                   }
-                }
-                return {
-                  'id': project['id'],
-                  'title': project['title'],
-                  'dueAt': project['dueAt'],
-                  'total': list.length,
-                  'done': list.where((t) => t['status'] == 'done').length,
-                  'inReview': list
-                      .where((t) => t['status'] == 'in_review')
-                      .length,
-                  'overdue': overdue,
-                  'idle': idle,
-                  'reviewPending': pending,
-                };
-              }(),
-          ],
-        },
+                  return {
+                    'id': project['id'],
+                    'title': project['title'],
+                    'dueAt': project['dueAt'],
+                    'total': list.length,
+                    'done': list.where((t) => t['status'] == 'done').length,
+                    'inReview': list
+                        .where((t) => t['status'] == 'in_review')
+                        .length,
+                    'overdue': overdue,
+                    'idle': idle,
+                    'reviewPending': pending,
+                  };
+                }(),
+            ],
+          },
     ];
     attention.sort((a, b) => a.$1 != b.$1 ? a.$1 - b.$1 : a.$2.compareTo(b.$2));
     people.addAll(divisions.map((d) => d['coordinatorID'] as String));
@@ -2567,6 +2647,821 @@ class DemoBackend implements GrouplyBackend {
       'body': 'Silakan rapat per divisi minggu ini.',
       'createdAt': at(const Duration(hours: -5)),
       'reads': ['u3', 'u2'],
+    });
+  }
+
+  // MARK: - Organization Plan Tahap 3a (docs/DESIGN-org-tahap3.md §3–4)
+  // templates: {id, organizationID (null = built-in), createdBy, name,
+  //   description, sections, createdAt}
+  // planItems: {id, projectID, position, title, description, dueAt, taskID}
+  // periods: {id, organizationID, label, startedAt, closedAt, closedBy}
+  // projects.periodID, groups.closedAt; templateUses: {groupID, createdAt}
+
+  /// Actions a closed committee still accepts (§4.1 daftar izin).
+  static const _closedAllowed = {
+    'sendMessage',
+    'retryMessage',
+    'markChatRead',
+    'reportMessage',
+    'reportContent',
+    'leaveGroup',
+    'removeMember',
+    'transferCoordinator',
+    'setCoordinator',
+    'removeClosedMember',
+    'markAnnouncementRead',
+    'deleteAnnouncement',
+    'reopenCommittee',
+  };
+
+  /// Group an action writes to, for the closed-group check; '' if none.
+  String _targetGroup(String action, JsonMap payload) {
+    String ofProject(String? id) => project(id ?? '')?.text('groupID') ?? '';
+    String ofTask(String id) => ofProject(task(id)?.text('projectID'));
+    return switch (action) {
+      'updateGroup' => payload.text('id'),
+      'createProject' ||
+      'generateInvite' ||
+      'createMeeting' ||
+      'requestApproval' ||
+      'postAnnouncement' ||
+      'applyTemplate' => payload.text('groupID'),
+      'updateProject' ||
+      'completeProject' ||
+      'reopenProject' ||
+      'archiveProject' ||
+      'restoreProject' => ofProject(payload.text('id')),
+      'createTask' || 'setProjectLead' => ofProject(payload.text('projectID')),
+      'updateTask' ||
+      'reassignTask' ||
+      'startTask' ||
+      'reopenTask' => ofTask(payload.text('id')),
+      'submitWork' || 'review' => ofTask(payload.text('taskID')),
+      'revokeInvite' =>
+        _find(invites, payload.text('id'))?.text('groupID') ?? '',
+      'joinGroup' =>
+        invites
+                .where(
+                  (row) =>
+                      row.text('code').toUpperCase() ==
+                      payload.text('code').trim().toUpperCase(),
+                )
+                .firstOrNull
+                ?.text('groupID') ??
+            '',
+      'updateMeeting' || 'cancelMeeting' || 'recordMeeting' =>
+        _find(meetings, payload.text('id'))?.text('groupID') ?? '',
+      'decideApproval' || 'cancelApproval' =>
+        _find(approvals, payload.text('id'))?.text('groupID') ?? '',
+      'deletePlanItem' => ofProject(
+        _find(planItems, payload.text('id'))?.text('projectID'),
+      ),
+      _ => '',
+    };
+  }
+
+  /// Two generic built-ins standing in for the migration's four (§1.4).
+  void _seedTemplates() {
+    JsonMap item(String title, int offset) => {
+      'title': title,
+      'description': '',
+      'offsetDays': offset,
+    };
+    templateRows = [
+      {
+        'id': 'tpl-seminar',
+        'organizationID': null,
+        'createdBy': null,
+        'name': 'Seminar',
+        'description': 'Kerangka panitia seminar satu hari.',
+        'createdAt': '2026-01-01T00:00:00.000Z',
+        'sections': [
+          {
+            'title': 'Sie Acara',
+            'description': 'Rundown dan pembicara.',
+            'offsetDays': -1,
+            'items': [
+              item('Hubungi pembicara', -21),
+              item('Susun rundown', -7),
+            ],
+          },
+          {
+            'title': 'Sie Publikasi',
+            'description': '',
+            'offsetDays': -3,
+            'items': [item('Desain poster', -14)],
+          },
+        ],
+      },
+      {
+        'id': 'tpl-oprec',
+        'organizationID': null,
+        'createdBy': null,
+        'name': 'Open recruitment',
+        'description': 'Pendaftaran dan seleksi anggota baru.',
+        'createdAt': '2026-01-01T00:00:00.000Z',
+        'sections': [
+          {
+            'title': 'Sie Seleksi',
+            'description': '',
+            'offsetDays': 0,
+            'items': [item('Buka formulir', -14), item('Wawancara', -2)],
+          },
+        ],
+      },
+    ];
+  }
+
+  List<JsonMap> _orgPeriods(String orgID) =>
+      periods.where((row) => row['organizationID'] == orgID).toList()
+        ..sort((a, b) => b.text('closedAt').compareTo(a.text('closedAt')));
+
+  List<JsonMap> _snapshotProjects() => [
+    for (final row in projects)
+      {
+        ...(_copy(row) as JsonMap)..remove('periodID'),
+        'periodLabel':
+            _find(periods, row['periodID'] as String? ?? '')?.text('label') ??
+            '',
+        'planItems': row['status'] == 'active'
+            ? [
+                for (final item in planItems)
+                  if (item['projectID'] == row['id'] && item['taskID'] == null)
+                    {
+                      'id': item['id'],
+                      'position': item['position'],
+                      'title': item['title'],
+                      'description': item['description'],
+                      'dueAt': item['dueAt'],
+                    },
+              ]
+            : <JsonMap>[],
+      },
+  ];
+
+  bool _orgCoordinator(String orgID, String id) =>
+      _divisions(orgID).any((row) => row['coordinatorID'] == id);
+
+  /// Template visible to the actor: built-in, or of an org they belong to.
+  JsonMap _visibleTemplate(String id) {
+    final row = _find(templateRows, id);
+    final orgID = row?['organizationID'] as String?;
+    if (row == null ||
+        (orgID != null && !_orgMembers(orgID).contains(_actor))) {
+      throw _code('forbidden');
+    }
+    return row;
+  }
+
+  /// `createTemplate` shape check (§4.5); anything off → invalid_input.
+  List<JsonMap> _templateSections(Object? raw) {
+    Never bad() => throw _code('invalid_input');
+    int offset(Object? value) =>
+        value is int && value >= -365 && value <= 365 ? value : bad();
+    String text(Object? value, int min, int max) {
+      if (value is! String) bad();
+      final trimmed = value.trim();
+      return trimmed.runes.length >= min && trimmed.runes.length <= max
+          ? trimmed
+          : bad();
+    }
+
+    if (raw is! List || raw.isEmpty || raw.length > 20) bad();
+    var total = 0;
+    return [
+      for (final section in raw)
+        () {
+          if (section is! Map ||
+              section.keys.any(
+                (key) => ![
+                  'title',
+                  'description',
+                  'offsetDays',
+                  'items',
+                ].contains(key),
+              )) {
+            bad();
+          }
+          final items = section['items'];
+          if (items is! List || items.length > 40) bad();
+          total += items.length;
+          if (total > 200) bad();
+          return <String, dynamic>{
+            'title': text(section['title'], 3, 120),
+            'description': text(section['description'] ?? '', 0, 2000),
+            'offsetDays': offset(section['offsetDays']),
+            'items': [
+              for (final item in items)
+                if (item is! Map ||
+                    item.keys.any(
+                      (key) =>
+                          !['title', 'description', 'offsetDays'].contains(key),
+                    ))
+                  bad()
+                else
+                  {
+                    'title': text(item['title'], 3, 120),
+                    'description': text(item['description'] ?? '', 0, 2000),
+                    'offsetDays': offset(item['offsetDays']),
+                  },
+            ],
+          };
+        }(),
+    ];
+  }
+
+  JsonMap _planMutate(String action, JsonMap payload) {
+    final actor = _actor;
+    final now = _clock().toUtc();
+    final stamp = now.toIso8601String();
+    switch (action) {
+      case 'applyTemplate':
+        final team = _orgWorkGroup(payload.text('groupID'), coordinator: true);
+        final org = _orgOf(team);
+        if (!_planActive(org)) throw _code('plan_inactive');
+        final template = _visibleTemplate(payload.text('templateID'));
+        final orgID = template['organizationID'];
+        if (orgID != null && orgID != org['id']) throw _code('forbidden');
+        final eventAt = payload.date('eventAt');
+        if (eventAt == null) throw _code('invalid_input');
+        if (templateUses
+                .where(
+                  (row) =>
+                      row['groupID'] == team['id'] &&
+                      row
+                          .date('createdAt')!
+                          .isAfter(now.subtract(const Duration(hours: 1))),
+                )
+                .length >=
+            5) {
+          throw _code('rate_limited');
+        }
+        String due(Object? offset) => eventAt
+            .add(Duration(days: offset as int))
+            .toUtc()
+            .toIso8601String();
+        final ids = <String>[];
+        for (final section in (template['sections'] as List).cast<JsonMap>()) {
+          if (!DateTime.parse(due(section['offsetDays'])).isAfter(now)) {
+            throw _code('invalid_input');
+          }
+          final id = _demoID();
+          ids.add(id);
+          projects.add({
+            'id': id,
+            'groupID': team['id'],
+            'title': section['title'],
+            'description': section['description'] ?? '',
+            'dueAt': due(section['offsetDays']),
+            'status': 'active',
+          });
+          for (final (i, item)
+              in (section['items'] as List).cast<JsonMap>().indexed) {
+            planItems.add({
+              'id': _demoID(),
+              'projectID': id,
+              'position': i + 1,
+              'title': item['title'],
+              'description': item['description'] ?? '',
+              'dueAt': due(item['offsetDays']),
+              'taskID': null,
+            });
+          }
+        }
+        templateUses.add({'groupID': team['id'], 'createdAt': stamp});
+        return {'projectIDs': ids};
+      case 'createTemplate':
+        final org = _find(organizations, payload.text('organizationID'));
+        if (org == null || !_orgMembers(org.text('id')).contains(actor)) {
+          throw _code('forbidden');
+        }
+        if (!['ketua', 'bph'].contains(_roles(org)[actor]) &&
+            !_orgCoordinator(org.text('id'), actor)) {
+          throw _code('forbidden');
+        }
+        if (!_planActive(org)) throw _code('plan_inactive');
+        final sections = _templateSections(payload['sections']);
+        final name = _input(payload, 'name', 80);
+        final description = _input(payload, 'description', 1000, min: 0);
+        if (templateRows
+                .where((row) => row['organizationID'] == org['id'])
+                .length >=
+            50) {
+          throw _code('rate_limited');
+        }
+        final id = _demoID();
+        templateRows.add({
+          'id': id,
+          'organizationID': org['id'],
+          'createdBy': actor,
+          'name': name,
+          'description': description,
+          'sections': sections,
+          'createdAt': stamp,
+        });
+        return {'id': id};
+      case 'deleteTemplate':
+        final row = _visibleTemplate(payload.text('id'));
+        final orgID = row['organizationID'] as String?;
+        if (orgID == null ||
+            (row['createdBy'] != actor &&
+                _roles(_find(organizations, orgID)!)[actor] != 'ketua')) {
+          throw _code('forbidden');
+        }
+        templateRows.remove(row);
+        return {};
+      case 'deletePlanItem':
+        final item = _find(planItems, payload.text('id'));
+        final parent = project(item?.text('projectID') ?? '');
+        if (item == null || parent == null) throw _code('forbidden');
+        _demoTaskManager(parent);
+        if (item['taskID'] != null) throw _code('plan_item_used');
+        if (parent['status'] != 'active') throw _code('project_read_only');
+        planItems.remove(item);
+        return {};
+      case 'closeCommittee':
+      case 'reopenCommittee':
+      case 'setCoordinator':
+      case 'removeClosedMember':
+        final team = group(payload.text('groupID'));
+        if (team == null) throw _code('forbidden');
+        final org = _orgOf(team);
+        final ketua =
+            _roles(org)[actor] == 'ketua' &&
+            _orgMembers(org.text('id')).contains(actor);
+        if (action == 'setCoordinator') {
+          if (!ketua) throw _code('forbidden');
+          final target = payload.text('userID');
+          if (!team.ids('memberIDs').contains(target) ||
+              team['coordinatorID'] == target) {
+            throw _code('invalid_input');
+          }
+          team['coordinatorID'] = target;
+          return {};
+        }
+        if (action == 'removeClosedMember') {
+          if (!ketua) throw _code('forbidden');
+          final target = payload.text('userID');
+          if (team['closedAt'] == null ||
+              !team.ids('memberIDs').contains(target)) {
+            throw _code('invalid_input');
+          }
+          if (team['coordinatorID'] == target) {
+            throw _code('coordinator_transfer_required');
+          }
+          team['memberIDs'] = [
+            for (final id in team.ids('memberIDs'))
+              if (id != target) id,
+          ];
+          _afterLeave(target, team);
+          return {};
+        }
+        if (team['isCommittee'] != true) throw _code('invalid_input');
+        if (action == 'reopenCommittee') {
+          if (!ketua) throw _code('forbidden');
+          if (team['closedAt'] == null) throw _code('invalid_input');
+          if (!_planActive(org)) throw _code('plan_inactive');
+          if (_divisions(org.text('id'))
+                  .where(
+                    (row) =>
+                        row['isCommittee'] == true && row['closedAt'] == null,
+                  )
+                  .length >=
+              30) {
+            throw _code('invalid_input');
+          }
+          team['closedAt'] = null;
+          return {};
+        }
+        if (!ketua &&
+            !(team.text('coordinatorID') == actor &&
+                team.ids('memberIDs').contains(actor))) {
+          throw _code('forbidden');
+        }
+        if (team['closedAt'] != null) throw _code('invalid_input');
+        final own = projects.where((row) => row['groupID'] == team['id']);
+        final ownIDs = own.map((row) => row['id']).toSet();
+        if (own.any((row) => row['status'] == 'active') ||
+            tasks.any(
+              (row) =>
+                  ownIDs.contains(row['projectID']) && row['status'] != 'done',
+            ) ||
+            approvals.any(
+              (row) =>
+                  row['groupID'] == team['id'] && row['status'] == 'pending',
+            )) {
+          throw _code('committee_busy');
+        }
+        team['closedAt'] = stamp;
+        for (final invite in invites.where(
+          (row) => row['groupID'] == team['id'],
+        )) {
+          invite['revoked'] = true;
+        }
+        for (final meeting in meetings.where(
+          (row) =>
+              row['groupID'] == team['id'] &&
+              row['status'] == 'scheduled' &&
+              row.date('startsAt')!.isAfter(now),
+        )) {
+          meeting['status'] = 'cancelled';
+          meeting['version'] = meeting.number('version').toInt() + 1;
+        }
+        return {};
+      case 'closePeriod':
+        final org = _find(organizations, payload.text('organizationID'));
+        if (org == null ||
+            !_orgMembers(org.text('id')).contains(actor) ||
+            _roles(org)[actor] != 'ketua') {
+          throw _code('forbidden');
+        }
+        final current = org.text('periodLabel');
+        final asked = payload['currentLabel'];
+        if (asked is! String || asked.trim().isEmpty) {
+          throw _code('invalid_input');
+        }
+        if (asked.trim() != current) throw _code('stale_version');
+        final next = _input(payload, 'nextLabel', 40);
+        if (next == current) throw _code('invalid_input');
+        final orgID = org.text('id');
+        if (_orgPeriods(orgID).any((row) => row['label'] == next)) {
+          throw _code('period_exists');
+        }
+        final id = _demoID();
+        final previous = _orgPeriods(orgID).firstOrNull;
+        periods.add({
+          'id': id,
+          'organizationID': orgID,
+          'label': current,
+          'startedAt': previous?['closedAt'],
+          'closedAt': stamp,
+          'closedBy': actor,
+        });
+        final teams = groups
+            .where((row) => row['organizationID'] == orgID)
+            .map((row) => row['id'])
+            .toSet();
+        var archived = 0;
+        for (final row in projects.where(
+          (row) => teams.contains(row['groupID']),
+        )) {
+          if (row['status'] == 'completed') {
+            row['previousStatus'] = 'completed';
+            row['status'] = 'archived';
+          }
+          if (row['status'] == 'archived' && row['periodID'] == null) {
+            row['periodID'] = id;
+            archived++;
+          }
+        }
+        org['periodLabel'] = next;
+        return {'periodID': id, 'archived': archived};
+      default:
+        _demoFail('Tindakan tidak dikenal: $action.');
+    }
+  }
+
+  @override
+  Future<List<JsonMap>> templates(String orgID) async {
+    if (!_orgMembers(orgID).contains(_actor)) throw _code('forbidden');
+    return [
+      for (final row in templateRows)
+        if (row['organizationID'] == null || row['organizationID'] == orgID)
+          {
+            'id': row['id'],
+            'name': row['name'],
+            'description': row['description'],
+            'builtIn': row['organizationID'] == null,
+            'sectionCount': (row['sections'] as List).length,
+            'itemCount': [
+              for (final section in row['sections'] as List)
+                (section['items'] as List).length,
+            ].fold<int>(0, (a, b) => a + b),
+            'createdAt': row['createdAt'],
+            'mine': row['createdBy'] == _actor,
+          },
+    ];
+  }
+
+  @override
+  Future<List<JsonMap>> orgMembers(String orgID) async {
+    final org = _find(organizations, orgID);
+    if (org == null || _roles(org)[_actor] != 'ketua') throw _code('forbidden');
+    final rows = groups.where((row) => row['organizationID'] == orgID).toList()
+      ..sort(
+        (a, b) =>
+            (a['isCommittee'] == true ? 1 : 0) !=
+                (b['isCommittee'] == true ? 1 : 0)
+            ? (a['isCommittee'] == true ? 1 : -1)
+            : a.text('name').compareTo(b.text('name')),
+      );
+    return [
+      for (final row in rows)
+        {
+          'groupID': row['id'],
+          'name': row['name'],
+          'isCommittee': row['isCommittee'] == true,
+          'closed': row['closedAt'] != null,
+          'coordinatorID': row.text('coordinatorID'),
+          'members': [
+            for (final id in row.ids('memberIDs'))
+              {'id': id, 'name': _name(id)},
+          ],
+        },
+    ];
+  }
+
+  @override
+  Future<JsonMap> template(String id) async {
+    final row = _visibleTemplate(id);
+    return _copy({
+          'id': row['id'],
+          'name': row['name'],
+          'description': row['description'],
+          'builtIn': row['organizationID'] == null,
+          'sections': row['sections'],
+        })
+        as JsonMap;
+  }
+
+  bool _orgOfficer(JsonMap org) =>
+      _officer(org, _actor) && _orgMembers(org.text('id')).contains(_actor);
+
+  @override
+  Future<JsonMap> orgArchive(String orgID) async {
+    final org = _find(organizations, orgID);
+    if (org == null || !_orgOfficer(org)) throw _code('forbidden');
+    return _copy({
+          'periods': [
+            for (final period in _orgPeriods(orgID))
+              {
+                'id': period['id'],
+                'label': period['label'],
+                'startedAt': period['startedAt'],
+                'closedAt': period['closedAt'],
+                'projects': [
+                  for (final row in projects)
+                    if (row['periodID'] == period['id'])
+                      {
+                        'id': row['id'],
+                        'groupID': row['groupID'],
+                        'groupName': group(row.text('groupID'))?['name'],
+                        'title': row['title'],
+                        'dueAt': row['dueAt'],
+                        'total': tasks
+                            .where((t) => t['projectID'] == row['id'])
+                            .length,
+                        'done': tasks
+                            .where(
+                              (t) =>
+                                  t['projectID'] == row['id'] &&
+                                  t['status'] == 'done',
+                            )
+                            .length,
+                      },
+                ],
+                'committees': [
+                  for (final row in groups)
+                    if (row['organizationID'] == orgID &&
+                        row['closedAt'] != null &&
+                        row
+                                .text('closedAt')
+                                .compareTo(period.text('closedAt')) <=
+                            0 &&
+                        row
+                                .text('closedAt')
+                                .compareTo(period.text('startedAt')) >
+                            0)
+                      {
+                        'id': row['id'],
+                        'name': row['name'],
+                        'closedAt': row['closedAt'],
+                      },
+                ],
+              },
+          ],
+        })
+        as JsonMap;
+  }
+
+  @override
+  Future<JsonMap> report(
+    String groupID, {
+    String? periodID,
+    List<String>? projectIDs,
+  }) async {
+    final team = group(groupID);
+    if (team == null) throw _code('forbidden');
+    final org = _orgOf(team);
+    final member = team.ids('memberIDs').contains(_actor);
+    // Any org role has full access (private.report), member or not.
+    final officer = _roles(org)[_actor] != null;
+    final coordinator = member && team['coordinatorID'] == _actor;
+    final leadOnly = !officer && !coordinator;
+    final period = periodID == null ? null : _find(periods, periodID);
+    if (periodID != null &&
+        (period == null || period['organizationID'] != org['id'])) {
+      throw _code('invalid_input');
+    }
+    final now = _clock().toUtc();
+    final start =
+        (period?['startedAt'] ??
+                _orgPeriods(org.text('id')).firstOrNull?['closedAt'])
+            as String?;
+    final end = period?.text('closedAt') ?? now.toIso8601String();
+    bool inWindow(String at) =>
+        (start == null || at.compareTo(start) > 0) && at.compareTo(end) <= 0;
+    final candidates = projects
+        .where(
+          (row) =>
+              row['groupID'] == groupID &&
+              row['periodID'] == periodID &&
+              (!leadOnly || (member && row['leadID'] == _actor)),
+        )
+        .toList();
+    // A koordinator sie without a sie in this period has no access.
+    if (leadOnly && candidates.isEmpty) throw _code('forbidden');
+    final List<JsonMap> picked;
+    if (projectIDs != null) {
+      if (projectIDs.length > 20 ||
+          projectIDs.any((id) => !candidates.any((row) => row['id'] == id))) {
+        throw _code('forbidden');
+      }
+      picked = candidates
+          .where((row) => projectIDs.contains(row['id']))
+          .toList();
+    } else {
+      picked =
+          (candidates
+                ..sort((a, b) => b.text('dueAt').compareTo(a.text('dueAt'))))
+              .take(20)
+              .toList();
+    }
+    final taskRows = <JsonMap>[];
+    final reportProjects = [
+      for (final row in picked)
+        {
+          'id': row['id'],
+          'title': row['title'],
+          'dueAt': row['dueAt'],
+          'status': row['status'],
+          'lead': row.text('leadID').isEmpty ? '' : _name(row.text('leadID')),
+          'tasks': [
+            for (final t in tasks.where((t) => t['projectID'] == row['id']))
+              () {
+                taskRows.add(t);
+                final submissions = _submissions(t);
+                final approved = submissions
+                    .where((s) => s['decision'] == 'approved')
+                    .lastOrNull;
+                return {
+                  'title': t['title'],
+                  'assignee': _name(t.text('assigneeID')),
+                  'reviewer': _name(t.text('reviewerID')),
+                  'status': t['status'],
+                  'dueAt': t['dueAt'],
+                  'doneAt': t['status'] == 'done'
+                      ? (approved?['createdAt'])
+                      : null,
+                  // Sends after the first one (private.report).
+                  'revisions': max(submissions.length - 1, 0),
+                  'links': submissions.lastOrNull?['links'] ?? <String>[],
+                };
+              }(),
+          ],
+        },
+    ];
+    final groupApprovals = leadOnly
+        ? <JsonMap>[]
+        : approvals
+              .where(
+                (row) =>
+                    row['groupID'] == groupID &&
+                    ['approved', 'rejected'].contains(row['status']) &&
+                    inWindow(row.text('closedAt')),
+              )
+              .toList();
+    return _copy({
+          'generatedAt': now.toIso8601String(),
+          'organization': org['name'],
+          'period': period?['label'] ?? org['periodLabel'],
+          'group': {
+            'name': team['name'],
+            'isCommittee': team['isCommittee'] == true,
+            'coordinator': _name(team.text('coordinatorID')),
+          },
+          'projects': reportProjects,
+          'meetings': [
+            for (final row in meetings)
+              if (row['groupID'] == groupID &&
+                  row['status'] != 'cancelled' &&
+                  inWindow(row.text('startsAt')))
+                () {
+                  final minutes = row.text('minutes');
+                  final attendance = (row['attendance'] as Map).values;
+                  return {
+                    'title': row['title'],
+                    'startsAt': row['startsAt'],
+                    'present': attendance.where((s) => s == 'hadir').length,
+                    'excused': attendance.where((s) => s == 'izin').length,
+                    'minutes': minutes.length > 4000
+                        ? minutes.substring(0, 4000)
+                        : minutes,
+                    'minutesTruncated': minutes.length > 4000,
+                  };
+                }(),
+          ].take(100).toList(),
+          'approvals': [
+            for (final row in groupApprovals)
+              {
+                'title': row['title'],
+                'amount': row['amount'],
+                'status': row['status'],
+                'closedAt': row['closedAt'],
+                'chain': [
+                  for (final step in _steps(row))
+                    '${_name(step.text('approverID'))} (${switch (step['decision']) {
+                      'approved' => 'disetujui',
+                      'rejected' => 'ditolak',
+                      _ => 'menunggu',
+                    }})',
+                ],
+              },
+          ],
+          'totals': {
+            'tasks': taskRows.length,
+            'done': taskRows.where((t) => t['status'] == 'done').length,
+            'approvedAmount': groupApprovals
+                .where((row) => row['status'] == 'approved')
+                .fold<int>(0, (sum, row) => sum + (row['amount'] as int? ?? 0)),
+          },
+        })
+        as JsonMap;
+  }
+
+  /// Test fixture on top of [seedOrganization]: committee g4 "Panitia
+  /// Seminar" (u1 coordinator, u2, u5) with sie p40 holding two plan items
+  /// (one already past), and an org template by u3 (BPH).
+  void seedOrgPlan() {
+    String at(Duration offset) =>
+        _clock().add(offset).toUtc().toIso8601String();
+    groups.add({
+      'id': 'g4',
+      'name': 'Panitia Seminar',
+      'description': '',
+      'course': '',
+      'memberIDs': ['u1', 'u2', 'u5'],
+      'coordinatorID': 'u1',
+      'tint': '#F9E9BE',
+      'icon': 'person.3',
+      'organizationID': 'o1',
+      'isCommittee': true,
+    });
+    projects.add({
+      'id': 'p40',
+      'groupID': 'g4',
+      'title': 'Sie Publikasi',
+      'description': 'Poster dan media sosial.',
+      'dueAt': at(const Duration(days: 10)),
+      'status': 'active',
+    });
+    planItems.addAll([
+      {
+        'id': 'pi1',
+        'projectID': 'p40',
+        'position': 1,
+        'title': 'Desain poster',
+        'description': 'Ukuran A3.',
+        'dueAt': at(const Duration(days: 5)),
+        'taskID': null,
+      },
+      {
+        'id': 'pi2',
+        'projectID': 'p40',
+        'position': 2,
+        'title': 'Hubungi media partner',
+        'description': '',
+        'dueAt': at(const Duration(days: -1)),
+        'taskID': null,
+      },
+    ]);
+    templateRows.add({
+      'id': 'tpl-bem',
+      'organizationID': 'o1',
+      'createdBy': 'u3',
+      'name': 'Makrab BEM',
+      'description': 'Kerangka makrab tahun lalu.',
+      'createdAt': at(const Duration(days: -30)),
+      'sections': [
+        {
+          'title': 'Sie Konsumsi',
+          'description': '',
+          'offsetDays': -1,
+          'items': [
+            {'title': 'Pesan katering', 'description': '', 'offsetDays': -7},
+          ],
+        },
+      ],
     });
   }
 

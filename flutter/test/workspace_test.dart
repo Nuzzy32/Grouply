@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:share_plus/share_plus.dart' show XFile;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:grouply/core/store.dart';
@@ -1780,6 +1781,666 @@ void main() {
       }
     });
   });
+
+  group('Organization Plan Tahap 3a', () {
+    Finder inSheet(String text) => find.descendant(
+      of: find.byType(BottomSheet),
+      matching: find.text(text),
+    );
+    Matcher shown(bool visible) => visible ? findsOneWidget : findsNothing;
+
+    Future<void> signInAs(WidgetTester tester, String id) async {
+      await tester.runAsync(() => store.signIn(id, 'demo'));
+      await tester.pumpAndSettle();
+    }
+
+    Future<void> seed({bool active = true}) async {
+      store.demo
+        ..seedOrganization(active: active)
+        ..seedOrgWork()
+        ..seedOrgPlan();
+      await store.refresh();
+    }
+
+    /// Taps day 28 of the month the open calendar shows; always after
+    /// today because the pickers start 30 days ahead or later.
+    Future<void> pickDay28(WidgetTester tester) => _tapOn(
+      tester,
+      find.descendant(
+        of: find.byType(CalendarDatePicker),
+        matching: find.text('28'),
+      ),
+    );
+
+    testWidgets('organization links follow the org role', (tester) async {
+      await seed();
+      final roles = store.demo.organizations.single['roles'] as Map;
+      for (final (role, officer, ketua) in [
+        ('ketua', true, true),
+        ('bph', true, false),
+        ('pembina', true, false),
+        ('', false, false),
+      ]) {
+        roles['u1'] = role;
+        if (role.isEmpty) roles.remove('u1');
+        await store.refresh();
+        await _show(tester, OrganizationScreen(store: store, orgID: 'o1'));
+        expect(find.byKey(const Key('org-templates')), findsOneWidget);
+        expect(
+          find.byKey(const Key('org-archive')),
+          shown(officer),
+          reason: role,
+        );
+        expect(
+          find.byKey(const Key('org-handover')),
+          shown(ketua),
+          reason: role,
+        );
+      }
+    });
+
+    testWidgets('use a template: pick group and day, sie and plan appear', (
+      tester,
+    ) async {
+      await seed();
+      await _show(tester, TemplatesScreen(store: store, orgID: 'o1'));
+      expect(find.text('Seminar'), findsOneWidget);
+      expect(find.text('Makrab BEM'), findsOneWidget);
+      await _tapOn(tester, find.byKey(const Key('template-tpl-seminar')));
+      expect(find.text('Sie Acara'), findsOneWidget);
+      expect(find.text('Hubungi pembicara'), findsOneWidget);
+      expect(find.text('H-21'), findsOneWidget);
+      // Built-ins cannot be reported or deleted.
+      expect(find.byKey(const Key('report-template')), findsNothing);
+      expect(_labelled('Hapus template'), findsNothing);
+      await _tapOn(tester, find.byKey(const Key('template-use')));
+      await _tapOn(tester, find.byKey(const Key('apply-save')));
+      expect(find.text('Pilih grup tujuan.'), findsOneWidget);
+      await _tapOn(tester, find.byKey(const Key('apply-group-g4')));
+      await _tapOn(tester, find.byKey(const Key('apply-event')));
+      await pickDay28(tester);
+      await _tapOn(tester, find.byKey(const Key('apply-save')));
+      final call = store.calls.last;
+      expect(call.action, 'applyTemplate');
+      expect(call.payload.keys, {'templateID', 'groupID', 'eventAt'});
+      expect(call.payload['templateID'], 'tpl-seminar');
+      expect(call.payload['groupID'], 'g4');
+      final event = DateTime.parse(call.payload['eventAt'] as String);
+      expect(event.isUtc, isTrue);
+      expect(
+        (event.toLocal().day, event.toLocal().hour, event.toLocal().minute),
+        (28, 23, 59),
+      );
+      expect(find.byType(GroupScreen), findsOneWidget);
+      final sie = store.projects.firstWhere(
+        (p) => p['title'] == 'Sie Acara' && p['groupID'] == 'g4',
+      );
+      expect(store.planItems(sie).map((i) => i['title']), [
+        'Hubungi pembicara',
+        'Susun rundown',
+      ]);
+      await _settleToasts(tester);
+    });
+
+    testWidgets('template buttons follow coordinator, creator and Ketua', (
+      tester,
+    ) async {
+      await seed();
+      // u1: Ketua, not the creator → report and delete.
+      await _show(
+        tester,
+        TemplateScreen(store: store, orgID: 'o1', templateID: 'tpl-bem'),
+      );
+      expect(find.byKey(const Key('report-template')), findsOneWidget);
+      expect(_labelled('Hapus template'), findsOneWidget);
+      expect(find.byKey(const Key('template-use')), findsOneWidget);
+      // u3: BPH and creator, coordinator of g2 → delete, no report.
+      await signInAs(tester, 'u3');
+      await _show(
+        tester,
+        TemplateScreen(
+          store: store,
+          orgID: 'o1',
+          templateID: 'tpl-bem',
+          mine: true,
+        ),
+      );
+      expect(find.byKey(const Key('report-template')), findsNothing);
+      expect(_labelled('Hapus template'), findsOneWidget);
+      // u2: staff, coordinates nothing → may only read and report.
+      await signInAs(tester, 'u2');
+      await _show(
+        tester,
+        TemplateScreen(store: store, orgID: 'o1', templateID: 'tpl-bem'),
+      );
+      expect(find.byKey(const Key('template-use')), findsNothing);
+      expect(_labelled('Hapus template'), findsNothing);
+      expect(find.byKey(const Key('report-template')), findsOneWidget);
+      await _tapOn(tester, find.byKey(const Key('report-template')));
+      expect(find.text('Laporkan template'), findsWidgets);
+    });
+
+    testWidgets('inactive plan locks using and saving templates', (
+      tester,
+    ) async {
+      await seed(active: false);
+      await _show(
+        tester,
+        TemplateScreen(store: store, orgID: 'o1', templateID: 'tpl-seminar'),
+      );
+      await _tapOn(tester, find.byKey(const Key('template-use')));
+      expect(find.byKey(const Key('apply-save')), findsNothing);
+      expect(
+        find.text('Template bisa dipakai saat paket organisasi aktif.'),
+        findsOneWidget,
+      );
+      await _settleToasts(tester);
+      await _show(tester, ProjectScreen(store: store, projectID: 'p40'));
+      expect(
+        _icon(find.byKey(const Key('project-save-template')), 'lock'),
+        findsOneWidget,
+      );
+      await _tapOn(tester, find.byKey(const Key('project-save-template')));
+      expect(find.byType(SaveTemplateScreen), findsNothing);
+      await _settleToasts(tester);
+      expect(store.calls, isEmpty);
+    });
+
+    testWidgets('plan items become tasks or are deleted; staff only reads', (
+      tester,
+    ) async {
+      await seed();
+      await _show(tester, ProjectScreen(store: store, projectID: 'p40'));
+      expect(find.byKey(const Key('plan-section')), findsOneWidget);
+      expect(find.text('Desain poster'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('plan-item-pi2')),
+          matching: find.text('Lewat'),
+        ),
+        findsOneWidget,
+      );
+      await _tapOn(tester, find.byKey(const Key('plan-task-pi1')));
+      final title = tester.widget<EditableText>(
+        find.descendant(
+          of: find.byKey(const Key('task-title')),
+          matching: find.byType(EditableText),
+        ),
+      );
+      expect(title.controller.text, 'Desain poster');
+      expect(find.text('Ukuran A3.'), findsWidgets);
+      await _tapOn(tester, inSheet('Raka').first);
+      await _tapOn(tester, inSheet('Sinta').last);
+      await _tapOn(tester, find.widgetWithText(GLSubmitButton, 'Buat tugas'));
+      final call = store.calls.last;
+      expect(call.action, 'createTask');
+      expect(call.payload['planItemID'], 'pi1');
+      expect(call.payload['description'], 'Ukuran A3.');
+      expect(
+        GLFormat.date(DateTime.parse(call.payload['dueAt'] as String)),
+        GLFormat.date(store.demo.planItems.first.date('dueAt')!),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('plan-item-pi1')), findsNothing);
+      await _settleToasts(tester);
+      // A used item cannot be used again (server check).
+      await expectLater(
+        store.mutate('createTask', {...call.payload, 'title': 'Lagi'}),
+        throwsA(
+          isA<GrouplyException>().having(
+            (e) => e.message,
+            'message',
+            GrouplyStore.codeText('plan_item_used'),
+          ),
+        ),
+      );
+
+      await _tapOn(tester, find.byKey(const Key('plan-delete-pi2')));
+      await _tap(tester, 'Hapus');
+      expect(store.calls.last.action, 'deletePlanItem');
+      expect(store.calls.last.payload, {'id': 'pi2'});
+      expect(find.byKey(const Key('plan-section')), findsNothing);
+      await _settleToasts(tester);
+
+      store.demo.planItems.add({
+        'id': 'pi3',
+        'projectID': 'p40',
+        'position': 3,
+        'title': 'Cetak spanduk',
+        'description': '',
+        'dueAt': DateTime.now()
+            .add(const Duration(days: 3))
+            .toUtc()
+            .toIso8601String(),
+        'taskID': null,
+      });
+      await signInAs(tester, 'u5');
+      await _show(tester, ProjectScreen(store: store, projectID: 'p40'));
+      expect(find.text('Cetak spanduk'), findsOneWidget);
+      expect(find.byKey(const Key('plan-task-pi3')), findsNothing);
+      expect(find.byKey(const Key('plan-delete-pi3')), findsNothing);
+      expect(find.byKey(const Key('project-save-template')), findsNothing);
+      expect(find.byKey(const Key('project-report')), findsNothing);
+    });
+
+    testWidgets('save as template sends an edited §4.5 payload', (
+      tester,
+    ) async {
+      await seed();
+      await _show(tester, ProjectScreen(store: store, projectID: 'p40'));
+      await _tapOn(tester, find.byKey(const Key('project-save-template')));
+      expect(find.byType(SaveTemplateScreen), findsOneWidget);
+      await _tapOn(tester, find.byKey(const Key('save-preview')));
+      await _fill(tester, find.byKey(const Key('save-name')), 'Seminar BEM');
+      await _fill(
+        tester,
+        find.byKey(const Key('save-item-0-1')),
+        'Hubungi media',
+      );
+      await _tapOn(tester, find.byKey(const Key('save-template')));
+      final call = store.calls.last;
+      expect(call.action, 'createTemplate');
+      expect(call.payload.keys, {
+        'organizationID',
+        'name',
+        'description',
+        'sections',
+      });
+      expect(call.payload['organizationID'], 'o1');
+      expect(call.payload['name'], 'Seminar BEM');
+      final section = (call.payload['sections'] as List).single as Map;
+      expect(section.keys, {'title', 'description', 'offsetDays', 'items'});
+      expect(section['title'], 'Sie Publikasi');
+      // The sie deadline is the event day by default.
+      expect(section['offsetDays'], 0);
+      expect(section['items'], [
+        {
+          'title': 'Desain poster',
+          'description': 'Ukuran A3.',
+          'offsetDays': -5,
+        },
+        {'title': 'Hubungi media', 'description': '', 'offsetDays': -11},
+      ]);
+      await tester.pumpAndSettle();
+      expect(find.byType(SaveTemplateScreen), findsNothing);
+      expect(
+        store.demo.templateRows.where((t) => t['name'] == 'Seminar BEM'),
+        hasLength(1),
+      );
+      await _settleToasts(tester);
+    });
+
+    testWidgets('close committee: reasons first, then closed and read-only', (
+      tester,
+    ) async {
+      await seed();
+      await _show(tester, GroupScreen(store: store, groupID: 'g4'));
+      await _tapOn(tester, find.byKey(const Key('committee-close')));
+      expect(find.text('Belum bisa ditutup'), findsOneWidget);
+      expect(find.textContaining('1 sie masih aktif'), findsOneWidget);
+      await _tap(tester, 'Mengerti');
+      expect(store.calls, isEmpty);
+      // Finish the sie: archive it, so nothing keeps the committee open.
+      store.demo.project('p40')!['status'] = 'archived';
+      await store.refresh();
+      await tester.pumpAndSettle();
+      await _tapOn(tester, find.byKey(const Key('committee-close')));
+      await _tap(tester, 'Tutup kepanitiaan');
+      expect(store.calls.last.action, 'closeCommittee');
+      expect(store.calls.last.payload, {'groupID': 'g4'});
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('committee-closed')), findsOneWidget);
+      for (final key in [
+        'committee-close',
+        'create-project',
+        'meeting-schedule',
+        'approval-request',
+      ]) {
+        expect(find.byKey(Key(key)), findsNothing, reason: key);
+      }
+      expect(find.text('Undang'), findsNothing);
+      expect(_labelled('Pengaturan grup'), findsNothing);
+      await _show(tester, ProjectScreen(store: store, projectID: 'p40'));
+      expect(_labelled('Aksi proyek'), findsNothing);
+      expect(find.text('Pulihkan Proyek'), findsNothing);
+      // A held but unrecorded meeting cannot be recorded any more.
+      store.demo.meetings.add({
+        'id': 'm40',
+        'groupID': 'g4',
+        'createdBy': 'u1',
+        'noteTakerID': 'u1',
+        'title': 'Rapat evaluasi',
+        'startsAt': DateTime.now()
+            .subtract(const Duration(days: 1))
+            .toUtc()
+            .toIso8601String(),
+        'place': '',
+        'agenda': '',
+        'minutes': '',
+        'status': 'scheduled',
+        'version': 1,
+        'attendance': <String, String>{},
+        'createdAt': DateTime.now().toUtc().toIso8601String(),
+      });
+      await store.refresh();
+      await _show(tester, MeetingScreen(store: store, meetingID: 'm40'));
+      expect(find.byKey(const Key('meeting-record')), findsNothing);
+      expect(_labelled('Aksi rapat'), findsNothing);
+      await _show(tester, GroupScreen(store: store, groupID: 'g4'));
+      expect(find.text('Rapat evaluasi'), findsNothing);
+      expect(find.byKey(const Key('group-report')), findsOneWidget);
+      // Server allowlist: chat still works, creating does not.
+      await expectLater(
+        store.mutate('createProject', {
+          'groupID': 'g4',
+          'title': 'Sie Baru',
+          'dueAt': DateTime.now()
+              .add(const Duration(days: 9))
+              .toUtc()
+              .toIso8601String(),
+        }),
+        throwsA(
+          isA<GrouplyException>().having(
+            (e) => e.message,
+            'message',
+            GrouplyStore.codeText('group_closed'),
+          ),
+        ),
+      );
+      await store.mutate('sendMessage', {
+        'groupID': 'g4',
+        'clientID': 'c-closed-1',
+        'text': 'Terima kasih panitia!',
+      });
+      await _settleToasts(tester);
+      await _show(tester, OrganizationScreen(store: store, orgID: 'o1'));
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('org-closed-committees')),
+          matching: find.text('Panitia Seminar'),
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('0 kepanitiaan'), findsOneWidget);
+      // Ketua reopens.
+      await _show(tester, GroupScreen(store: store, groupID: 'g4'));
+      await _tapOn(tester, find.byKey(const Key('committee-reopen')));
+      await _tap(tester, 'Buka kembali');
+      expect(store.calls.last.action, 'reopenCommittee');
+      expect(store.calls.last.payload, {'groupID': 'g4'});
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('committee-closed')), findsNothing);
+      await _settleToasts(tester);
+    });
+
+    testWidgets('only coordinator or Ketua may close; staff sees neither', (
+      tester,
+    ) async {
+      await seed();
+      // u2 is staff in g4 and has no org role.
+      await signInAs(tester, 'u2');
+      await _show(tester, GroupScreen(store: store, groupID: 'g4'));
+      expect(find.byKey(const Key('committee-close')), findsNothing);
+      expect(find.byKey(const Key('committee-reopen')), findsNothing);
+      // A plain division never shows the close button.
+      await signInAs(tester, 'u1');
+      await _show(tester, GroupScreen(store: store, groupID: 'g1'));
+      expect(find.byKey(const Key('committee-close')), findsNothing);
+    });
+
+    testWidgets('handover closes the period; archive and retry follow', (
+      tester,
+    ) async {
+      await seed();
+      await _show(tester, HandoverScreen(store: store, orgID: 'o1'));
+      expect(find.text('Proposal Topik'), findsOneWidget);
+      expect(find.text('Diarsipkan'), findsOneWidget);
+      expect(find.text('Sistem Informasi Perpustakaan'), findsOneWidget);
+      // g3 is a division u1 is not in: listed from grouply_org_members.
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('handover-division-g3')),
+          matching: find.text('Bima'),
+        ),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('handover-committee-g4')), findsOneWidget);
+      // Ketua sets a new coordinator for g2 (u3 → u5).
+      await _tapOn(tester, find.byKey(const Key('handover-coordinator-g2')));
+      await _tapOn(tester, find.byKey(const Key('coordinator-pick-u5')));
+      expect(store.calls.last.action, 'setCoordinator');
+      expect(store.calls.last.payload, {'groupID': 'g2', 'userID': 'u5'});
+      await tester.pumpAndSettle();
+      expect(store.group('g2')!['coordinatorID'], 'u5');
+      await _settleToasts(tester);
+
+      await _tapOn(tester, find.byKey(const Key('handover-close-period')));
+      expect(find.textContaining('Isi label periode baru'), findsOneWidget);
+      await _fill(tester, find.byKey(const Key('handover-next')), '2027/2028');
+      await _tapOn(tester, find.byKey(const Key('handover-close-period')));
+      await _tap(tester, 'Tutup periode');
+      expect(store.calls.last.action, 'closePeriod');
+      expect(store.calls.last.payload, {
+        'organizationID': 'o1',
+        'currentLabel': '2026/2027',
+        'nextLabel': '2027/2028',
+      });
+      await tester.pumpAndSettle();
+      expect(store.organization('o1')!['periodLabel'], '2027/2028');
+      expect(store.project('p3')!['status'], 'archived');
+      expect(store.project('p3')!['periodLabel'], '2026/2027');
+      expect(store.project('p1')!['status'], 'active');
+      expect(store.periods('o1').single['label'], '2026/2027');
+      await _settleToasts(tester);
+      // A retry with the old label is stale, not a second close.
+      await expectLater(
+        store.mutate('closePeriod', store.calls.last.payload),
+        throwsA(
+          isA<GrouplyException>().having(
+            (e) => e.message,
+            'message',
+            GrouplyStore.codeText('stale_version'),
+          ),
+        ),
+      );
+      // A labelled project stays in its archive.
+      await expectLater(
+        store.mutate('restoreProject', {'id': 'p3'}),
+        throwsA(
+          isA<GrouplyException>().having(
+            (e) => e.message,
+            'message',
+            GrouplyStore.codeText('project_read_only'),
+          ),
+        ),
+      );
+
+      // The labelled project offers no restore, and its recap asks for the
+      // closed period (a null period would be refused).
+      await _show(tester, ProjectScreen(store: store, projectID: 'p3'));
+      expect(find.textContaining('arsip periode 2026/2027'), findsOneWidget);
+      expect(find.text('Pulihkan Proyek'), findsNothing);
+      await _tapOn(tester, _labelled('Aksi proyek'));
+      expect(find.text('Pulihkan proyek'), findsNothing);
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+      await _tapOn(tester, find.byKey(const Key('project-report')));
+      expect(find.byKey(const Key('report-preview')), findsOneWidget);
+
+      await _show(tester, ArchiveScreen(store: store, orgID: 'o1'));
+      expect(find.text('Periode 2026/2027'), findsOneWidget);
+      await _tapOn(tester, find.byKey(const Key('archive-project-p3')));
+      expect(find.byType(ReportScreen), findsOneWidget);
+      expect(find.byKey(const Key('report-preview')), findsOneWidget);
+      expect(find.text('Proposal Topik'), findsWidgets);
+    });
+
+    testWidgets('non-Ketua cannot open handover; staff cannot open archive', (
+      tester,
+    ) async {
+      await seed();
+      await signInAs(tester, 'u3');
+      await _show(tester, HandoverScreen(store: store, orgID: 'o1'));
+      expect(find.byType(GLAccessDenied), findsOneWidget);
+      await _show(tester, ArchiveScreen(store: store, orgID: 'o1'));
+      expect(find.text('Periode berjalan'), findsOneWidget);
+      await signInAs(tester, 'u2');
+      await _show(tester, ArchiveScreen(store: store, orgID: 'o1'));
+      expect(find.byType(GLAccessDenied), findsOneWidget);
+    });
+
+    testWidgets('recap: coordinator shares CSV; koordinator sie gets theirs', (
+      tester,
+    ) async {
+      await seed();
+      final shared = <(XFile, String)>[];
+      final previous = ReportScreen.share;
+      ReportScreen.share = (file, name, origin) async =>
+          shared.add((file, name));
+      addTearDown(() => ReportScreen.share = previous);
+
+      await _show(tester, GroupScreen(store: store, groupID: 'g1'));
+      await _tapOn(tester, find.byKey(const Key('group-report')));
+      expect(find.byKey(const Key('report-preview')), findsOneWidget);
+      expect(find.text('Basis Data · Kelompok 3'), findsWidgets);
+      await _tapOn(tester, find.byKey(const Key('report-csv')));
+      final bytes = await shared.single.$1.readAsBytes();
+      expect(bytes.sublist(0, 3), [0xEF, 0xBB, 0xBF]);
+      expect(
+        shared.single.$2,
+        'Rekap LPJ - Basis Data · Kelompok 3 - 2026-2027.csv',
+      );
+      // Chip + preview row; deselecting p1 drops it from the preview only.
+      expect(find.text('Sistem Informasi Perpustakaan'), findsNWidgets(2));
+      await _tapOn(tester, find.byKey(const Key('report-pick-p1')));
+      expect(store.calls, isEmpty);
+      expect(find.text('Sistem Informasi Perpustakaan'), findsOneWidget);
+      expect(find.text('Proposal Topik'), findsNWidgets(2));
+
+      // "Revisi" = sends after the first one (private.report).
+      final report = await store.report('g1');
+      final sent = {
+        for (final t in store.tasks)
+          t.text('title'): (t['submissions'] as List).length,
+      };
+      for (final p in (report['projects'] as List).cast<JsonMap>()) {
+        for (final t in (p['tasks'] as List).cast<JsonMap>()) {
+          final n = sent[t['title']]!;
+          expect(t['revisions'], n > 1 ? n - 1 : 0, reason: '${t['title']}');
+        }
+      }
+
+      // u2 leads p1 (koordinator sie) but is not coordinator or officer.
+      store.demo.project('p1')!['leadID'] = 'u2';
+      await signInAs(tester, 'u2');
+      await _show(tester, ProjectScreen(store: store, projectID: 'p1'));
+      expect(find.byKey(const Key('project-report')), findsOneWidget);
+      await _show(tester, ProjectScreen(store: store, projectID: 'p3'));
+      expect(find.byKey(const Key('project-report')), findsNothing);
+      await _show(tester, GroupScreen(store: store, groupID: 'g1'));
+      await _tapOn(tester, find.byKey(const Key('group-report')));
+      expect(find.byKey(const Key('report-pick-p1')), findsOneWidget);
+      expect(find.byKey(const Key('report-pick-p3')), findsNothing);
+      expect(find.byKey(const Key('report-preview')), findsOneWidget);
+      // Staff without a sie gets no recap button.
+      await signInAs(tester, 'u4');
+      await _show(tester, GroupScreen(store: store, groupID: 'g1'));
+      expect(find.byKey(const Key('group-report')), findsNothing);
+    });
+
+    testWidgets('handover reaches every group: seats, reopen, roles', (
+      tester,
+    ) async {
+      await seed();
+      // u8 is only in g4, which is closed: a stranded seat.
+      store.demo.users.add({
+        'id': 'u8',
+        'name': 'Wulan',
+        'email': 'wulan@student.ac.id',
+        'tint': '#DED2FF',
+      });
+      store.demo.group('g4')!
+        ..['memberIDs'] = ['u1', 'u2', 'u5', 'u8']
+        ..['closedAt'] = DateTime.now().toUtc().toIso8601String();
+      store.demo.project('p40')!['status'] = 'archived';
+      await store.refresh();
+      await _show(tester, OrganizationScreen(store: store, orgID: 'o1'));
+      await _tapOn(tester, find.byKey(const Key('org-handover')));
+      // g3 (u1 not a member) gets a new coordinator from the full list.
+      await _tapOn(tester, find.byKey(const Key('handover-coordinator-g3')));
+      await _tapOn(tester, find.byKey(const Key('coordinator-pick-u7')));
+      expect(store.calls.last.action, 'setCoordinator');
+      expect(store.calls.last.payload, {'groupID': 'g3', 'userID': 'u7'});
+      expect(store.demo.group('g3')!['coordinatorID'], 'u7');
+      await _settleToasts(tester);
+      expect(find.byKey(const Key('handover-seat-u8')), findsOneWidget);
+      expect(find.byKey(const Key('handover-seat-u2')), findsNothing);
+      await _tapOn(tester, find.byKey(const Key('handover-remove-u8')));
+      await _tap(tester, 'Keluarkan');
+      expect(store.calls.last.action, 'removeClosedMember');
+      expect(store.calls.last.payload, {'groupID': 'g4', 'userID': 'u8'});
+      expect(find.byKey(const Key('handover-seat-u8')), findsNothing);
+      await _settleToasts(tester);
+      await _tapOn(tester, find.byKey(const Key('handover-reopen-g4')));
+      await _tap(tester, 'Buka kembali');
+      expect(store.calls.last.action, 'reopenCommittee');
+      expect(store.calls.last.payload, {'groupID': 'g4'});
+      expect(find.byKey(const Key('handover-close-g4')), findsOneWidget);
+      await _settleToasts(tester);
+      // "Atur jabatan" returns to the organization's role sheet.
+      await _tapOn(tester, find.byKey(const Key('handover-roles')));
+      expect(find.byType(HandoverScreen), findsNothing);
+      expect(
+        find.text(
+          'Pilih anggota untuk dijadikan BPH atau Pembina, atau serahkan jabatan Ketua.',
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('Ketua reopens a closed committee from the archive', (
+      tester,
+    ) async {
+      await seed();
+      store.demo.group('g4')!['closedAt'] = DateTime.now()
+          .toUtc()
+          .toIso8601String();
+      await store.refresh();
+      await _show(tester, ArchiveScreen(store: store, orgID: 'o1'));
+      await _tapOn(tester, find.byKey(const Key('archive-reopen-g4')));
+      await _tap(tester, 'Buka kembali');
+      expect(store.calls.last.action, 'reopenCommittee');
+      expect(store.isClosed(store.group('g4')), isFalse);
+      await _settleToasts(tester);
+      await signInAs(tester, 'u3');
+      store.demo.group('g4')!['closedAt'] = DateTime.now()
+          .toUtc()
+          .toIso8601String();
+      await tester.runAsync(store.refresh);
+      await _show(tester, ArchiveScreen(store: store, orgID: 'o1'));
+      expect(find.byKey(const Key('archive-reopen-g4')), findsNothing);
+    });
+
+    testWidgets('Tahap 3a screens render in dark mode', (tester) async {
+      final previous = GLTheme.dark;
+      GLTheme.dark = true;
+      addTearDown(() => GLTheme.dark = previous);
+      await seed();
+      for (final screen in <Widget>[
+        TemplatesScreen(store: store, orgID: 'o1'),
+        TemplateScreen(store: store, orgID: 'o1', templateID: 'tpl-bem'),
+        SaveTemplateScreen(store: store, projectID: 'p40'),
+        HandoverScreen(store: store, orgID: 'o1'),
+        ArchiveScreen(store: store, orgID: 'o1'),
+        ReportScreen(store: store, groupID: 'g4'),
+        ProjectScreen(store: store, projectID: 'p40'),
+      ]) {
+        await _show(tester, screen);
+        expect(tester.takeException(), isNull, reason: '$screen');
+      }
+    });
+  });
+
   group('Template Proker', () {
     Future<void> openTemplate(WidgetTester tester, {bool active = true}) async {
       store.demo.seedOrganization(active: active);

@@ -1254,4 +1254,309 @@ void main() {
         : false,
     timeout: const Timeout(Duration(minutes: 2)),
   );
+
+  test(
+    'local organization plan tahap 3a: template, plan item, close committee, period, archive, report',
+    () async {
+      var stage = 'private local configuration';
+      final stores = <GrouplyStore>[];
+      final backends = <SupabaseGrouplyBackend>[];
+      addTearDown(() async {
+        for (final backend in backends) {
+          await backend.disconnect().timeout(const Duration(seconds: 5));
+        }
+        for (final store in stores) {
+          store.dispose();
+        }
+      });
+      try {
+        final environment = Platform.environment;
+        final path =
+            environment['GROUPLY_LOCAL_ACCOUNTS_PATH'] ??
+            '${environment['HOME']}/Library/Application Support/'
+                'GrouplyDevelopment/accounts.json';
+        final fixture = jsonDecode(await File(path).readAsString()) as JsonMap;
+        final url = fixture['url'] as String;
+        final key = fixture['publishableKey'] as String;
+        _check(
+          url == 'http://127.0.0.1:55321' || url == 'http://localhost:55321',
+          'Only loopback HTTP port 55321 is allowed.',
+        );
+        SharedPreferences.setMockInitialValues({});
+        GrouplyStore open() {
+          final backend = SupabaseGrouplyBackend(
+            url: url,
+            anonKey: key,
+            client: SupabaseClient(
+              url,
+              key,
+              authOptions: AuthClientOptions(pkceAsyncStorage: _MemoryPKCE()),
+            ),
+            sessionStorage: _MemorySession(),
+          );
+          backends.add(backend);
+          final store = GrouplyStore(backend: backend);
+          stores.add(store);
+          return store;
+        }
+
+        stage = 'fresh founder sign-up and two existing accounts';
+        final founder = open(), alex = open(), raka = open();
+        for (final store in stores) {
+          await store.initialize();
+        }
+        final label = 'Rencana lokal ${DateTime.now().microsecondsSinceEpoch}';
+        _check(
+          await founder.signUp(
+            'Uji Kerja',
+            'flutter-plan-${DateTime.now().microsecondsSinceEpoch}@example.test',
+            'Org-${_messageID()}',
+          ),
+          'Founder sign-up failed.',
+        );
+        final accounts = fixture['accounts'] as JsonMap;
+        for (final (store, name) in [(alex, 'alex'), (raka, 'raka')]) {
+          final account = accounts[name] as JsonMap;
+          await store.signIn(
+            account['email'] as String,
+            account['password'] as String,
+          );
+        }
+        final org = (await founder.mutate('createOrganization', {
+          'name': label,
+          'periodLabel': 'Uji 1',
+        })).text('id');
+
+        stage = 'operator plan activation';
+        final status = await Process.run('supabase', [
+          'status',
+          '-o',
+          'json',
+        ], workingDirectory: '..');
+        _check(status.exitCode == 0, 'Local Supabase status is unavailable.');
+        final local = jsonDecode(status.stdout as String) as JsonMap;
+        _check(
+          Uri.parse(local['API_URL'] as String).port == 55321,
+          'Only the Grouply local stack may be activated.',
+        );
+        final service = local['SERVICE_ROLE_KEY'] as String;
+        final http = HttpClient();
+        addTearDown(() => http.close(force: true));
+        final request = await http.postUrl(
+          Uri.parse('$url/rest/v1/rpc/grouply_billing'),
+        );
+        request.headers
+          ..set('apikey', service)
+          ..set('Authorization', 'Bearer $service')
+          ..contentType = ContentType.json;
+        request.write(
+          jsonEncode({
+            'action': 'activatePlan',
+            'payload': {
+              'organizationID': org,
+              'seatLimit': 5,
+              'expiresAt': DateTime.now()
+                  .toUtc()
+                  .add(const Duration(days: 30))
+                  .toIso8601String(),
+            },
+          }),
+        );
+        final response = await request.close();
+        await response.drain<void>();
+        _check(response.statusCode == 200, 'Plan activation was rejected.');
+        await founder.refresh();
+
+        stage = 'committee and built-in templates';
+        final committee = (await founder.mutate('createDivision', {
+          'organizationID': org,
+          'name': 'Panitia Rencana',
+          'committee': true,
+        })).text('id');
+        final invite = await founder.mutate('generateInvite', {
+          'groupID': committee,
+          'maxUses': 10,
+        });
+        for (final store in [alex, raka]) {
+          await store.mutate('joinGroup', {
+            'code': (invite['invite'] as JsonMap).text('code'),
+          });
+        }
+        final builtIn = await founder.templates(org);
+        _check(
+          builtIn.where((row) => row['builtIn'] == true).length == 4,
+          'Built-in templates are missing.',
+        );
+        final seminar = await founder.template(
+          builtIn.firstWhere((row) => row['name'] == 'Seminar').text('id'),
+        );
+        _check(
+          (seminar['sections'] as List).length == 5,
+          'Template detail does not match.',
+        );
+
+        stage = 'own template applied as sie and plan';
+        final own = (await founder.mutate('createTemplate', {
+          'organizationID': org,
+          'name': 'Bakti lokal',
+          'sections': [
+            {
+              'title': 'Sie Lapangan',
+              'offsetDays': 0,
+              'items': [
+                {'title': 'Survei lokasi', 'offsetDays': -5},
+              ],
+            },
+          ],
+        })).text('id');
+        final applied = await founder.mutate('applyTemplate', {
+          'templateID': own,
+          'groupID': committee,
+          'eventAt': DateTime.now()
+              .toUtc()
+              .add(const Duration(days: 20))
+              .toIso8601String(),
+        });
+        final sie = (applied['projectIDs'] as List).single as String;
+        final item = founder.planItems(founder.project(sie)).single;
+        final task = (await founder.mutate('createTask', {
+          'projectID': sie,
+          'title': item.text('title'),
+          'description': '',
+          'assigneeID': raka.currentUserID,
+          'reviewerID': alex.currentUserID,
+          'dueAt': item.text('dueAt'),
+          'planItemID': item.text('id'),
+        })).text('id');
+        _check(
+          founder.planItems(founder.project(sie)).isEmpty,
+          'A used plan item stayed in the plan.',
+        );
+        await _denied(
+          () => backends[0].mutate('createTask', {
+            'projectID': sie,
+            'title': 'Lagi',
+            'assigneeID': raka.currentUserID,
+            'reviewerID': alex.currentUserID,
+            'dueAt': item.text('dueAt'),
+            'planItemID': item.text('id'),
+          }),
+          'plan_item_used',
+        );
+
+        stage = 'finish work and close the committee';
+        await raka.refresh();
+        await raka.mutate('startTask', {'id': task, 'expectedVersion': 1});
+        await raka.mutate('submitWork', {
+          'taskID': task,
+          'note': 'Selesai',
+          'links': ['https://example.org/plan-local'],
+          'expectedVersion': 2,
+        });
+        await alex.refresh();
+        await alex.mutate('review', {
+          'taskID': task,
+          'approve': true,
+          'feedback': 'Oke',
+          'expectedVersion': 3,
+        });
+        await founder.refresh();
+        await founder.mutate('completeProject', {'projectID': sie});
+        await founder.mutate('closeCommittee', {'groupID': committee});
+        _check(
+          founder.group(committee)?['closed'] == true,
+          'Committee is not closed in the snapshot.',
+        );
+        await _denied(
+          () => backends[0].mutate('createProject', {
+            'groupID': committee,
+            'title': 'Setelah tutup',
+            'dueAt': DateTime.now()
+                .toUtc()
+                .add(const Duration(days: 5))
+                .toIso8601String(),
+          }),
+          'group_closed',
+        );
+
+        stage = 'report, period close and archive';
+        final current = await founder.report(committee);
+        final reportTask =
+            ((current['projects'] as List).single as JsonMap)['tasks'] as List;
+        _check(
+          (reportTask.single as JsonMap)['doneAt'] != null,
+          'Report misses the finished task.',
+        );
+        final closed = await founder.mutate('closePeriod', {
+          'organizationID': org,
+          'currentLabel': 'Uji 1',
+          'nextLabel': 'Uji 2',
+        });
+        await _denied(
+          () => backends[0].mutate('closePeriod', {
+            'organizationID': org,
+            'currentLabel': 'Uji 1',
+            'nextLabel': 'Uji 2',
+          }),
+          'stale_version',
+        );
+        await founder.refresh();
+        _check(
+          founder.organization(org)?['periodLabel'] == 'Uji 2' &&
+              founder.periods(org).length == 1,
+          'Period did not move on.',
+        );
+        final archive = await founder.orgArchive(org);
+        final period = (archive['periods'] as List).single as JsonMap;
+        _check(
+          (period['projects'] as List).any(
+                (row) => (row as Map)['id'] == sie,
+              ) &&
+              (period['committees'] as List).any(
+                (row) => (row as Map)['id'] == committee,
+              ),
+          'Archive misses the closed work.',
+        );
+        final old = await founder.report(
+          committee,
+          periodID: closed.text('periodID'),
+        );
+        _check(
+          old['period'] == 'Uji 1' && (old['projects'] as List).length == 1,
+          'Old period report does not match.',
+        );
+
+        // Closed committees still let members leave; the founder is then alone.
+        stage = 'cleanup';
+        // Handover tools reach the closed committee: list it, free alex's seat.
+        final members = await founder.orgMembers(org);
+        final row = members.firstWhere((g) => g['groupID'] == committee);
+        _check(
+          row['closed'] == true &&
+              (row['members'] as List).any(
+                (m) => (m as Map)['id'] == alex.currentUserID,
+              ),
+          'Handover member list misses the closed committee.',
+        );
+        await founder.mutate('removeClosedMember', {
+          'groupID': committee,
+          'userID': alex.currentUserID,
+        });
+        await raka.mutate('leaveGroup', {'id': committee});
+        await founder.mutate('deleteAccount', {});
+        _check(!founder.authenticated, 'Founder account was not removed.');
+        debugPrint(
+          'PASS: built-in + own template; applied sie and plan item; plan item '
+          'used once; committee closed and locked; report; period close + retry; '
+          'archive; old period report; cleanup.',
+        );
+      } catch (_) {
+        fail('Local tahap 3a flow failed during $stage; details suppressed.');
+      }
+    },
+    skip: Platform.environment['GROUPLY_LOCAL_INTEGRATION'] != '1'
+        ? 'Opt in with GROUPLY_LOCAL_INTEGRATION=1; existing localhost backend only.'
+        : false,
+    timeout: const Timeout(Duration(minutes: 2)),
+  );
 }
