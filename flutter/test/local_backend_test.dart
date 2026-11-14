@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:grouply/core/backend.dart';
 import 'package:grouply/core/store.dart';
@@ -969,6 +970,40 @@ void main() {
           'dueAt': due,
         })).text('id');
 
+        stage = 'premium task batch and concurrent retry';
+        FlutterSecureStorage.setMockInitialValues({});
+        _check(alex.taskBatchAvailable, 'Batch capability missing.');
+        final batch = {
+          'projectID': sie,
+          'requestID': '00000000-0000-4000-8000-000000000001',
+          'tasks': [
+            for (final title in ['Kartu peserta', 'Sertifikat'])
+              {
+                'title': title,
+                'description': '',
+                'assigneeID': raka.currentUserID,
+                'reviewerID': alex.currentUserID,
+                'dueAt': due,
+              },
+          ],
+        };
+        final receipts = await Future.wait([
+          alex.publishTaskBatch(batch),
+          backends[1].mutate('publishTaskBatch', batch),
+        ]);
+        final batchIDs = receipts.first.ids('ids');
+        _check(
+          batchIDs.length == 2 &&
+              listEquals(batchIDs, receipts.last.ids('ids')) &&
+              await alex.pendingTaskBatch(sie) == null,
+          'Concurrent retry did not return the original tasks.',
+        );
+        await raka.refresh();
+        _check(
+          batchIDs.every((id) => raka.task(id) != null),
+          'Batch tasks missing for assignee.',
+        );
+
         stage = 'meeting minutes, attendance and a task from the meeting';
         final meeting = (await founder.mutate('createMeeting', {
           'groupID': committee,
@@ -998,6 +1033,63 @@ void main() {
               (detail['attendance'] as List).length == 3,
           'Meeting detail does not match the recorded minutes.',
         );
+        stage = 'meeting follow-up publication and retry';
+        final followUp = {
+          'meetingID': meeting,
+          // Follow-up request IDs are global, and each run creates a fresh meeting.
+          'requestID': meeting,
+          'title': 'Periksa materi publikasi',
+          'assigneeID': raka.currentUserID,
+          'dueAt': due,
+        };
+        final followUpID = (await alex.mutate(
+          'addMeetingFollowUp',
+          followUp,
+        )).text('id');
+        _check(
+          (await alex.mutate('addMeetingFollowUp', followUp)).text('id') ==
+              followUpID,
+          'Add retry changed follow-up ID.',
+        );
+        final publish = {
+          'meetingID': meeting,
+          'followUpID': followUpID,
+          'projectID': sie,
+          'reviewerID': alex.currentUserID,
+        };
+        final results = await Future.wait([
+          alex.mutate('publishMeetingFollowUp', publish),
+          backends[1].mutate('publishMeetingFollowUp', publish),
+        ]);
+        final followUpTask = results.first.text('id');
+        final updated = await alex.meetingDetail(meeting);
+        _check(
+          followUpTask.isNotEmpty &&
+              results.last.text('id') == followUpTask &&
+              (updated['followUps'] as List).single['taskID'] == followUpTask,
+          'Concurrent publish did not return the linked task.',
+        );
+        stage = 'meeting follow-up removal';
+        // The sie ID is fresh per run, so it doubles as a unique follow-up ID.
+        await alex.mutate('addMeetingFollowUp', {
+          ...followUp,
+          'requestID': sie,
+          'title': 'Poin dibatalkan',
+        });
+        final remove = {'meetingID': meeting, 'followUpID': sie};
+        await alex.mutate('removeMeetingFollowUp', remove);
+        await alex.mutate('removeMeetingFollowUp', remove);
+        final published = {'meetingID': meeting, 'followUpID': followUpID};
+        final kept = await alex.meetingDetail(meeting);
+        _check(
+          (kept['followUps'] as List).single['id'] == followUpID,
+          'Follow-up removal is not idempotent.',
+        );
+        await expectLater(
+          alex.mutate('removeMeetingFollowUp', published),
+          throwsA(isA<GrouplyException>()),
+        );
+        stage = 'manual task from meeting';
         final second = (await alex.mutate('createTask', {
           'projectID': sie,
           'title': 'Banner',
@@ -1127,9 +1219,9 @@ void main() {
         await reviewed.drain<void>();
         _check(reviewed.statusCode == 200, 'Operator review was rejected.');
 
-        // Finish both tasks so the persistent accounts hold no assignments.
+        // Finish the tasks so the persistent accounts hold no assignments.
         stage = 'cleanup';
-        for (final task in [first, second]) {
+        for (final task in [first, second, followUpTask, ...batchIDs]) {
           await raka.mutate('startTask', {'id': task, 'expectedVersion': 1});
           await raka.mutate('submitWork', {
             'taskID': task,
@@ -1149,7 +1241,7 @@ void main() {
         await founder.mutate('deleteAccount', {});
         _check(!founder.authenticated, 'Founder account was not removed.');
         debugPrint(
-          'PASS: committee; project lead tasks; meeting minutes, attendance, '
+          'PASS: committee; project lead tasks; premium batch concurrent retry; meeting minutes, attendance, '
           'meeting task; two-step approval + closed mapping; announcement '
           'read counts; cleanup.',
         );

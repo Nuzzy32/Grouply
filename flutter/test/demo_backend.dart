@@ -41,6 +41,8 @@ class DemoBackend implements GrouplyBackend {
       announcements = [];
   String _actor = '';
   Map<String, List<String>> _blocks = {}, _reads = {};
+  final _taskBatchReceipts = <(String, String, String), (String, JsonMap)>{};
+  bool taskBatchAvailable = true;
 
   /// Sends from the current actor are stored as `failed`, like the old demo.
   bool simulateSendFailure = false;
@@ -101,6 +103,8 @@ class DemoBackend implements GrouplyBackend {
   @override
   Future<JsonMap> snapshot() async => {
     'currentUserID': _actor,
+    'taskBatchAvailable': taskBatchAvailable,
+    'meetingFollowUpsAvailable': true,
     'users': _copy(users),
     'groups': _copy(groups),
     'projects': _copy(projects),
@@ -897,6 +901,83 @@ class DemoBackend implements GrouplyBackend {
           row['previousStatus'] = null;
         }
         return {};
+      case 'publishTaskBatch':
+        final parent = _demoProject(payload.text('projectID'));
+        final team = group(parent.text('groupID'))!;
+        final batch = payload['tasks'];
+        if (batch is! List ||
+            batch.isEmpty ||
+            batch.length > 20 ||
+            payload.text('requestID').isEmpty) {
+          throw _code('invalid_input');
+        }
+        final key = (actor, parent.text('id'), payload.text('requestID'));
+        final encoded = jsonEncode(batch);
+        final receipt = _taskBatchReceipts[key];
+        if (receipt != null) {
+          if (receipt.$1 != encoded) throw _code('invalid_input');
+          return receipt.$2;
+        }
+        _demoTaskManager(parent);
+        if (!_planActive(_orgOf(team))) throw _code('plan_inactive');
+        final result = {
+          'ids': [
+            for (final item in batch)
+              _demoMutate('createTask', {
+                ...item as JsonMap,
+                'projectID': parent.text('id'),
+              }).text('id'),
+          ],
+        };
+        _taskBatchReceipts[key] = (encoded, result);
+        return result;
+      case 'addMeetingFollowUp':
+      case 'publishMeetingFollowUp':
+        final mid = payload.text('meetingID');
+        final meeting = _find(meetings, mid);
+        if (meeting == null) throw _code('forbidden');
+        final groupID = meeting.text('groupID');
+        final team = _demoMember(groupID);
+        final rows = (meeting['followUps'] as List? ?? []).cast<JsonMap>();
+        final adding = action == 'addMeetingFollowUp';
+        final id = payload.text(adding ? 'requestID' : 'followUpID');
+        final row = _find(rows, id);
+        if (!adding && row == null) throw _code('invalid_input');
+        if (!adding && row!.text('taskID').isNotEmpty) {
+          return {'id': row.text('taskID')};
+        }
+        if (meeting.text('status') != 'done') throw _code('meeting_closed');
+        if (!_planActive(_orgOf(team))) throw _code('plan_inactive');
+        if (adding) {
+          if (id.isEmpty ||
+              !team.ids('memberIDs').contains(payload.text('assigneeID'))) {
+            throw _code('invalid_input');
+          }
+          if (team.text('coordinatorID') != actor &&
+              meeting.text('noteTakerID') != actor) {
+            throw _code('forbidden');
+          }
+          if (row != null) return {'id': id};
+          rows.add({
+            'id': id,
+            'title': _input(payload, 'title', 120),
+            'assigneeID': payload.text('assigneeID'),
+            'dueAt': _demoDue(payload),
+            'taskID': null,
+          });
+          meeting['followUps'] = rows;
+        } else {
+          final target = _demoProject(payload.text('projectID'));
+          if (target.text('groupID') != groupID) throw _code('forbidden');
+          row!['taskID'] = _demoMutate('createTask', {
+            ...row,
+            'projectID': payload.text('projectID'),
+            'reviewerID': payload.text('reviewerID'),
+            'meetingID': mid,
+          }).text('id');
+        }
+        meeting['version'] = meeting.number('version').toInt() + 1;
+        return {'id': adding ? id : row!.text('taskID')};
       case 'createTask':
         final parent = _demoProject(payload.text('projectID'));
         _demoTaskManager(parent);
@@ -2077,6 +2158,7 @@ class DemoBackend implements GrouplyBackend {
           'version': row['version'],
           'agenda': row['agenda'],
           'minutes': row['minutes'],
+          'followUps': row['followUps'] ?? [],
           'attendance': [
             for (final MapEntry(key: userID, value: status)
                 in (row['attendance'] as Map).entries)

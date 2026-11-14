@@ -30,10 +30,10 @@ def call(actor, request):
 
 def check_locks():
     run = uuid.uuid4().hex[:8]
-    k, c1, c2, x, y, m, d, z, w, fk, fc, fr, fd, fb, fl, fq, ft, fu = users = [str(uuid.uuid4()) for _ in range(18)]
+    k, c1, c2, x, y, m, d, z, w, fk, fc, fr, fd, fb, fl, fq, ft, fu, fp = users = [str(uuid.uuid4()) for _ in range(19)]
     org_a, org_b, org_c, org_e, org_f = orgs = [str(uuid.uuid4()) for _ in range(5)]
     a1, a2, b1, b2, cg, e1, e2, f1 = groups = [str(uuid.uuid4()) for _ in range(8)]
-    ap1, ap2, ap3, proj, notice, rep_a, rep_b = [str(uuid.uuid4()) for _ in range(7)]
+    ap1, ap2, ap3, proj, notice, rep_a, rep_b, proj2, batch = [str(uuid.uuid4()) for _ in range(9)]
     listed = lambda ids: ",".join("'" + i + "'" for i in ids)
     setup = f"""
       BEGIN;
@@ -47,10 +47,11 @@ def check_locks():
       INSERT INTO public.group_members VALUES
         ('{a1}','{c1}'),('{a1}','{k}'),('{a2}','{c2}'),('{b1}','{c1}'),('{b1}','{k}'),('{b2}','{c2}'),('{b2}','{k}'),
         ('{cg}','{k}'),('{cg}','{m}'),('{e1}','{k}'),('{e1}','{d}'),('{e1}','{z}'),('{e2}','{c1}'),('{e2}','{d}'),('{e2}','{w}'),
-        ('{f1}','{fk}'),('{f1}','{fc}'),('{f1}','{fr}'),('{f1}','{fd}'),('{f1}','{fb}'),('{f1}','{fl}'),('{f1}','{fq}'),('{f1}','{ft}'),('{f1}','{fu}');
+        ('{f1}','{fk}'),('{f1}','{fc}'),('{f1}','{fr}'),('{f1}','{fd}'),('{f1}','{fb}'),('{f1}','{fl}'),('{f1}','{fq}'),('{f1}','{ft}'),('{f1}','{fu}'),('{f1}','{fp}');
       INSERT INTO public.organization_roles SELECT id::uuid,'{k}','ketua' FROM unnest(ARRAY[{listed(orgs[:4])}]) id;
       INSERT INTO public.organization_roles VALUES ('{org_f}','{fk}','ketua'),('{org_f}','{fb}','bph');
-      INSERT INTO public.projects(id,group_id,title,due_at,lead_id) VALUES ('{proj}','{f1}','Sie lock',now()+interval '30 days','{fl}');
+      INSERT INTO public.projects(id,group_id,title,due_at,lead_id) VALUES ('{proj}','{f1}','Sie lock',now()+interval '30 days','{fl}'),
+        ('{proj2}','{f1}','Sie batch',now()+interval '30 days','{fp}');
       INSERT INTO public.approvals(id,organization_id,group_id,requester_id,title,note) VALUES
         ('{ap1}','{org_f}','{f1}','{fr}','Lock 1','x'),('{ap2}','{org_f}','{f1}','{fd}','Lock 2','x'),('{ap3}','{org_f}','{f1}','{fq}','Lock 3','x');
       INSERT INTO public.approval_steps(approval_id,position,approver_id) VALUES ('{ap1}',1,'{fk}'),('{ap2}',1,'{fk}'),('{ap3}',1,'{fb}');
@@ -111,6 +112,12 @@ def check_locks():
          fl, ("createTask", {"projectID": proj, "title": "Telat", "assigneeID": fq, "reviewerID": fc, "dueAt": "2030-01-01T00:00:00Z"}),
          "COMMIT;", "error:forbidden",
          f"SELECT NOT EXISTS(SELECT 1 FROM public.tasks WHERE project_id='{proj}') AND (SELECT lead_id IS NULL FROM public.projects WHERE id='{proj}');"),
+        ("project lead publishes a task batch while being removed", fc, ("removeMember", {"groupID": f1, "userID": fp}), "{}",
+         fp, ("publishTaskBatch", {"projectID": proj2, "requestID": batch, "tasks": [
+             {"title": "Telat", "description": "", "assigneeID": fq, "reviewerID": fc, "dueAt": "2030-01-01T00:00:00Z"}]}),
+         "COMMIT;", "error:forbidden",
+         f"SELECT NOT EXISTS(SELECT 1 FROM public.tasks WHERE project_id='{proj2}') "
+         f"AND NOT EXISTS(SELECT 1 FROM private.task_batch_receipts WHERE project_id='{proj2}');"),
         # Reports on organization content: operator review vs reporter account deletion, both orders.
         ("operator removes reported content while the reporter deletes the account", None,
          {"id": rep_a, "decision": "removed", "note": "Lock regression"}, '"status": "removed"',

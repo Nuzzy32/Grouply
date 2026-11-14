@@ -2,7 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:grouply/core/store.dart';
 import 'package:grouply/features/workspace_screens.dart';
@@ -15,12 +17,18 @@ class _DemoStore extends GrouplyStore {
   final DemoBackend demo;
   final calls = <({String action, JsonMap payload})>[];
   Completer<void>? gate;
+  bool loseBatchResponse = false;
 
   @override
   Future<JsonMap> mutate(String action, [JsonMap payload = const {}]) async {
     calls.add((action: action, payload: Map.of(payload)));
     await gate?.future;
-    return super.mutate(action, payload);
+    final result = await super.mutate(action, payload);
+    if (action == 'publishTaskBatch' && loseBatchResponse) {
+      loseBatchResponse = false;
+      throw const GrouplyException('Koneksi terputus.');
+    }
+    return result;
   }
 }
 
@@ -75,6 +83,8 @@ void main() {
   late _DemoStore store;
 
   setUp(() async {
+    SharedPreferences.setMockInitialValues({});
+    FlutterSecureStorage.setMockInitialValues({});
     store = _DemoStore(DemoBackend());
     await store.signIn('u1', 'demo');
   });
@@ -190,6 +200,8 @@ void main() {
         'links': <String>[],
         'expectedVersion': 2,
       });
+      store.demo.tasks.firstWhere((row) => row['id'] == 't11')['description'] =
+          'Ringkasan.\n\nKriteria review:\n- Cantumkan kesimpulan.';
       await tester.runAsync(() => store.signIn('u3', 'demo'));
       store.calls.clear();
       await _show(tester, TaskScreen(store: store, taskID: 't11'));
@@ -202,6 +214,8 @@ void main() {
       await _settleToasts(tester);
 
       await _tapOn(tester, find.byKey(const Key('open-review')));
+      expect(find.text('Kriteria review'), findsOneWidget);
+      expect(find.text('• Cantumkan kesimpulan.'), findsOneWidget);
       await _tap(tester, 'Minta revisi');
       await _tap(tester, 'Kirim ke Raka');
       expect(find.text('Jelaskan apa yang perlu diubah.'), findsOneWidget);
@@ -738,6 +752,24 @@ void main() {
         expect(find.text('Perlu perhatian'), findsOneWidget);
         expect(find.text('Statistika · Kelompok 1 · Laras'), findsOneWidget);
         expect(find.text('Terlambat 2 hari'), findsOneWidget);
+
+        expect(
+          find.byKey(const Key('project-summary-p9-overdue')),
+          findsNothing,
+        );
+        await _tapOn(
+          tester,
+          find.byKey(const Key('project-summary-p2-overdue')),
+        );
+        expect(find.text('Laporan Usability Test'), findsWidgets);
+        expect(
+          find.descendant(
+            of: find.byType(BottomSheet),
+            matching: find.text('Script wawancara'),
+          ),
+          findsOneWidget,
+        );
+        await _tapOn(tester, _labelled('Tutup'));
 
         // u1 is not in g3: summary only.
         await _tap(tester, 'Sebar kuesioner');
@@ -1662,6 +1694,38 @@ void main() {
       expect(store.calls, isEmpty);
     });
 
+    testWidgets('Project reports require an active plan and task management', (
+      tester,
+    ) async {
+      await seed();
+      await _show(tester, ProjectScreen(store: store, projectID: 'p1'));
+      await _tapOn(tester, _labelled('Aksi proyek'));
+      expect(find.text('Ekspor rekap CSV'), findsOneWidget);
+      await _tap(tester, 'Buat draf LPJ');
+      final draft = find.descendant(
+        of: find.byType(BottomSheet),
+        matching: find.byType(TextFormField),
+      );
+      expect(
+        tester.widget<TextFormField>(draft).initialValue,
+        contains('DRAF LAPORAN PERTANGGUNGJAWABAN'),
+      );
+      expect(find.text('Bagikan draf'), findsOneWidget);
+      await _tapOn(tester, _labelled('Tutup'));
+      await tester.runAsync(() => store.signIn('u2', 'demo'));
+      await _show(tester, ProjectScreen(store: store, projectID: 'p1'));
+      await _tapOn(tester, _labelled('Aksi proyek'));
+      expect(find.text('Ekspor rekap CSV'), findsNothing);
+      expect(find.text('Buat draf LPJ'), findsNothing);
+      await tester.runAsync(() => store.signIn('u1', 'demo'));
+      store.demo.organizations.single['planExpiresAt'] = null;
+      await store.refresh();
+      await _show(tester, ProjectScreen(store: store, projectID: 'p1'));
+      await _tapOn(tester, _labelled('Aksi proyek'));
+      expect(find.text('Ekspor rekap CSV'), findsNothing);
+      expect(find.text('Buat draf LPJ'), findsNothing);
+    });
+
     testWidgets('dashboard groups committees and counts pending approvals', (
       tester,
     ) async {
@@ -1715,5 +1779,221 @@ void main() {
         expect(tester.takeException(), isNull, reason: '$screen');
       }
     });
+  });
+  group('Template Proker', () {
+    Future<void> openTemplate(WidgetTester tester, {bool active = true}) async {
+      store.demo.seedOrganization(active: active);
+      await store.refresh();
+      await _show(tester, ProjectScreen(store: store, projectID: 'p1'));
+      await _tapOn(tester, find.byKey(const Key('use-template')));
+    }
+
+    testWidgets('inactive plan explains the lock and keeps manual creation', (
+      tester,
+    ) async {
+      await openTemplate(tester, active: false);
+      expect(
+        find.textContaining('Paket organisasi belum aktif'),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('template-draft')), findsNothing);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('add-task')), findsOneWidget);
+      expect(store.calls, isEmpty);
+    });
+
+    testWidgets('older server leaves manual task creation available', (
+      tester,
+    ) async {
+      store.demo.taskBatchAvailable = false;
+      await openTemplate(tester);
+      expect(
+        find.textContaining('Server belum mendukung template'),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('template-draft')), findsNothing);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('add-task')), findsOneWidget);
+    });
+
+    testWidgets(
+      'equal workloads use name order and warn about project deadline',
+      (tester) async {
+        await openTemplate(tester);
+        for (final task in store.demo.tasks) {
+          task['status'] = 'done';
+        }
+        await store.refresh();
+        await _tapOn(tester, find.byKey(const Key('template-date')));
+        await _tap(tester, 'OK');
+        await _tapOn(tester, find.byKey(const Key('template-role-Acara-u2')));
+        await _tapOn(tester, find.byKey(const Key('template-role-Acara-u3')));
+        await _tapOn(tester, find.byKey(const Key('template-draft')));
+        expect(
+          tester
+              .widget<DropdownButtonFormField<String>>(
+                find.byKey(const Key('template-assignee-0')),
+              )
+              .initialValue,
+          'u3',
+        );
+        expect(
+          find.textContaining('Deadline melewati deadline proyek'),
+          findsWidgets,
+        );
+        expect(store.calls, isEmpty);
+      },
+    );
+
+    testWidgets('publishes only selected reviewed draft', (tester) async {
+      await openTemplate(tester);
+      await _tapOn(tester, find.byKey(const Key('template-date')));
+      await _tap(tester, 'OK');
+      await _tapOn(tester, find.byKey(const Key('template-role-Acara-u1')));
+      await _tapOn(tester, find.byKey(const Key('template-draft')));
+      await _tapOn(tester, find.byKey(const Key('template-select-1')));
+      await _tapOn(tester, find.byKey(const Key('template-select-2')));
+      await _fill(
+        tester,
+        find.byKey(const Key('template-title-0')),
+        'Rundown final',
+      );
+      await _tapOn(tester, find.byKey(const Key('template-reviewer-0')));
+      await _tapOn(tester, find.text('Raka').last);
+      await _tapOn(tester, find.byKey(const Key('template-publish')));
+      expect(store.calls.last.action, 'publishTaskBatch');
+      final payload = store.calls.last.payload;
+      expect(payload['projectID'], 'p1');
+      final tasks = payload['tasks'] as List;
+      expect(tasks, hasLength(1));
+      expect(tasks.single['title'], 'Rundown final');
+      expect(tasks.single['assigneeID'], 'u1');
+      expect(tasks.single['reviewerID'], 'u2');
+      expect(
+        store.tasks.any((t) => t.text('title') == 'Rundown final'),
+        isTrue,
+      );
+      await _settleToasts(tester);
+    });
+
+    testWidgets('unconfirmed publication is recovered with the same request', (
+      tester,
+    ) async {
+      await openTemplate(tester);
+      await _tapOn(tester, find.byKey(const Key('template-date')));
+      await _tap(tester, 'OK');
+      await _tapOn(tester, find.byKey(const Key('template-role-Acara-u1')));
+      await _tapOn(tester, find.byKey(const Key('template-draft')));
+      await _tapOn(tester, find.byKey(const Key('template-select-1')));
+      await _tapOn(tester, find.byKey(const Key('template-select-2')));
+      await _tapOn(tester, find.byKey(const Key('template-reviewer-0')));
+      await _tapOn(tester, find.text('Raka').last);
+      store.loseBatchResponse = true;
+      await _tapOn(tester, find.byKey(const Key('template-publish')));
+      final first = store.calls.last.payload;
+      expect(find.byKey(const Key('template-retry')), findsOneWidget);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      await _tapOn(tester, find.byKey(const Key('use-template')));
+      expect(find.byKey(const Key('template-retry')), findsOneWidget);
+      await _tapOn(tester, find.byKey(const Key('template-retry')));
+      expect(store.calls.last.payload, first);
+      expect(
+        store.tasks.where((t) => t.text('title') == 'Susun rundown acara'),
+        hasLength(1),
+      );
+      await _settleToasts(tester);
+    });
+
+    testWidgets('unconfirmed request can be discarded and ends on sign-out', (
+      tester,
+    ) async {
+      Future<Iterable<String>> saved() async =>
+          (await const FlutterSecureStorage().readAll()).keys.where(
+            (key) => key.startsWith('grouply.pendingTaskBatch.'),
+          );
+      Future<void> loseOne() async {
+        await _tapOn(tester, find.byKey(const Key('template-date')));
+        await _tap(tester, 'OK');
+        await _tapOn(tester, find.byKey(const Key('template-role-Acara-u1')));
+        await _tapOn(tester, find.byKey(const Key('template-draft')));
+        await _tapOn(tester, find.byKey(const Key('template-select-1')));
+        await _tapOn(tester, find.byKey(const Key('template-select-2')));
+        await _tapOn(tester, find.byKey(const Key('template-reviewer-0')));
+        await _tapOn(tester, find.text('Raka').last);
+        store.loseBatchResponse = true;
+        await _tapOn(tester, find.byKey(const Key('template-publish')));
+      }
+
+      await openTemplate(tester);
+      await loseOne();
+      expect(await saved(), hasLength(1));
+      await _tapOn(tester, find.byKey(const Key('template-discard')));
+      await _tap(tester, 'Buang');
+      expect(await saved(), isEmpty);
+      expect(find.byKey(const Key('template-retry')), findsNothing);
+      final lost = store.calls.last.payload;
+      store.loseBatchResponse = true;
+      Object? failure;
+      await tester.runAsync(() async {
+        try {
+          await store.publishTaskBatch({
+            ...lost,
+            'requestID': 'second-request',
+          });
+        } catch (e) {
+          failure = e;
+        }
+      });
+      expect(failure, isA<GrouplyException>());
+      expect(await saved(), hasLength(1));
+      await tester.runAsync(store.signOut);
+      expect(await saved(), isEmpty);
+    });
+
+    testWidgets(
+      'drafts use mapped members, are editable and cancel without mutation',
+      (tester) async {
+        await openTemplate(tester);
+        await _tapOn(tester, find.byKey(const Key('template-date')));
+        await _tap(tester, 'OK');
+        await _tapOn(tester, find.byKey(const Key('template-role-Acara-u2')));
+        await _tapOn(tester, find.byKey(const Key('template-draft')));
+        expect(
+          tester
+              .widget<DropdownButtonFormField<String>>(
+                find.byKey(const Key('template-assignee-0')),
+              )
+              .initialValue,
+          'u2',
+        );
+        expect(
+          tester
+              .widget<DropdownButtonFormField<String>>(
+                find.byKey(const Key('template-assignee-1')),
+              )
+              .initialValue,
+          isNull,
+        );
+        expect(
+          find.text('Pilih pelaksana dan reviewer yang berbeda.'),
+          findsWidgets,
+        );
+        await _fill(
+          tester,
+          find.byKey(const Key('template-title-0')),
+          'Rundown yang diperbarui',
+        );
+        await _tapOn(tester, find.byKey(const Key('template-select-2')));
+        await _tapOn(tester, find.byKey(const Key('template-publish')));
+        expect(find.textContaining('Periksa tugas 1'), findsOneWidget);
+        expect(store.calls, isEmpty);
+        await tester.binding.handlePopRoute();
+        await tester.pumpAndSettle();
+        expect(store.calls, isEmpty);
+      },
+    );
   });
 }

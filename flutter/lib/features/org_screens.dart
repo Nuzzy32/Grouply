@@ -1088,6 +1088,9 @@ class _OrgDashboardState extends _WorkspaceState<OrgDashboardScreen>
           text: 'Dashboard hanya untuk Ketua, BPH, dan Pembina organisasi ini.',
         );
       }
+      if (org['planActive'] != true) {
+        return GLAccessDenied(text: 'Paket organisasi belum aktif.');
+      }
       final data = this.data;
       final stamp = data?.date('generatedAt');
       return detailPage(
@@ -1289,61 +1292,152 @@ class _OrgDashboardState extends _WorkspaceState<OrgDashboardScreen>
           ],
           for (final project in projects) ...[
             SizedBox(height: 14),
-            _projectProgress(project),
+            _projectProgress(
+              project,
+              division.text('id'),
+              data.date('generatedAt'),
+            ),
           ],
         ],
       ),
     );
   }
 
-  Widget _projectProgress(JsonMap project) {
+  void _openProjectTasks(
+    JsonMap project,
+    String divisionID,
+    String filter,
+    String label,
+    DateTime? generatedAt,
+  ) {
+    final projectID = project.text('id');
+    final cutoff = generatedAt ?? store.now;
+    showGLSheet<void>(
+      context,
+      title: label,
+      subtitle: project.text('title'),
+      builder: (sheetContext) => ListenableBuilder(
+        listenable: store,
+        builder: (_, _) {
+          if (store.orgRole(widget.orgID).isEmpty ||
+              store.organization(widget.orgID)?['planActive'] != true ||
+              !_member(store, store.group(divisionID))) {
+            return GLFormError('Akses ke rincian proker tidak tersedia.');
+          }
+          final tasks = store.tasks.where((task) {
+            if (task.text('projectID') != projectID) return false;
+            final status = task.text('status');
+            return switch (filter) {
+              'done' => status == 'done',
+              'overdue' =>
+                status != 'done' &&
+                    task.date('dueAt')?.isBefore(cutoff) == true,
+              'inReview' => status == 'in_review',
+              _ => false,
+            };
+          }).toList();
+          if (tasks.isEmpty) {
+            return Text('Tidak ada tugas dalam kategori ini.');
+          }
+          return _workList([
+            for (final task in tasks)
+              _workRow(
+                icon: 'checkmark.circle',
+                tint: GLStatus.tint(task.text('status')),
+                title: task.text('title'),
+                subtitle: GLStatus.label(task.text('status')),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  open(TaskScreen(store: store, taskID: task.text('id')));
+                },
+              ),
+          ]);
+        },
+      ),
+    );
+  }
+
+  Widget _projectProgress(
+    JsonMap project,
+    String divisionID,
+    DateTime? generatedAt,
+  ) {
     final total = project.number('total').toInt();
     final done = project.number('done').toInt();
     final due = project.date('dueAt');
+    final canOpen = _member(store, store.group(divisionID));
     final flags = [
       for (final (key, label, tint) in [
+        ('done', 'selesai', GLTheme.mint),
         ('overdue', 'terlambat', GLTheme.coral),
+        ('inReview', 'menunggu review', GLTheme.chip),
         ('idle', 'tanpa kabar', GLTheme.butter),
         ('reviewPending', 'review tertahan', GLTheme.lavender),
-        ('inReview', 'menunggu review', GLTheme.chip),
       ])
-        if (project.number(key) > 0)
-          GLChip(
-            label: '${project.number(key)} $label',
-            background: tint,
-            height: 24,
-            fontSize: 12,
-          ),
-    ];
-    return MergeSemantics(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(child: Text(project.text('title'), style: gl(15, w600))),
-              SizedBox(width: 8),
-              Text(
-                '$done/$total selesai',
-                style: gl(13, w400, 0, GLTheme.text3),
+        if (total > 0 &&
+            (project.number(key) > 0 ||
+                const {'done', 'overdue', 'inReview'}.contains(key)))
+          if (canOpen &&
+              project.number(key) > 0 &&
+              const {'done', 'overdue', 'inReview'}.contains(key))
+            GLTap(
+              key: Key('project-summary-${project.text('id')}-$key'),
+              label: '${project.number(key)} $label, lihat tugas',
+              onTap: () => _openProjectTasks(
+                project,
+                divisionID,
+                key,
+                label,
+                generatedAt,
               ),
-            ],
-          ),
-          if (due != null) ...[
-            SizedBox(height: 2),
+              child: SizedBox(
+                height: 44,
+                child: Center(
+                  widthFactor: 1,
+                  child: GLChip(
+                    label: '${project.number(key)} $label ›',
+                    background: tint,
+                    height: 28,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            )
+          else
+            GLChip(
+              label: '${project.number(key)} $label',
+              background: tint,
+              height: 24,
+              fontSize: 12,
+            ),
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(child: Text(project.text('title'), style: gl(15, w600))),
+            SizedBox(width: 8),
             Text(
-              'Deadline ${GLFormat.date(due)}',
-              style: gl(12, w400, 0, GLTheme.secondary),
+              total == 0 ? 'Belum ada tugas' : '$done/$total selesai',
+              style: gl(13, w400, 0, GLTheme.text3),
             ),
           ],
-          SizedBox(height: 8),
-          GLProgressBar(value: total == 0 ? 0 : done / total),
-          if (flags.isNotEmpty) ...[
-            SizedBox(height: 8),
-            Wrap(spacing: 6, runSpacing: 6, children: flags),
-          ],
+        ),
+        if (due != null) ...[
+          SizedBox(height: 2),
+          Text(
+            'Deadline ${GLFormat.date(due)}',
+            style: gl(12, w400, 0, GLTheme.secondary),
+          ),
         ],
-      ),
+        SizedBox(height: 8),
+        if (total > 0) GLProgressBar(value: done / total),
+        if (flags.isNotEmpty) ...[
+          SizedBox(height: 8),
+          Wrap(spacing: 6, runSpacing: 6, children: flags),
+        ],
+      ],
     );
   }
 

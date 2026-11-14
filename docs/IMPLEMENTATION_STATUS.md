@@ -134,6 +134,13 @@ Review tambahan menutup pesan gagal yang terlihat lintas persona, koordinator de
 - Flutter: tombol **Laporkan** di layar rapat, pengajuan, dan pengumuman memakai lembar laporan yang sama dengan chat; berubah menjadi "Sudah kamu laporkan" setelah terkirim.
 - Verifikasi lokal: `organization_work` **142 PASS** (22 baru), `workflow` 40, `milestone_e` 54, `organization` 66; uji kunci `billing_local.py` **12/12**, `moderation_local.py` 5/5; smoke, advisors, dan lint bersih; `flutter analyze` bersih, `flutter test` **168 lulus**; keempat tes localhost lulus 3/3 run, termasuk laporan pengumuman dan peninjauan operator lewat HTTP.
 
+## Premium tanpa AI — Template Proker
+
+- Flutter menampilkan **Gunakan Template** untuk koordinator grup atau sie di proyek organisasi. Template **Persiapan Seminar** menghasilkan tiga draf. Saran pelaksana memakai pemetaan peran dan jumlah tugas aktif. Koordinator dapat mengubah atau melepas pilihan sebelum menerbitkan tugas.
+- Migration `20261113173427_premium_task_batch.sql` menambah `publishTaskBatch` untuk satu proyek, maksimal 20 tugas. Aksi memakai validasi dan efek `createTask`, dengan pemeriksaan paket aktif untuk penerbitan baru. Hasil disimpan bersama tugas dalam satu transaksi. Flutter menyimpan permintaan yang belum terkonfirmasi di secure storage agar percobaan ulang memakai ID yang sama.
+- Verifikasi lokal: `flutter analyze` bersih, **178 tes Flutter lulus** termasuk 4 integrasi Supabase localhost, empat suite SQL lama **302 pemeriksaan lulus**, dan suite batch **12 pemeriksaan lulus**. Uji kunci organisasi **12/12**, advisors dan lint bersih. Integrasi menguji dua permintaan batch bersamaan lewat HTTP dan memeriksa tugas terlihat oleh pelaksana.
+- Build iOS Simulator berhasil. Build Android belum terverifikasi karena resolusi dependensi Gradle belum berhasil. Alur UI diuji melalui widget test dan belum dijalankan di simulator, perangkat fisik, atau cloud. Tahap berikutnya dan pilot ada di [rencana Premium](PLAN-premium-tanpa-ai.md).
+
 ## Target cloud dan rilis yang belum tersedia
 
 Belum tersedia/terverifikasi: deployment cloud, provider Apple nyata dan pencabutan token Apple, Realtime Group Chat lintas perangkat fisik, APNs/pengingat lokal, domain/AASA/Universal Links, operator moderasi production dan kebijakan retention. Penghapusan akun password server dan CLI moderasi tersedia lokal, bukan bukti readiness Apple/App Review. Source migration aktual ada di `supabase/migrations`; DDL dokumen produk mencakup target yang lebih luas. Tidak ada proyek cloud atau database production yang diubah. Gate cloud/TestFlight tetap belum dicentang.
