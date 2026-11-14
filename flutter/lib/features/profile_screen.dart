@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/store.dart';
 import '../ui/gl.dart';
+import '../ui/gupy.dart' show GupyLogo;
 
 String _failureText(Object failure) => failure is GrouplyException
     ? failure.message
@@ -823,12 +824,7 @@ class _AboutScreen extends StatelessWidget {
           GLCard(
             child: Row(
               children: [
-                Container(
-                  width: 52,
-                  height: 52,
-                  decoration: glBox(GLTheme.mint, 18),
-                  child: GLIcon('person.3', size: 26),
-                ),
+                GupyLogo(size: 52, radius: 18),
                 SizedBox(width: 14),
                 Expanded(
                   child: Column(

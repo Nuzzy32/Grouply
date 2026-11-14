@@ -752,6 +752,8 @@ class _GroupsState extends _WorkspaceState<GroupsScreen>
                     message:
                         'Grup menyatukan proyek, tugas, dan chat kelompokmu. Buat grup dengan tombol + atau gabung pakai kode undangan.',
                     icon: 'person.3',
+                    // First thing a new account sees: Gupy waves hello.
+                    art: GupyRig(size: 140, idle: false, waveOnStart: true),
                   ),
                 ],
                 for (final group in groups) ...[

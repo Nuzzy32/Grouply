@@ -480,12 +480,18 @@ class _MyTasksState extends _WorkspaceState<MyTasksScreen> {
                           message:
                               'Belum ada tugas yang ditugaskan ke kamu atau menunggu review kamu. Saat koordinator membagi tugas, semuanya muncul di sini.',
                           icon: 'checkmark.circle',
+                          // Nothing to do yet: Gupy sits back and waits.
+                          art: GupyStill(pose: 'santai', size: 150),
                           tint: GLTheme.sky,
                         )
                       : Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           spacing: 22,
                           children: [
+                            if (filter == 'all' &&
+                                toReview.isEmpty &&
+                                done.length == mine.length)
+                              _AllDone(count: done.length),
                             for (final (title, items) in sections)
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -925,6 +931,12 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: 12,
       children: [
+        GupyHint(
+          id: 'task-flow',
+          title: 'Begini alur tugasnya',
+          text:
+              'Pelaksana mengerjakan, lalu kirim hasil berupa catatan dan tautan. Reviewer memeriksa: disetujui berarti selesai, kalau diminta revisi kirim versi baru.',
+        ),
         if (status == 'needs_revision' &&
             last != null &&
             feedbackText.isNotEmpty)
@@ -1190,6 +1202,11 @@ class _TaskState extends _WorkspaceState<TaskScreen> {
           ),
           for (final link in sub.ids('links'))
             _TaskLinkRow(url: link, external: true),
+          _SubmissionFiles(
+            store: store,
+            task: task,
+            submissionID: sub.text('id'),
+          ),
           if (feedbackText.isNotEmpty)
             Container(
               padding: EdgeInsets.only(top: 12),
@@ -2272,6 +2289,135 @@ class _TaskLinkRow extends StatelessWidget {
   }
 }
 
+const _maxSubmissionFiles = 3;
+const _maxSubmissionFileBytes = 10 * 1024 * 1024;
+// Same list as the `submission-files` bucket (allowed_mime_types).
+const _submissionFileTypes = {
+  'pdf': 'application/pdf',
+  'jpg': 'image/jpeg',
+  'jpeg': 'image/jpeg',
+  'png': 'image/png',
+  'docx':
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'pptx':
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+};
+
+String _fileSize(int bytes) => bytes < 1024 * 1024
+    ? '${(bytes / 1024).ceil()} KB'
+    : '${(bytes / 1024 / 1024).toStringAsFixed(1).replaceAll('.', ',')} MB';
+
+/// One attachment: picked (with a remove button) or sent (opens on tap).
+class _TaskFileRow extends StatelessWidget {
+  const _TaskFileRow({
+    required this.name,
+    required this.type,
+    required this.size,
+    this.onRemove,
+    this.onOpen,
+  });
+  final String name;
+  final String type;
+  final int size;
+  final VoidCallback? onRemove;
+  final VoidCallback? onOpen;
+  @override
+  Widget build(BuildContext context) {
+    final row = Container(
+      constraints: BoxConstraints(minHeight: 48),
+      padding: EdgeInsets.only(left: 12, right: onRemove == null ? 12 : 0),
+      decoration: glBox(GLTheme.muted, 14),
+      child: Row(
+        spacing: 10,
+        children: [
+          GLIcon(type.startsWith('image/') ? 'photo' : 'doc.text', size: 19),
+          Expanded(
+            child: Text(
+              name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: gl(14, w500),
+            ),
+          ),
+          Text(_fileSize(size), style: gl(13, w400, 0, GLTheme.secondary)),
+          if (onOpen != null)
+            GLIcon('arrow.up.right.square', size: 17, color: GLTheme.secondary),
+          if (onRemove != null)
+            GLTap(
+              label: 'Hapus $name',
+              onTap: onRemove,
+              child: SizedBox(
+                width: 44,
+                height: 44,
+                child: GLIcon('xmark', size: 16, color: GLTheme.secondary),
+              ),
+            ),
+        ],
+      ),
+    );
+    return onOpen == null
+        ? row
+        : GLTap(
+            label: 'Buka $name',
+            onTap: onOpen,
+            child: ExcludeSemantics(child: row),
+          );
+  }
+}
+
+/// Attachments of one submission, read from the server per task (they are
+/// not in the snapshot). Shows nothing while loading or without files.
+class _SubmissionFiles extends StatelessWidget {
+  const _SubmissionFiles({
+    required this.store,
+    required this.task,
+    required this.submissionID,
+  });
+  final GrouplyStore store;
+  final JsonMap task;
+  final String submissionID;
+
+  Future<void> _open(BuildContext context, String path) async {
+    try {
+      final url = await store.submissionFileUrl(path);
+      // Signed link from our own Storage, valid for 10 minutes.
+      if (!await launchUrl(Uri.parse(url), mode: LaunchMode.inAppBrowserView)) {
+        throw const GrouplyException('File belum dapat dibuka.');
+      }
+    } catch (e) {
+      if (context.mounted) {
+        showGLToast(context, '$e', kind: GLToastKind.err);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!store.submissionFilesAvailable) return SizedBox.shrink();
+    return FutureBuilder(
+      future: store.submissionFiles(task.text('id'), _submissions(task).length),
+      builder: (context, snapshot) {
+        final files = snapshot.data?[submissionID] ?? const [];
+        if (files.isEmpty) return SizedBox.shrink();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          spacing: 8,
+          children: [
+            for (final file in files)
+              _TaskFileRow(
+                name: file.text('name'),
+                type: file.text('type'),
+                size: file.number('size').toInt(),
+                onOpen: () => _open(context, file.text('path')),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
 /// Multiline input box (`TaskTextArea`): white, 1pt border.
 class _TaskTextArea extends StatelessWidget {
   const _TaskTextArea({
@@ -3055,8 +3201,46 @@ class _TaskSubmissionSheetState extends State<_TaskSubmissionSheet> {
 
   final note = TextEditingController();
   final links = [TextEditingController()];
+  // Picked files and, once uploaded, their storage path (kept so a retry
+  // after a failed submit does not upload them again).
+  final files = <({String name, Uint8List bytes, String type})>[];
+  final uploaded = <String?>[];
   String? error;
+  String? progress;
   bool busy = false;
+
+  Future<void> _pick() async {
+    final List<PlatformFile> picked;
+    try {
+      picked = await FilePicker.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: _submissionFileTypes.keys.toList(),
+      );
+    } catch (_) {
+      return setState(() => error = 'File belum dapat dipilih.');
+    }
+    String? problem;
+    for (final file in picked) {
+      if (files.length >= _maxSubmissionFiles) {
+        problem = 'Maksimal $_maxSubmissionFiles file per kiriman.';
+        break;
+      }
+      final type = _submissionFileTypes[file.extension?.toLowerCase()];
+      if (type == null) {
+        problem = '${file.name} bukan PDF, gambar, atau dokumen Office.';
+      } else if ((await file.length() ?? 0) > _maxSubmissionFileBytes) {
+        problem = '${file.name} lebih dari 10 MB.';
+      } else {
+        files.add((
+          name: file.name,
+          bytes: await file.readAsBytes(),
+          type: type,
+        ));
+        uploaded.add(null);
+      }
+    }
+    if (mounted) setState(() => error = problem);
+  }
 
   @override
   void dispose() {
@@ -3093,11 +3277,28 @@ class _TaskSubmissionSheetState extends State<_TaskSubmissionSheet> {
     });
     final task = widget.task;
     try {
+      for (var i = 0; i < files.length; i++) {
+        if (uploaded[i] != null) continue;
+        if (mounted) {
+          setState(() => progress = 'Mengunggah ${i + 1}/${files.length}…');
+        }
+        uploaded[i] = await widget.store.uploadSubmissionFile(
+          task.text('id'),
+          files[i].bytes,
+          files[i].type,
+        );
+      }
+      if (mounted) setState(() => progress = null);
       await widget.store.mutate('submitWork', {
         'taskID': task.text('id'),
         'expectedVersion': _openedVersion,
         'note': text,
         'links': clean,
+        if (files.isNotEmpty)
+          'files': [
+            for (var i = 0; i < files.length; i++)
+              {'path': uploaded[i], 'name': files[i].name},
+          ],
       });
       if (!mounted) return;
       showGLToast(
@@ -3108,9 +3309,74 @@ class _TaskSubmissionSheetState extends State<_TaskSubmissionSheet> {
     } catch (e) {
       if (mounted) setState(() => error = '$e');
     } finally {
-      if (mounted) setState(() => busy = false);
+      if (mounted) {
+        setState(() {
+          busy = false;
+          progress = null;
+        });
+      }
     }
   }
+
+  Widget _files() => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    spacing: 8,
+    children: [
+      Row(
+        children: [
+          Expanded(
+            child: Text.rich(
+              TextSpan(
+                text: 'File (opsional)',
+                children: [
+                  TextSpan(
+                    text: '  PDF, gambar, Office · maks 10 MB',
+                    style: gl(13, w400, 0, GLTheme.secondary),
+                  ),
+                ],
+              ),
+              style: gl(14, w600),
+            ),
+          ),
+          Text(
+            '${files.length}/$_maxSubmissionFiles',
+            style: gl(13, w400, 0, GLTheme.secondary),
+          ),
+        ],
+      ),
+      for (var i = 0; i < files.length; i++)
+        _TaskFileRow(
+          name: files[i].name,
+          type: files[i].type,
+          size: files[i].bytes.length,
+          onRemove: busy
+              ? null
+              : () => setState(() {
+                  files.removeAt(i);
+                  uploaded.removeAt(i);
+                }),
+        ),
+      if (files.length < _maxSubmissionFiles)
+        Align(
+          alignment: Alignment.centerLeft,
+          child: GLTap(
+            key: Key('submission-attach'),
+            onTap: busy ? null : _pick,
+            child: SizedBox(
+              height: 44,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                spacing: 6,
+                children: [
+                  GLIcon('paperclip', size: 19),
+                  Text('Lampirkan file', style: gl(15, w600)),
+                ],
+              ),
+            ),
+          ),
+        ),
+    ],
+  );
 
   @override
   Widget build(BuildContext context) => Column(
@@ -3202,11 +3468,12 @@ class _TaskSubmissionSheetState extends State<_TaskSubmissionSheet> {
             ),
         ],
       ),
+      if (widget.store.submissionFilesAvailable) _files(),
       if (error != null) GLFormError(error!),
       GLSubmitButton(
         key: Key('submit-work'),
         title: busy
-            ? 'Mengirim…'
+            ? progress ?? 'Mengirim…'
             : (error?.contains('Gagal') ?? false)
             ? 'Coba lagi'
             : 'Kirim untuk direview',
@@ -3355,6 +3622,11 @@ class _TaskReviewSheetState extends State<_TaskReviewSheet> {
                 ),
                 for (final link in sub.ids('links'))
                   _TaskLinkRow(url: link, external: true),
+                _SubmissionFiles(
+                  store: store,
+                  task: task,
+                  submissionID: sub.text('id'),
+                ),
               ],
             ),
           ),
@@ -3641,4 +3913,55 @@ String _clientID() {
       .map((byte) => byte.toRadixString(16).padLeft(2, '0'))
       .join();
   return '${hex.substring(0, 8)}-${hex.substring(8, 12)}-${hex.substring(12, 16)}-${hex.substring(16, 20)}-${hex.substring(20)}';
+}
+
+/// Every task of yours is done and nothing waits for your review: Gupy cheers
+/// (a tap makes him hop).
+class _AllDone extends StatefulWidget {
+  const _AllDone({required this.count});
+  final int count;
+  @override
+  State<_AllDone> createState() => _AllDoneState();
+}
+
+class _AllDoneState extends State<_AllDone>
+    with SingleTickerProviderStateMixin {
+  late final _hop = AnimationController(
+    vsync: this,
+    duration: Duration(milliseconds: (GupyJump.seconds * 1000).round()),
+  );
+  @override
+  void dispose() {
+    _hop.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Container(
+    key: Key('tasks-all-done'),
+    padding: EdgeInsets.fromLTRB(8, 8, 18, 8),
+    decoration: glBox(GLTheme.mint, 24),
+    child: Row(
+      children: [
+        GestureDetector(
+          onTap: reduceMotionOf(context) ? null : () => _hop.forward(from: 0),
+          child: GupyJump(progress: _hop, size: 96),
+        ),
+        SizedBox(width: 6),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            spacing: 4,
+            children: [
+              Text('Semua tugasmu beres!', style: gl(17, w700)),
+              Text(
+                '${widget.count} tugas selesai. Gupy ikut senang.',
+                style: gl(14, w400, 0, GLTheme.text2),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
 }

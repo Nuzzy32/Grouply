@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Icon from '#lib/Icon.svelte';
+	import Gupy from '#lib/gupy/Gupy.svelte';
 	import { dayOffset, isOverdue } from '#lib/app/format.ts';
 	import { header, store } from '#lib/app/store.svelte.ts';
 	import TaskTable from '#lib/app/ui/TaskTable.svelte';
@@ -71,11 +72,18 @@
 
 	{#if none}
 		<div class="empty">
-			<span class="empty-icon"><Icon name="task_alt" size={28} /></span>
+			<Gupy size={150} pose="santai" />
 			<b>Belum ada tugas</b>
 			<span>Saat koordinator membagi tugas atau ada hasil kerja yang perlu kamu review, semuanya muncul di sini.</span>
 		</div>
 	{:else}
+		{#if filter === 'all' && !toReview.length && done.length === mine.length}
+			<!-- Semua tugasmu selesai dan tidak ada yang menunggu review: Gupy ikut senang. -->
+			<div class="all-done">
+				<Gupy size={96} pose="celebrate" />
+				<div><b>Semua tugasmu beres!</b><span>{done.length} tugas selesai. Gupy ikut senang.</span></div>
+			</div>
+		{/if}
 		{#each sections as [title, items] (title)}
 			<section class="section">
 				<div class="sec-head"><h2>{title}</h2><span>{items.length}</span></div>
@@ -183,6 +191,26 @@
 		font-size: 13px;
 		color: var(--secondary);
 	}
+	.all-done {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		padding: 8px 22px 8px 10px;
+		border-radius: 24px;
+		background: var(--mint);
+	}
+	.all-done div {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+	}
+	.all-done b {
+		font-size: 17px;
+	}
+	.all-done span {
+		font-size: 14px;
+		color: var(--text2, var(--secondary));
+	}
 	.sec-empty {
 		background: var(--surface);
 		border-radius: 24px;
@@ -200,15 +228,6 @@
 		align-items: center;
 		gap: 10px;
 		text-align: center;
-	}
-	.empty-icon {
-		width: 56px;
-		height: 56px;
-		border-radius: 20px;
-		background: var(--sky);
-		display: flex;
-		align-items: center;
-		justify-content: center;
 	}
 	.empty b {
 		font-size: 19px;

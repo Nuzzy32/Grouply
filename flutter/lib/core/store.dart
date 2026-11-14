@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -45,6 +46,9 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
   String currentUserID = '';
   bool taskBatchAvailable = false;
   bool meetingFollowUpsAvailable = false;
+
+  /// Server stores submission attachments (`submission_files` migration).
+  bool submissionFilesAvailable = false;
   bool _publishingTaskBatch = false;
   static const _taskBatchStorage = FlutterSecureStorage();
   bool loading = false;
@@ -138,6 +142,8 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
     currentUserID = '';
     taskBatchAvailable = false;
     meetingFollowUpsAvailable = false;
+    submissionFilesAvailable = false;
+    _files.clear();
     _blocks = {};
     _reads = {};
     _snapshotOrder++;
@@ -603,6 +609,53 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
     for (final row in announcements(orgID))
       if (row['read'] != true) row,
   ];
+
+  // One request per task and revision count; a new submission refetches.
+  final _files = <String, Future<Map<String, List<JsonMap>>>>{};
+
+  /// Attachments of every submission of [taskID], keyed by submission id.
+  Future<Map<String, List<JsonMap>>> submissionFiles(
+    String taskID,
+    int revisions,
+  ) {
+    final key = '$taskID#$revisions';
+    return _files.putIfAbsent(key, () async {
+      try {
+        return await _backend.submissionFiles(taskID);
+      } catch (failure) {
+        _files.remove(key);
+        throw GrouplyException(
+          serverMessage(failure) ?? 'Lampiran belum dapat dimuat.',
+        );
+      }
+    });
+  }
+
+  Future<String> uploadSubmissionFile(
+    String taskID,
+    Uint8List bytes,
+    String contentType,
+  ) async {
+    if (!authenticated) throw const GrouplyException('Masuk terlebih dahulu.');
+    try {
+      return await _backend.uploadSubmissionFile(taskID, bytes, contentType);
+    } catch (failure) {
+      throw GrouplyException(
+        serverMessage(failure) ??
+            'File belum dapat diunggah. Periksa koneksi lalu coba lagi.',
+      );
+    }
+  }
+
+  Future<String> submissionFileUrl(String path) async {
+    try {
+      return await _backend.submissionFileUrl(path);
+    } catch (failure) {
+      throw GrouplyException(
+        serverMessage(failure) ?? 'File belum dapat dibuka.',
+      );
+    }
+  }
 
   /// Agenda, minutes and attendance (`grouply_meeting`). Not cached:
   /// the meeting screen reloads it when the snapshot `version` changes.
@@ -1260,6 +1313,7 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
     currentUserID = actor;
     taskBatchAvailable = value['taskBatchAvailable'] == true;
     meetingFollowUpsAvailable = value['meetingFollowUpsAvailable'] == true;
+    submissionFilesAvailable = value['submissionFilesAvailable'] == true;
     _blocks = {actor: blocks};
     _reads = {actor: reads};
   }

@@ -2,6 +2,7 @@
 	import { page } from '$app/state';
 	import Icon from '#lib/Icon.svelte';
 	import { dateInput, dueFromInput, dueLabel, groupIcon, initials, isOverdue, STATUS, tint } from '#lib/app/format.ts';
+	import { contributions } from '#lib/app/contribution.ts';
 	import { canManageTasks, PROJECT_STATUS } from '#lib/app/project.ts';
 	import { openTask } from '#lib/app/nav.ts';
 	import { ask, flash, header, store } from '#lib/app/store.svelte.ts';
@@ -32,7 +33,7 @@
 	const waitHours = (t: Task) =>
 		Math.floor((now.getTime() - new Date(t.submissions.at(-1)?.createdAt ?? now).getTime()) / 3_600_000);
 
-	// Group Pulse: memilih anggota menyorot tugasnya, bukan menilai kontribusi.
+	// Group Pulse: memilih anggota menyorot tugasnya; porsi kontribusi ada di kartu Kontribusi.
 	let picked = $state('');
 	const members = $derived(
 		(group?.memberIDs ?? []).map((id) => {
@@ -41,6 +42,9 @@
 		})
 	);
 	const pickedStats = $derived(members.find((m) => m.id === picked));
+	const contrib = $derived(contributions(tasks, group?.memberIDs ?? [], now));
+	const contribDetail = (c: (typeof contrib)[number]) =>
+		[`${c.done} disetujui`, c.review && `${c.review} direview`, c.active && `${c.active} dikerjakan`, c.late && `${c.late} terlambat`].filter(Boolean).join(' · ');
 	const dim = (t: Task) => picked !== '' && t.assigneeID !== picked;
 
 	let view = $state<'board' | 'list'>('board');
@@ -339,11 +343,31 @@
 							<button onclick={() => (picked = '')}>Tampilkan semua</button>
 						</span>
 						<span class="bar"><span style:width="{pickedStats.total ? (pickedStats.done / pickedStats.total) * 100 : 0}%"></span></span>
-						<small>Ringkasan pembagian tugas, bukan penilaian kontribusi.</small>
 					</div>
 				{/if}
 			</div>
 		</div>
+
+		{#if tasks.length}
+			<div class="card contrib">
+				<div class="pulse-head">
+					<h2>Kontribusi</h2>
+					<span>{contrib.some((c) => c.done) ? 'Porsi dari tugas yang sudah disetujui; tiap tugas dihitung sama.' : 'Persentase muncul setelah ada tugas yang disetujui.'}</span>
+				</div>
+				<div class="contrib-rows">
+					{#each contrib as c (c.id)}
+						<div class="contrib-row">
+							<span class="av" style="--s:40px;font-size:13px" style:background={tint(user(c.id)?.tint)}>{initials(user(c.id)?.name)}</span>
+							<div class="contrib-main">
+								<span class="contrib-name"><b>{c.id ? name(c.id) : 'Pengguna terhapus'}</b><b>{c.percent}%</b></span>
+								<span class="bar"><span style:width="{c.percent}%"></span></span>
+								<small>{contribDetail(c)}</small>
+							</div>
+						</div>
+					{/each}
+				</div>
+			</div>
+		{/if}
 
 		<div class="tasks-head">
 			<h2>Tugas</h2>
@@ -617,6 +641,48 @@
 		flex-direction: column;
 		gap: 16px;
 	}
+	.contrib {
+		padding: 22px 24px;
+		display: flex;
+		flex-direction: column;
+		gap: 16px;
+	}
+	.contrib-rows {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+		gap: 14px 28px;
+	}
+	.contrib-row {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+	}
+	.contrib-main {
+		flex: 1;
+		min-width: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+	}
+	.contrib-name {
+		display: flex;
+		justify-content: space-between;
+		gap: 8px;
+		font-size: 15px;
+	}
+	.contrib-name b:first-child {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		font-weight: 600;
+	}
+	.contrib .bar {
+		background: var(--muted);
+	}
+	.contrib small {
+		font-size: 12px;
+		color: var(--secondary);
+	}
 	.pulse-head {
 		display: flex;
 		align-items: baseline;
@@ -800,10 +866,6 @@
 		border-radius: 3px;
 		background: var(--ink);
 		transition: width 0.5s ease;
-	}
-	.picked small {
-		font-size: 12px;
-		color: var(--text2);
 	}
 	.tasks-head {
 		padding-top: 4px;

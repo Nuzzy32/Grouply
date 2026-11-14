@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Icon from '#lib/Icon.svelte';
 	import { reducedMotion, reveal } from '#lib/reveal.ts';
+	import Gupy from '#lib/gupy/Gupy.svelte';
 	import AppFrame from './AppFrame.svelte';
 	import { SIGN_IN_URL, SIGN_UP_URL } from './links';
 
@@ -150,6 +151,8 @@
 				<span class="bubble">Fine dipisah jadi entity sendiri ya 👌</span>
 			</div>
 		</div>
+		<!-- Gupy menyapa dari sudut mockup; arahkan kursor untuk lambaian lagi. -->
+		<div class="hero-gupy"><Gupy size={210} waveOnShow hoverWave /></div>
 	</div>
 </section>
 
@@ -463,6 +466,20 @@
 		gap: 4px;
 	}
 
+	.hero-gupy {
+		display: flex;
+		justify-content: center;
+		margin-top: -40px;
+		position: relative;
+	}
+	@media (min-width: 1100px) {
+		.hero-gupy {
+			position: absolute;
+			left: -150px;
+			bottom: -60px;
+			margin: 0;
+		}
+	}
 	.float {
 		position: absolute;
 		display: none;

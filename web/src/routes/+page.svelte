@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Icon from '#lib/Icon.svelte';
+	import Gupy from '#lib/gupy/Gupy.svelte';
 	import ThemeToggle from '#lib/ThemeToggle.svelte';
 	import { reveal } from '#lib/reveal.ts';
 	import Demo from '#lib/landing/Demo.svelte';
@@ -79,6 +80,8 @@
 		<div class="wrap cta rv" style="--t:.9s">
 			<span class="glow" aria-hidden="true" style="left:-80px;top:-80px;background:#ded2ff;opacity:.35"></span>
 			<span class="glow" aria-hidden="true" style="right:-60px;bottom:-100px;background:#c9f2d6;opacity:.3"></span>
+			<!-- Gupy menunjuk ke arah ajakan (pose menunjuk ke kiri). -->
+			<span class="cta-gupy"><Gupy size={190} pose="point" /></span>
 			<h2>Mulai kelompok berikutnya dengan lebih tenang.</h2>
 			<p>Buat grup, bagikan kode undangan, dan bagi tugas pertama dalam beberapa menit.</p>
 			<div class="cta-actions">
@@ -308,6 +311,17 @@
 		align-items: center;
 		gap: 22px;
 		text-align: center;
+	}
+	.cta-gupy {
+		display: none;
+	}
+	@media (min-width: 980px) {
+		.cta-gupy {
+			display: block;
+			position: absolute;
+			right: clamp(8px, 4vw, 56px);
+			bottom: 8px;
+		}
 	}
 	.glow {
 		position: absolute;

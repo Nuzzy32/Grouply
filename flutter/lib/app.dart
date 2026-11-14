@@ -10,6 +10,7 @@ import 'features/chat_screens.dart';
 import 'features/profile_screen.dart';
 import 'features/workspace_screens.dart';
 import 'ui/gl.dart';
+import 'ui/gupy.dart';
 
 String? taskIDFromLink(Uri uri) {
   if (uri.scheme != 'grouply' ||
@@ -38,6 +39,11 @@ class _GrouplyAppState extends State<GrouplyApp> {
   StreamSubscription<Uri>? _links;
   String _actor = '';
   String? _pendingTask;
+  // Invite code entered on Welcome, used once the account is signed in.
+  // ponytail: memory only, so it is lost if the app is killed before sign-in
+  // (e.g. while confirming the email); keep it in the Keychain if that bites.
+  String? _pendingInvite;
+  bool _joining = false;
 
   @override
   void initState() {
@@ -86,6 +92,11 @@ class _GrouplyAppState extends State<GrouplyApp> {
       if (identityChanged) {
         _navigator.currentState?.popUntil((route) => route.isFirst);
       }
+      if (widget.store.authenticated &&
+          !widget.store.loading &&
+          _pendingInvite != null) {
+        _join(_pendingInvite!);
+      }
       if (!widget.store.authenticated ||
           widget.store.loading ||
           _pendingTask == null) {
@@ -112,6 +123,40 @@ class _GrouplyAppState extends State<GrouplyApp> {
       );
     });
     WidgetsBinding.instance.ensureVisualUpdate();
+  }
+
+  Future<void> _join(String code) async {
+    if (_joining) return;
+    _joining = true;
+    _pendingInvite = null;
+    try {
+      final result = await widget.store.mutate('joinGroup', {'code': code});
+      final id = result.text('id');
+      final context = _navigator.currentContext;
+      if (context == null || !context.mounted) return;
+      showGLToast(
+        context,
+        'Kamu bergabung ke ${widget.store.group(id)?.text('name') ?? 'grup'}',
+      );
+      _navigator.currentState?.push(
+        MaterialPageRoute<void>(
+          builder: (_) => GroupScreen(store: widget.store, groupID: id),
+        ),
+      );
+    } catch (error) {
+      final context = _navigator.currentContext;
+      if (context == null || !context.mounted) return;
+      showGLConfirm(
+        context,
+        title: 'Kode undangan tidak dapat dipakai',
+        text:
+            '$error\nMinta kode baru ke koordinator, lalu gabung lewat tab Grup.',
+        ok: 'Mengerti',
+        info: true,
+      );
+    } finally {
+      _joining = false;
+    }
   }
 
   @override
@@ -154,12 +199,17 @@ class _GrouplyAppState extends State<GrouplyApp> {
           if (widget.store.loading && !widget.store.authenticated) {
             return _Restoring();
           }
-          return widget.store.authenticated
-              ? _Shell(
-                  key: ValueKey(widget.store.currentUserID),
-                  store: widget.store,
-                )
-              : _Welcome(store: widget.store);
+          if (widget.store.authenticated) {
+            return _Shell(
+              key: ValueKey(widget.store.currentUserID),
+              store: widget.store,
+            );
+          }
+          return _Welcome(
+            store: widget.store,
+            invite: _pendingInvite,
+            onInvite: (code) => setState(() => _pendingInvite = code),
+          );
         },
       ),
     );
@@ -176,12 +226,7 @@ class _Restoring extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            width: 72,
-            height: 72,
-            decoration: glBox(GLTheme.mint, 26),
-            child: GLIcon('person.3', size: 36),
-          ),
+          GupyLogo(size: 72, radius: 26),
           SizedBox(height: 16),
           Text('GROUPLY', style: gl(15, w800, 0.12)),
           SizedBox(height: 16),
@@ -202,18 +247,36 @@ class _Restoring extends StatelessWidget {
   );
 }
 
-/// Swift `WelcomeView.welcome`.
-class _Welcome extends StatefulWidget {
-  const _Welcome({required this.store});
+/// The one welcome screen: Gupy waves, the invite path comes first (most
+/// people arrive with a code from their coordinator), then Masuk / Daftar.
+/// A code is kept until sign-in, then joined (see _GrouplyAppState._join).
+class _Welcome extends StatelessWidget {
+  const _Welcome({
+    required this.store,
+    required this.invite,
+    required this.onInvite,
+  });
   final GrouplyStore store;
-  @override
-  State<_Welcome> createState() => _WelcomeState();
-}
+  final String? invite;
+  final ValueChanged<String?> onInvite;
 
-class _WelcomeState extends State<_Welcome> {
+  Future<void> _enterCode(BuildContext context) async {
+    final code = await showGLSheet<String>(
+      context,
+      title: 'Punya kode undangan?',
+      subtitle:
+          'Tempel kode atau tautan dari koordinatormu. Setelah masuk atau daftar, kamu langsung bergabung ke grupnya.',
+      builder: (_) => _InviteSheet(initial: invite),
+    );
+    if (code == null || !context.mounted) return;
+    onInvite(code);
+    await showLoginSheet(context, store, signUp: true);
+  }
+
   @override
   Widget build(BuildContext context) {
-    final error = widget.store.error;
+    final error = store.error;
+    final code = invite;
     return Scaffold(
       backgroundColor: GLTheme.background,
       body: SafeArea(
@@ -228,31 +291,75 @@ class _WelcomeState extends State<_Welcome> {
           children: [
             Row(
               children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: glBox(GLTheme.mint, 14),
-                  child: GLIcon('person.3', size: 22),
-                ),
+                GupyLogo(size: 40, radius: 14),
                 SizedBox(width: 10),
                 Text('GROUPLY', style: gl(15, w800, 0.12)),
               ],
             ),
-            SizedBox(height: 18),
-            _PreviewCards(),
-            SizedBox(height: 18),
+            Center(child: GupyRig(size: 210, waveOnStart: true)),
             Text(
               'Kerja kelompok yang beneran jalan.',
               style: gl(30, w700, -0.03),
             ),
             SizedBox(height: 8),
             Text(
-              'Bagi tugas, kirim hasil, review bareng, dan pantau progres grup dalam satu tempat.',
+              'Halo, aku Gupy! Bagi tugas, kirim hasil, review bareng, dan pantau progres grup dalam satu tempat.',
               style: gl(15, w400, 0, GLTheme.secondary, 4.5),
             ),
             SizedBox(height: 18),
             GLTap.card(
-              onTap: () => showLoginSheet(context, widget.store),
+              key: const Key('welcome-invite'),
+              onTap: () => _enterCode(context),
+              child: Container(
+                padding: EdgeInsets.fromLTRB(6, 6, 16, 6),
+                decoration: glBox(GLTheme.butter, 22),
+                child: Row(
+                  children: [
+                    GupyPose(pose: 'undangan', size: 84),
+                    SizedBox(width: 6),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        spacing: 3,
+                        children: [
+                          Text(
+                            code == null
+                                ? 'Punya kode undangan?'
+                                : 'Kode undangan siap dipakai',
+                            style: gl(16, w700),
+                          ),
+                          Text(
+                            code == null
+                                ? 'Masukkan kodenya, lalu langsung gabung ke grup.'
+                                : 'Masuk atau daftar, lalu kamu langsung bergabung.',
+                            style: gl(13, w400, 0, GLTheme.text2, 3),
+                          ),
+                        ],
+                      ),
+                    ),
+                    GLIcon('chevron.right', size: 18),
+                  ],
+                ),
+              ),
+            ),
+            if (code != null)
+              Align(
+                alignment: Alignment.centerRight,
+                child: GLTap(
+                  key: const Key('welcome-invite-clear'),
+                  onTap: () => onInvite(null),
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+                    child: Text(
+                      'Hapus kode',
+                      style: gl(14, w600, 0, GLTheme.secondary),
+                    ),
+                  ),
+                ),
+              ),
+            SizedBox(height: code == null ? 12 : 2),
+            GLTap.card(
+              onTap: () => showLoginSheet(context, store),
               child: Container(
                 height: 56,
                 alignment: Alignment.center,
@@ -273,8 +380,7 @@ class _WelcomeState extends State<_Welcome> {
               height: 56,
               radius: 18,
               fontSize: 16,
-              onPressed: () =>
-                  showLoginSheet(context, widget.store, signUp: true),
+              onPressed: () => showLoginSheet(context, store, signUp: true),
             ),
             if (error != null) ...[SizedBox(height: 18), GLFormError(error)],
             SizedBox(height: 18),
@@ -301,123 +407,61 @@ class _WelcomeState extends State<_Welcome> {
   }
 }
 
-/// Three tilted preview cards (Swift `previewCards`, 220pt tall).
-class _PreviewCards extends StatelessWidget {
-  const _PreviewCards();
-  static final _deg = 3.141592653589793 / 180;
+/// Invite code field; returns the token (a pasted /invite/ link is trimmed
+/// to its code, like the Grup tab's join sheet).
+class _InviteSheet extends StatefulWidget {
+  const _InviteSheet({this.initial});
+  final String? initial;
   @override
-  Widget build(BuildContext context) => ExcludeSemantics(
-    child: SizedBox(
-      height: 220,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final w = constraints.maxWidth, h = constraints.maxHeight;
-          return Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Positioned(
-                left: 0,
-                top: h * 0.06,
-                width: w * 0.7,
-                child: Transform.rotate(
-                  angle: -3 * _deg,
-                  child: Container(
-                    padding: EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-                    decoration: ShapeDecoration(
-                      color: GLTheme.butter,
-                      shape: glShape(24),
-                      shadows: [
-                        BoxShadow(
-                          color: Color(0x1F000000),
-                          blurRadius: 24,
-                          offset: Offset(0, 10),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Perlu perhatian', style: gl(14, w700)),
-                        SizedBox(height: 6),
-                        Text(
-                          'Revisi diminta oleh Nadia',
-                          style: gl(13, w400, 0, GLTheme.text2),
-                        ),
-                        SizedBox(height: 6),
-                        Text('Tulis script DDL SQL', style: gl(15, w600)),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              Positioned(
-                left: w * 0.34,
-                top: h * 0.34,
-                width: w * 0.66,
-                child: Transform.rotate(
-                  angle: 2.5 * _deg,
-                  child: Container(
-                    padding: EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-                    decoration: ShapeDecoration(
-                      color: GLTheme.surface,
-                      shape: glShape(24),
-                      shadows: [
-                        BoxShadow(
-                          color: Color(0x24000000),
-                          blurRadius: 28,
-                          offset: Offset(0, 14),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        GLChip(
-                          label: 'Menunggu review',
-                          icon: 'eye',
-                          background: GLTheme.lavender,
-                          height: 26,
-                          fontSize: 12,
-                          iconSize: 15,
-                        ),
-                        SizedBox(height: 8),
-                        Text('Draft diagram ERD', style: gl(15, w600)),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              Positioned(
-                left: w * 0.08,
-                bottom: 0,
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: w * 0.62),
-                  child: Transform.rotate(
-                    angle: -1.5 * _deg,
-                    child: Container(
-                      padding: EdgeInsets.symmetric(
-                        vertical: 10,
-                        horizontal: 14,
-                      ),
-                      decoration: BoxDecoration(
-                        color: GLTheme.lavender,
-                        borderRadius: BorderRadius.only(
-                          topLeft: Radius.circular(18),
-                          topRight: Radius.circular(18),
-                          bottomRight: Radius.circular(18),
-                          bottomLeft: Radius.circular(6),
-                        ),
-                      ),
-                      child: Text('ERD udah aku kirim ya!', style: gl(14)),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          );
-        },
+  State<_InviteSheet> createState() => _InviteSheetState();
+}
+
+class _InviteSheetState extends State<_InviteSheet> {
+  late final _code = TextEditingController(text: widget.initial);
+  String? _error;
+
+  @override
+  void dispose() {
+    _code.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final raw = _code.text.trim();
+    final parts = raw.split('/invite/');
+    final token = (parts.length > 1 ? parts[1] : raw).trim();
+    if (token.isEmpty) return setState(() => _error = 'Isi kode undangan.');
+    Navigator.of(context).pop(token);
+  }
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      Center(child: GupyPose(pose: 'undangan', size: 150)),
+      SizedBox(height: 8),
+      TextField(
+        key: const Key('invite-code'),
+        controller: _code,
+        autofocus: true,
+        autocorrect: false,
+        enableSuggestions: false,
+        textInputAction: TextInputAction.done,
+        onSubmitted: (_) => _submit(),
+        cursorColor: GLTheme.ink,
+        style: gl(16, w500, 0, GLTheme.ink),
+        decoration: glInputDecoration(hint: 'Kode atau tautan undangan'),
       ),
-    ),
+      if (_error != null) ...[SizedBox(height: 10), GLFormError(_error!)],
+      SizedBox(height: 14),
+      GLInkButton(
+        key: const Key('invite-continue'),
+        radius: 18,
+        height: 56,
+        onPressed: _submit,
+        child: Text('Lanjut', style: gl(17, w600, 0, GLTheme.onInk)),
+      ),
+    ],
   );
 }
 
@@ -1042,11 +1086,23 @@ class _TabBar extends StatelessWidget {
                   Stack(
                     clipBehavior: Clip.none,
                     children: [
-                      GLIcon(
-                        active ? '$icon.fill' : icon,
-                        // SF tab glyphs read larger than Cupertino's at 23.
-                        size: 27,
-                        color: color,
+                      // Clay icons (assets/mascot/nav): full colour when active,
+                      // smaller and faded otherwise.
+                      AnimatedScale(
+                        scale: active ? 1 : 0.9,
+                        duration: Duration(milliseconds: 180),
+                        curve: Curves.easeOutBack,
+                        child: AnimatedOpacity(
+                          opacity: active ? 1 : 0.8,
+                          duration: Duration(milliseconds: 180),
+                          child: Image.asset(
+                            'assets/mascot/nav/$icon.webp',
+                            width: 30,
+                            height: 30,
+                            excludeFromSemantics: true,
+                            filterQuality: FilterQuality.medium,
+                          ),
+                        ),
                       ),
                       if (badge > 0)
                         Positioned(
@@ -1113,13 +1169,13 @@ class _TabBar extends StatelessWidget {
     ),
     child: Row(
       children: [
-        _button(0, 'Beranda', 'house'),
+        _button(0, 'Beranda', 'beranda'),
         SizedBox(width: 2),
-        _button(1, 'Grup', 'person.2'),
+        _button(1, 'Grup', 'grup'),
         SizedBox(width: 2),
-        _button(2, 'Chat', 'bubble.left', badge: unread),
+        _button(2, 'Chat', 'chat', badge: unread),
         SizedBox(width: 2),
-        _button(3, 'Tugas Saya', 'checkmark.circle'),
+        _button(3, 'Tugas Saya', 'tugas_saya'),
       ],
     ),
   );

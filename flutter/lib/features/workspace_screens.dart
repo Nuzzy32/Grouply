@@ -1,16 +1,20 @@
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../core/contribution.dart';
 import '../core/lpj_export.dart';
 import '../core/project_csv.dart';
 import '../core/project_lpj.dart';
 import '../core/store.dart';
 import '../ui/gl.dart';
+import '../ui/gupy.dart'
+    show GupyHint, GupyJump, GupyRig, GupyStill, reduceMotionOf;
 import 'chat_screens.dart';
 
 part 'groups_screens.dart';

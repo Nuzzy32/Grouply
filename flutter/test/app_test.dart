@@ -30,6 +30,10 @@ void main() {
     tester,
   ) async {
     SharedPreferences.setMockInitialValues({});
+    // Welcome's Gupy keeps moving; reduced motion lets pumpAndSettle settle.
+    tester.platformDispatcher.accessibilityFeaturesTestValue =
+        const FakeAccessibilityFeatures(reduceMotion: true);
+    addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
     tester.view.physicalSize = const Size(430, 932);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -59,6 +63,10 @@ void main() {
 
   testWidgets('signed-in shell opens all four tabs', (tester) async {
     SharedPreferences.setMockInitialValues({});
+    // Welcome's Gupy keeps moving; reduced motion lets pumpAndSettle settle.
+    tester.platformDispatcher.accessibilityFeaturesTestValue =
+        const FakeAccessibilityFeatures(reduceMotion: true);
+    addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
     tester.view.physicalSize = const Size(430, 932);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -140,6 +148,10 @@ void main() {
     tester,
   ) async {
     SharedPreferences.setMockInitialValues({});
+    // Welcome's Gupy keeps moving; reduced motion lets pumpAndSettle settle.
+    tester.platformDispatcher.accessibilityFeaturesTestValue =
+        const FakeAccessibilityFeatures(reduceMotion: true);
+    addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
     tester.view.physicalSize = const Size(430, 932);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -240,6 +252,10 @@ void main() {
     tester,
   ) async {
     SharedPreferences.setMockInitialValues({});
+    // Welcome's Gupy keeps moving; reduced motion lets pumpAndSettle settle.
+    tester.platformDispatcher.accessibilityFeaturesTestValue =
+        const FakeAccessibilityFeatures(reduceMotion: true);
+    addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
     tester.view.physicalSize = const Size(430, 932);
     tester.view.devicePixelRatio = 1;
     tester.view.padding = const FakeViewPadding(top: 24);

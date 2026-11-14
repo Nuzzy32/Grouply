@@ -91,4 +91,14 @@ export interface Snapshot {
 	invites: Invite[];
 	blockedUserIDs: string[];
 	readMessageIDs: string[];
+	/** Server menyimpan lampiran hasil kerja (migration submission_files). */
+	submissionFilesAvailable?: boolean;
+}
+
+/** Lampiran satu submission; dibaca per tugas dari tabel `submissions`, bukan dari snapshot. */
+export interface SubmissionFile {
+	path: string;
+	name: string;
+	size: number;
+	type: string;
 }
