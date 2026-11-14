@@ -283,6 +283,15 @@ class _ProjectState extends _WorkspaceState<ProjectScreen> {
             ],
           ),
         ),
+        if (store.isDivision(group) && canTasks)
+          GLOutlineButton(
+            key: Key('use-template'),
+            title: 'Gunakan Template',
+            icon: _activeDivision(store, group) ? 'square.grid.2x2' : 'lock',
+            onPressed: () => open(
+              _SeminarTemplateScreen(store: store, projectID: p.text('id')),
+            ),
+          ),
         _bleed(
           Row(
             spacing: 6,
@@ -1080,6 +1089,22 @@ class _ProjectState extends _WorkspaceState<ProjectScreen> {
             decoration: glBox(GLTheme.surface, 24),
             child: Column(
               children: [
+                if (_activeDivision(store, group) && store.canManageTasks(p))
+                  row(
+                    ctx,
+                    'csv',
+                    'Ekspor rekap CSV',
+                    'Tugas, pelaksana, status, dan tautan hasil terakhir',
+                    'square.and.arrow.up',
+                  ),
+                if (_activeDivision(store, group) && store.canManageTasks(p))
+                  row(
+                    ctx,
+                    'lpj',
+                    'Buat draf LPJ',
+                    'Rekap pekerjaan dan notulen rapat terkait',
+                    'doc.text',
+                  ),
                 row(
                   ctx,
                   'edit',
@@ -1134,12 +1159,123 @@ class _ProjectState extends _WorkspaceState<ProjectScreen> {
     if (!mounted) return;
     final fresh = store.project(p.text('id')) ?? p;
     switch (pick) {
+      case 'csv':
+        await _shareProjectReport(p.text('id'));
+      case 'lpj':
+        await _shareProjectReport(p.text('id'), lpj: true);
       case 'edit':
         await _openEdit(fresh, group);
       case 'status':
         completed ? await _reopen(fresh, group) : await _complete(fresh, group);
       case 'archive':
         await _archive(fresh, group);
+    }
+  }
+
+  Future<void> _shareProjectReport(String projectID, {bool lpj = false}) async {
+    if (busy || store.loading || store.isMutating) return;
+    final actor = store.currentUserID;
+    setState(() => busy = true);
+    try {
+      await store.refresh();
+      if (!mounted || actor != store.currentUserID || store.isMutating) return;
+      final project = store.project(projectID);
+      final group = store.group(project?.text('groupID') ?? '');
+      if (project == null ||
+          !_activeDivision(store, group) ||
+          !store.canManageTasks(project)) {
+        return _deny('Akses untuk mengekspor rekap tidak tersedia.');
+      }
+      String nameFor(String id) => store.user(id)?.text('name') ?? 'Anggota';
+      final tasks = _pjTasks(store, projectID);
+      var content = '';
+      if (lpj) {
+        final taskIDs = {for (final task in tasks) task.text('id')};
+        final linked = [
+          for (final meeting in store.meetings)
+            if (meeting.text('groupID') == project.text('groupID') &&
+                meeting.text('status') == 'done' &&
+                meeting.ids('taskIDs').any(taskIDs.contains))
+              meeting,
+        ];
+        final details = await Future.wait([
+          for (final meeting in linked) store.meetingDetail(meeting.text('id')),
+        ]);
+        if (!mounted || actor != store.currentUserID) return;
+        final meetings = [
+          for (final (i, meeting) in linked.indexed)
+            if (details[i].text('minutes').trim().isNotEmpty)
+              {...meeting, 'minutes': details[i].text('minutes')},
+        ];
+        var draft = projectLpj(
+          project,
+          tasks,
+          meetings,
+          nameFor,
+          GLStatus.label,
+        );
+        final edited = await showGLSheet<String>(
+          context,
+          title: 'Draf LPJ',
+          builder: (ctx) => Column(
+            spacing: 16,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              TextFormField(
+                initialValue: draft,
+                decoration: glInputDecoration(hint: 'Isi draf LPJ'),
+                minLines: 8,
+                maxLines: 12,
+                onChanged: (value) => draft = value,
+              ),
+              GLSubmitButton(
+                title: 'Bagikan draf',
+                onPressed: () {
+                  if (draft.trim().isNotEmpty) Navigator.of(ctx).pop(draft);
+                },
+              ),
+            ],
+          ),
+        );
+        if (!mounted || edited == null || actor != store.currentUserID) return;
+        await store.refresh();
+        if (!mounted || actor != store.currentUserID || store.isMutating) {
+          return;
+        }
+        final fresh = store.project(projectID);
+        if (!_activeDivision(
+              store,
+              store.group(fresh?.text('groupID') ?? ''),
+            ) ||
+            !store.canManageTasks(fresh)) {
+          return _deny('Akses untuk mengekspor rekap tidak tersedia.');
+        }
+        content = edited;
+      } else {
+        content = projectCsv(
+          project.text('title'),
+          tasks,
+          nameFor,
+          GLStatus.label,
+        );
+      }
+      final box = context.findRenderObject() as RenderBox;
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [
+            XFile.fromData(
+              utf8.encode(content),
+              mimeType: lpj ? 'text/plain' : 'text/csv',
+            ),
+          ],
+          fileNameOverrides: [lpj ? 'draf-lpj.txt' : 'rekap-proker.csv'],
+          sharePositionOrigin: box.localToGlobal(Offset.zero) & box.size,
+        ),
+      );
+    } catch (_) {
+      if (mounted) _deny('Rekap belum bisa dibagikan. Coba lagi.');
+    } finally {
+      if (mounted) setState(() => busy = false);
     }
   }
 

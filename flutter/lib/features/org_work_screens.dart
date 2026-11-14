@@ -705,6 +705,68 @@ class _MeetingState extends _WorkspaceState<MeetingScreen>
             ),
           ]),
           ..._attendance(meeting, group, detail),
+          if (store.meetingFollowUpsAvailable) ...[
+            _workHeading(
+              'Tindak lanjut rapat',
+              action: status == 'done' && _canRecord(meeting, group)
+                  ? _orgPill(
+                      'Tambah',
+                      _activeDivision(store, group) ? 'plus' : 'lock',
+                      () => _addFollowUp(meeting, group),
+                      key: Key('follow-up-add'),
+                    )
+                  : null,
+            ),
+            if ((detail['followUps'] as List? ?? []).isEmpty)
+              Text(
+                'Belum ada tindak lanjut.',
+                style: gl(14, w400, 0, GLTheme.secondary),
+              )
+            else
+              _workList([
+                for (final row in (detail['followUps'] as List).cast<JsonMap>())
+                  _workRow(
+                    key: Key('follow-up-${row.text('id')}'),
+                    icon: row.text('taskID').isEmpty
+                        ? 'list.bullet'
+                        : 'checkmark.circle',
+                    tint: row.text('taskID').isEmpty
+                        ? GLTheme.butter
+                        : GLTheme.mint,
+                    title: row.text('title'),
+                    subtitle:
+                        '${_personName(store, row.text('assigneeID'))} · ${GLFormat.date(row.date('dueAt')!)}${row.text('taskID').isEmpty ? '' : ' · Sudah diterbitkan'}',
+                    onTap: row.text('taskID').isNotEmpty
+                        ? () {
+                            if (store.task(row.text('taskID')) == null) {
+                              feedback(
+                                'Tugas tidak tersedia.',
+                                kind: GLToastKind.err,
+                              );
+                            } else {
+                              open(
+                                TaskScreen(
+                                  store: store,
+                                  taskID: row.text('taskID'),
+                                ),
+                              );
+                            }
+                          }
+                        : (status == 'done' && canTask) ||
+                              _canRecord(meeting, group)
+                        ? () => _publishFollowUp(
+                            meeting,
+                            group,
+                            row,
+                            canPublish: status == 'done' && canTask,
+                          )
+                        : () => feedback(
+                            'Hanya koordinator proyek aktif yang dapat menerbitkan tindak lanjut.',
+                            kind: GLToastKind.info,
+                          ),
+                  ),
+              ]),
+          ],
         ],
         _workHeading(
           'Tugas dari rapat ini',
@@ -850,6 +912,47 @@ class _MeetingState extends _WorkspaceState<MeetingScreen>
       title: title.length > 120 ? title.substring(0, 120) : title,
       meetingID: meeting.text('id'),
     );
+  }
+
+  Future<void> _addFollowUp(JsonMap meeting, JsonMap group) async {
+    if (!_activeDivision(store, group)) {
+      return feedback('Paket organisasi belum aktif.', kind: GLToastKind.err);
+    }
+    final saved = await showGLSheet<bool>(
+      context,
+      title: 'Tambah tindak lanjut',
+      builder: (_) =>
+          _FollowUpSheet(store: store, meeting: meeting, group: group),
+    );
+    if (saved == true && mounted) await _load();
+  }
+
+  Future<void> _publishFollowUp(
+    JsonMap meeting,
+    JsonMap group,
+    JsonMap row, {
+    required bool canPublish,
+  }) async {
+    // Removal stays available after the plan ends so dead points can be cleared.
+    final publish = canPublish && _activeDivision(store, group);
+    final remove = _canRecord(meeting, group);
+    if (!publish && !remove) {
+      return feedback('Paket organisasi belum aktif.', kind: GLToastKind.err);
+    }
+    final saved = await showGLSheet<bool>(
+      context,
+      title: publish ? 'Terbitkan tindak lanjut' : 'Tindak lanjut',
+      builder: (_) => _PublishFollowUpSheet(
+        store: store,
+        meeting: meeting,
+        group: group,
+        followUp: row,
+        projects: _taskProjects(group),
+        canPublish: publish,
+        canRemove: remove,
+      ),
+    );
+    if (saved == true && mounted) await _load();
   }
 
   Future<void> _actions(JsonMap meeting, JsonMap group) async {
@@ -1338,6 +1441,325 @@ class _MinutesSheetState extends State<_MinutesSheet> {
           busy: saving,
           onPressed: _save,
         ),
+      ],
+    ),
+  );
+}
+
+// MARK: - Meeting follow-ups
+
+class _FollowUpSheet extends StatefulWidget {
+  const _FollowUpSheet({
+    required this.store,
+    required this.meeting,
+    required this.group,
+  });
+  final GrouplyStore store;
+  final JsonMap meeting, group;
+  @override
+  State<_FollowUpSheet> createState() => _FollowUpSheetState();
+}
+
+class _FollowUpSheetState extends State<_FollowUpSheet> {
+  final title = TextEditingController();
+  String? assignee, error;
+  DateTime? due;
+  JsonMap? submitted;
+  bool busy = false;
+
+  @override
+  void dispose() {
+    title.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    if (busy) return;
+    if (submitted == null) {
+      final text = title.text.trim();
+      if (text.length < 3 || text.length > 120) {
+        setState(() => error = 'Judul harus 3–120 karakter.');
+        return;
+      }
+      if (assignee == null ||
+          !widget.group.ids('memberIDs').contains(assignee)) {
+        setState(() => error = 'Pilih pelaksana dari anggota grup.');
+        return;
+      }
+      if (due == null || !due!.isAfter(widget.store.now)) {
+        setState(() => error = 'Pilih tenggat mendatang.');
+        return;
+      }
+      submitted = {
+        'meetingID': widget.meeting.text('id'),
+        'requestID': _clientID(),
+        'title': text,
+        'assigneeID': assignee,
+        'dueAt': due!.toUtc().toIso8601String(),
+      };
+    }
+    FocusScope.of(context).unfocus();
+    setState(() {
+      busy = true;
+      error = null;
+    });
+    try {
+      await widget.store.mutate('addMeetingFollowUp', submitted!);
+      if (!mounted) return;
+      showGLToast(context, 'Tindak lanjut ditambahkan');
+      Navigator.of(context).pop(true);
+    } catch (e) {
+      if (mounted) {
+        setState(
+          () => error =
+              '$e\nCoba lagi untuk memastikan hasil, atau tutup dan muat ulang rapat.',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => PopScope(
+    canPop: !busy,
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      spacing: 16,
+      children: [
+        GLField(
+          'Tindak lanjut',
+          child: IgnorePointer(
+            ignoring: busy || submitted != null,
+            child: GLTextField(
+              key: Key('follow-up-title'),
+              controller: title,
+              maxLength: 120,
+              hint: 'Pekerjaan yang disepakati',
+              semanticLabel: 'Tindak lanjut',
+            ),
+          ),
+        ),
+        GLField(
+          'Pelaksana',
+          child: DropdownButtonFormField<String>(
+            key: Key('follow-up-assignee'),
+            initialValue: assignee,
+            decoration: glInputDecoration(hint: 'Pilih anggota'),
+            items: [
+              for (final id in widget.group.ids('memberIDs'))
+                DropdownMenuItem(
+                  value: id,
+                  child: Text(_personName(widget.store, id)),
+                ),
+            ],
+            onChanged: busy || submitted != null
+                ? null
+                : (value) => setState(() => assignee = value),
+          ),
+        ),
+        GLOutlineButton(
+          key: Key('follow-up-due'),
+          title: due == null
+              ? 'Pilih tenggat'
+              : 'Tenggat ${GLFormat.date(due!)}',
+          icon: 'calendar',
+          onPressed: busy || submitted != null
+              ? null
+              : () async {
+                  final now = widget.store.now.toLocal();
+                  final today = DateTime(now.year, now.month, now.day);
+                  final value = await showDatePicker(
+                    context: context,
+                    initialDate: due ?? today.add(Duration(days: 7)),
+                    firstDate: today,
+                    lastDate: DateTime(today.year + 10),
+                  );
+                  if (value != null && mounted) {
+                    setState(() => due = _taskEndOfDay(value));
+                  }
+                },
+        ),
+        if (error != null) GLFormError(error!),
+        GLSubmitButton(
+          key: Key('follow-up-save'),
+          title: submitted == null ? 'Simpan tindak lanjut' : 'Coba lagi',
+          busy: busy,
+          onPressed: _save,
+        ),
+      ],
+    ),
+  );
+}
+
+class _PublishFollowUpSheet extends StatefulWidget {
+  const _PublishFollowUpSheet({
+    required this.store,
+    required this.meeting,
+    required this.group,
+    required this.followUp,
+    required this.projects,
+    required this.canPublish,
+    required this.canRemove,
+  });
+  final GrouplyStore store;
+  final JsonMap meeting, group, followUp;
+  final List<JsonMap> projects;
+  final bool canPublish, canRemove;
+  @override
+  State<_PublishFollowUpSheet> createState() => _PublishFollowUpSheetState();
+}
+
+class _PublishFollowUpSheetState extends State<_PublishFollowUpSheet> {
+  String? projectID, reviewer, error;
+  bool busy = false;
+  @override
+  void initState() {
+    super.initState();
+    if (widget.projects.length == 1) {
+      projectID = widget.projects.single.text('id');
+    }
+  }
+
+  Future<void> _save() async {
+    if (busy) return;
+    if (projectID == null) {
+      setState(() => error = 'Pilih proyek atau sie.');
+      return;
+    }
+    if (reviewer == null || reviewer == widget.followUp.text('assigneeID')) {
+      setState(() => error = 'Pilih reviewer yang berbeda dari pelaksana.');
+      return;
+    }
+    setState(() {
+      busy = true;
+      error = null;
+    });
+    try {
+      await widget.store.mutate('publishMeetingFollowUp', {
+        'meetingID': widget.meeting.text('id'),
+        'followUpID': widget.followUp.text('id'),
+        'projectID': projectID,
+        'reviewerID': reviewer,
+      });
+      if (!mounted) return;
+      showGLToast(context, 'Tugas diterbitkan');
+      Navigator.of(context).pop(true);
+    } catch (e) {
+      if (mounted) setState(() => error = '$e');
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
+  Future<void> _remove() async {
+    if (busy ||
+        !await showGLConfirm(
+          context,
+          title: 'Hapus tindak lanjut?',
+          text: 'Poin ini belum diterbitkan dan akan dihapus dari rapat.',
+          ok: 'Hapus',
+        ) ||
+        !mounted) {
+      return;
+    }
+    setState(() {
+      busy = true;
+      error = null;
+    });
+    try {
+      await widget.store.mutate('removeMeetingFollowUp', {
+        'meetingID': widget.meeting.text('id'),
+        'followUpID': widget.followUp.text('id'),
+      });
+      if (!mounted) return;
+      showGLToast(context, 'Tindak lanjut dihapus');
+      Navigator.of(context).pop(true);
+    } catch (e) {
+      if (mounted) setState(() => error = '$e');
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => PopScope(
+    canPop: !busy,
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      spacing: 16,
+      children: [
+        Text(widget.followUp.text('title'), style: gl(18, w700)),
+        Text(
+          'Pelaksana: ${_personName(widget.store, widget.followUp.text('assigneeID'))} · Tenggat ${GLFormat.date(widget.followUp.date('dueAt')!)}',
+          style: gl(14, w400),
+        ),
+        if (!widget.followUp.date('dueAt')!.isAfter(widget.store.now))
+          GLFormError(
+            'Tenggat tindak lanjut sudah lewat. Tugas belum dapat diterbitkan.',
+          ),
+        if (!widget.group
+            .ids('memberIDs')
+            .contains(widget.followUp.text('assigneeID')))
+          GLFormError(
+            'Pelaksana sudah tidak menjadi anggota grup. Hapus poin ini dan buat poin baru.',
+          ),
+        if (widget.canPublish) ...[
+          GLField(
+            'Proyek atau sie',
+            child: DropdownButtonFormField<String>(
+              key: Key('follow-up-project'),
+              initialValue: projectID,
+              decoration: glInputDecoration(hint: 'Pilih proyek atau sie'),
+              items: [
+                for (final p in widget.projects)
+                  DropdownMenuItem(
+                    value: p.text('id'),
+                    child: Text(p.text('title')),
+                  ),
+              ],
+              onChanged: busy
+                  ? null
+                  : (value) => setState(() => projectID = value),
+            ),
+          ),
+          GLField(
+            'Reviewer',
+            child: DropdownButtonFormField<String>(
+              key: Key('follow-up-reviewer'),
+              initialValue: reviewer,
+              decoration: glInputDecoration(hint: 'Pilih reviewer'),
+              items: [
+                for (final id in widget.group.ids('memberIDs'))
+                  if (id != widget.followUp.text('assigneeID'))
+                    DropdownMenuItem(
+                      value: id,
+                      child: Text(_personName(widget.store, id)),
+                    ),
+              ],
+              onChanged: busy
+                  ? null
+                  : (value) => setState(() => reviewer = value),
+            ),
+          ),
+          if (error != null) GLFormError(error!),
+          GLSubmitButton(
+            key: Key('follow-up-publish'),
+            title: 'Terbitkan tugas',
+            busy: busy,
+            onPressed: widget.followUp.date('dueAt')!.isAfter(widget.store.now)
+                ? _save
+                : null,
+          ),
+        ] else if (error != null)
+          GLFormError(error!),
+        if (widget.canRemove)
+          GLOutlineButton(
+            key: Key('follow-up-remove'),
+            title: 'Hapus tindak lanjut',
+            icon: 'trash',
+            onPressed: busy ? null : _remove,
+          ),
       ],
     ),
   );

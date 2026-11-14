@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/widgets.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:supabase_flutter/supabase_flutter.dart'
     show AuthException, PostgrestException;
 
@@ -41,7 +43,12 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
       invites = [],
       reports = [];
   String currentUserID = '';
+  bool taskBatchAvailable = false;
+  bool meetingFollowUpsAvailable = false;
+  bool _publishingTaskBatch = false;
+  static const _taskBatchStorage = FlutterSecureStorage();
   bool loading = false;
+  bool get isMutating => _mutating;
   bool get authenticated => currentUserID.isNotEmpty;
   DateTime get now => _clock();
   bool get configured => _backend.configured;
@@ -129,6 +136,8 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
     organizations = [];
     meetings = [];
     currentUserID = '';
+    taskBatchAvailable = false;
+    meetingFollowUpsAvailable = false;
     _blocks = {};
     _reads = {};
     _snapshotOrder++;
@@ -265,8 +274,18 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<void> signOut() async {
     final generation = ++_generation;
+    final actor = currentUserID;
     _refreshTimer?.cancel();
     _clear();
+    // Unconfirmed template requests hold task drafts; leaving the account ends them.
+    if (actor.isNotEmpty) {
+      try {
+        final prefix = _taskBatchKey(actor, '');
+        for (final key in (await _taskBatchStorage.readAll()).keys) {
+          if (key.startsWith(prefix)) await _taskBatchStorage.delete(key: key);
+        }
+      } catch (_) {}
+    }
     loading = true;
     error = null;
     _notify();
@@ -429,9 +448,86 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
         error = message;
         _notify();
       }
+      if (action == 'publishTaskBatch' &&
+          failure is PostgrestException &&
+          failure.code == 'P0001' &&
+          const {
+            'invalid_input',
+            'plan_inactive',
+            'project_read_only',
+            'forbidden',
+          }.contains(failure.message)) {
+        rethrow;
+      }
       throw GrouplyException(message);
     } finally {
       _mutating = false;
+    }
+  }
+
+  String _taskBatchKey(String actor, String projectID) =>
+      'grouply.pendingTaskBatch.$actor.$projectID';
+
+  Future<JsonMap?> pendingTaskBatch(String projectID) async {
+    final actor = currentUserID;
+    if (actor.isEmpty) return null;
+    final pending = await _taskBatchStorage.read(
+      key: _taskBatchKey(actor, projectID),
+    );
+    if (actor != currentUserID) return null;
+    return pending == null ? null : jsonDecode(pending) as JsonMap;
+  }
+
+  /// Forgets an unconfirmed request. The server may still have created its
+  /// tasks, so callers confirm with the user and reload before a new publish.
+  Future<void> discardTaskBatch(String projectID) async {
+    if (!authenticated || _publishingTaskBatch) return;
+    await _taskBatchStorage.delete(
+      key: _taskBatchKey(currentUserID, projectID),
+    );
+    await refresh();
+  }
+
+  Future<JsonMap> publishTaskBatch(JsonMap payload) async {
+    if (!authenticated || _publishingTaskBatch || _mutating || loading) {
+      throw const GrouplyException(
+        'Masuk atau tunggu proses sebelumnya selesai.',
+      );
+    }
+    final actor = currentUserID;
+    final generation = _generation;
+    final key = _taskBatchKey(actor, payload.text('projectID'));
+    final encoded = jsonEncode(payload);
+    _publishingTaskBatch = true;
+    try {
+      final pending = await _taskBatchStorage.read(key: key);
+      if (pending != null && pending != encoded) {
+        throw const GrouplyException(
+          'Konfirmasi penerbitan sebelumnya dahulu.',
+        );
+      }
+      if (pending == null) {
+        await _taskBatchStorage.write(key: key, value: encoded);
+      }
+      if (_disposed ||
+          generation != _generation ||
+          actor != currentUserID ||
+          actor != _backend.currentUserID) {
+        throw const GrouplyException('Sesi telah berubah.');
+      }
+      try {
+        final result = await mutate('publishTaskBatch', payload);
+        if (result.ids('ids').length != (payload['tasks'] as List).length) {
+          throw const GrouplyException('Hasil penerbitan belum terkonfirmasi.');
+        }
+        await _taskBatchStorage.delete(key: key);
+        return result;
+      } on PostgrestException catch (failure) {
+        await _taskBatchStorage.delete(key: key);
+        throw GrouplyException(serverMessage(failure) ?? 'Penerbitan ditolak.');
+      }
+    } finally {
+      _publishingTaskBatch = false;
     }
   }
 
@@ -1162,6 +1258,8 @@ class GrouplyStore extends ChangeNotifier with WidgetsBindingObserver {
     organizations = orgs;
     this.meetings = meetings;
     currentUserID = actor;
+    taskBatchAvailable = value['taskBatchAvailable'] == true;
+    meetingFollowUpsAvailable = value['meetingFollowUpsAvailable'] == true;
     _blocks = {actor: blocks};
     _reads = {actor: reads};
   }

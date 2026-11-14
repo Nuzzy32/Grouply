@@ -3219,6 +3219,20 @@ class _TaskSubmissionSheetState extends State<_TaskSubmissionSheet> {
 
 // MARK: - Review sheet (prototype `sheetReview`)
 
+const _reviewCriteriaHeading = 'Kriteria review:';
+
+List<String> _reviewCriteria(String description) {
+  final lines = description.split('\n');
+  final start = lines.indexWhere(
+    (line) => line.trim() == _reviewCriteriaHeading,
+  );
+  if (start == -1) return const [];
+  return [
+    for (final line in lines.skip(start + 1).map((line) => line.trim()))
+      if (line.startsWith('- ') && line.length > 2) line.substring(2).trim(),
+  ];
+}
+
 class _TaskReviewSheet extends StatefulWidget {
   const _TaskReviewSheet({required this.store, required this.task});
   final GrouplyStore store;
@@ -3318,6 +3332,7 @@ class _TaskReviewSheetState extends State<_TaskReviewSheet> {
     final store = widget.store, task = widget.task;
     final sub = _submissions(task).lastOrNull;
     final busy = pending != null;
+    final criteria = _reviewCriteria(task.text('description'));
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: 16,
@@ -3340,6 +3355,20 @@ class _TaskReviewSheetState extends State<_TaskReviewSheet> {
                 ),
                 for (final link in sub.ids('links'))
                   _TaskLinkRow(url: link, external: true),
+              ],
+            ),
+          ),
+        if (criteria.isNotEmpty)
+          Container(
+            padding: EdgeInsets.all(16),
+            decoration: glBox(GLTheme.surface, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              spacing: 8,
+              children: [
+                Text('Kriteria review', style: gl(16, w700)),
+                for (final item in criteria)
+                  Text('• $item', style: gl(14, w400)),
               ],
             ),
           ),
