@@ -23,7 +23,7 @@
 
 	store.init();
 	$effect(() => {
-		if (store.ready && store.userID) void goto('/app', { replaceState: true });
+		if (store.ready && store.userID) void goto('/app', { replace: true });
 	});
 
 	const strong = $derived(password.length >= MIN_PASSWORD);

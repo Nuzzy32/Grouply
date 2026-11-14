@@ -3,11 +3,12 @@
 	import Icon from '#lib/Icon.svelte';
 	import { dateInput, dueFromInput, dueLabel, groupIcon, initials, isOverdue, STATUS, tint } from '#lib/app/format.ts';
 	import { canManageTasks, PROJECT_STATUS } from '#lib/app/project.ts';
+	import { openTask } from '#lib/app/nav.ts';
 	import { flash, header, store } from '#lib/app/store.svelte.ts';
 	import DueField from '#lib/app/ui/DueField.svelte';
 	import Modal from '#lib/app/ui/Modal.svelte';
 	import PulseRing from '#lib/app/ui/PulseRing.svelte';
-	import StatusChip from '#lib/app/ui/StatusChip.svelte';
+	import TaskTable from '#lib/app/ui/TaskTable.svelte';
 	import type { Task, TaskStatus } from '#lib/app/types.ts';
 
 	const now = new Date();
@@ -239,7 +240,7 @@
 						</div>
 						{#each items as t (t.id)}
 							{@const late = isOverdue(new Date(t.dueAt), t.status, now)}
-							<div class="task" class:dim={dim(t)}>
+							<button class="task" class:dim={dim(t)} onclick={() => openTask(t.id)}>
 								{#if late}<span class="chip flag" style="background:var(--coral)"><Icon name="error" size={15} />Terlambat</span>{/if}
 								{#if t.status === 'in_review' && waitHours(t) > 48}<span class="chip flag" style="background:var(--lavender)"><Icon name="pending_actions" size={15} />Menunggu {waitHours(t)} jam</span>{/if}
 								<b>{t.title}</b>
@@ -249,7 +250,7 @@
 									<span class="meta"><Icon name="schedule" size={15} />{dueLabel(new Date(t.dueAt), t.status, now)}</span>
 									<span class="meta"><Icon name="chat_bubble" size={15} />{comments(t)}</span>
 								</span>
-							</div>
+							</button>
 						{:else}
 							<div class="col-empty">Tidak ada tugas</div>
 						{/each}
@@ -257,18 +258,7 @@
 				{/each}
 			</div>
 		{:else}
-			<div class="card list">
-				<div class="tr th"><span>Tugas</span><span>Status</span><span>Pelaksana → Reviewer</span><span>Deadline</span><span class="right">Kom.</span></div>
-				{#each tasks as t (t.id)}
-					<div class="tr" class:dim={dim(t)}>
-						<span class="t-title"><b>{t.title}</b>{#if isOverdue(new Date(t.dueAt), t.status, now)}<span class="late" title="Terlambat"><Icon name="error" size={18} /></span>{/if}</span>
-						<span><StatusChip status={t.status} /></span>
-						<span class="t-pair">{@render pair(t)}<span class="ellipsis">{name(t.assigneeID)} → {name(t.reviewerID)}</span></span>
-						<span class="nowrap">{dueLabel(new Date(t.dueAt), t.status, now)}</span>
-						<span class="right">{comments(t)}</span>
-					</div>
-				{/each}
-			</div>
+			<TaskTable {snap} {tasks} {dim} />
 		{/if}
 	</div>
 {/if}
@@ -713,14 +703,24 @@
 		justify-content: center;
 	}
 	.task {
+		width: 100%;
+		border: none;
+		text-align: left;
 		background: var(--surface);
 		border-radius: 18px;
 		padding: 14px;
 		display: flex;
 		flex-direction: column;
 		gap: 10px;
-		transition: opacity 0.25s;
+		transition:
+			opacity 0.25s,
+			transform 0.15s,
+			box-shadow 0.15s;
 		animation: up 0.22s ease both;
+	}
+	.task:hover {
+		transform: translateY(-1px);
+		box-shadow: 0 10px 24px -14px rgba(0, 0, 0, 0.3);
 	}
 	.task b {
 		font-size: 15px;
@@ -769,79 +769,6 @@
 		font-size: 15px;
 		color: var(--secondary);
 		border-radius: 24px;
-	}
-	.list {
-		border-radius: 24px;
-		padding: 4px 8px 6px;
-		display: flex;
-		flex-direction: column;
-	}
-	.tr {
-		display: grid;
-		grid-template-columns: minmax(0, 2fr) 170px minmax(0, 1.3fr) 130px 50px;
-		gap: 16px;
-		align-items: center;
-		min-height: 56px;
-		padding: 8px 12px;
-		border-top: 1px solid var(--muted);
-		font-size: 13px;
-		color: var(--text3);
-		transition: opacity 0.25s;
-	}
-	.th {
-		min-height: 0;
-		padding: 10px 12px;
-		border-top: none;
-		font-size: 12px;
-		font-weight: 700;
-		letter-spacing: 0.04em;
-		text-transform: uppercase;
-		color: var(--text2);
-	}
-	@media (max-width: 1099px) {
-		.tr {
-			grid-template-columns: minmax(0, 2fr) 170px 120px 50px;
-		}
-		.tr > :nth-child(3) {
-			display: none;
-		}
-	}
-	.t-title {
-		min-width: 0;
-		display: flex;
-		align-items: center;
-		gap: 8px;
-	}
-	.t-title b {
-		min-width: 0;
-		font-size: 15px;
-		font-weight: 600;
-		color: var(--ink);
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
-	.late {
-		flex: none;
-		display: flex;
-		color: var(--danger);
-	}
-	.t-pair {
-		min-width: 0;
-		display: flex;
-		align-items: center;
-		gap: 8px;
-	}
-	.ellipsis {
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
-	.nowrap {
-		white-space: nowrap;
-	}
-	.right {
-		text-align: right;
 	}
 	.missing {
 		max-width: 480px;

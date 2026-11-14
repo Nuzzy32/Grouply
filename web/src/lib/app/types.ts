@@ -75,6 +75,7 @@ export interface Snapshot {
 	projects: Project[];
 	tasks: Task[];
 	messages: Message[];
+	reports: { id: string; messageID: string; kind: string; targetID: string }[];
 	blockedUserIDs: string[];
 	readMessageIDs: string[];
 }

@@ -6,13 +6,14 @@
 	import { groupIcon, initials, tint } from '#lib/app/format.ts';
 	import { myGroups, unreadCount } from '#lib/app/derive.ts';
 	import { flash, header, store, toast } from '#lib/app/store.svelte.ts';
+	import TaskDrawer from '#lib/app/ui/TaskDrawer.svelte';
 	import '#lib/app/app.css';
 
 	let { children } = $props();
 
 	store.init();
 	$effect(() => {
-		if (store.ready && !store.userID) void goto('/masuk', { replaceState: true });
+		if (store.ready && !store.userID) void goto('/masuk', { replace: true });
 	});
 
 	let width = $state(1440);
@@ -129,6 +130,10 @@
 			<div class="content">{@render children()}</div>
 		</div>
 	</div>
+	{@const taskID = page.url.searchParams.get('tugas')}
+	{#if taskID}
+		{#key taskID}<TaskDrawer {taskID} />{/key}
+	{/if}
 	{#if toastVisible}
 		{#key toast.id}
 			<div class="toast {toast.kind}" role="status">

@@ -102,3 +102,18 @@ export function dueFromInput(value: string): Date | null {
 	const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
 	return m ? new Date(+m[1], +m[2] - 1, +m[3], 23, 59) : null;
 }
+
+/** Pecah teks pesan jadi potongan teks dan tautan https (hanya https yang dijadikan link). */
+export function linkify(text: string): { text: string; href?: string }[] {
+	return text
+		.split(/(https:\/\/[^\s<>"']+)/)
+		.filter(Boolean)
+		.map((part) => (part.startsWith('https://') ? { text: part.replace('https://', ''), href: part } : { text: part }));
+}
+
+const dayFmt = new Intl.DateTimeFormat('id-ID', { weekday: 'long', day: 'numeric', month: 'long' });
+/** Pemisah hari di thread: "Hari ini", "Kemarin", atau "Jumat, 16 Oktober". */
+export function dayLabel(value: Date, now: Date): string {
+	const n = dayOffset(value, now);
+	return n === 0 ? 'Hari ini' : n === -1 ? 'Kemarin' : dayFmt.format(value);
+}

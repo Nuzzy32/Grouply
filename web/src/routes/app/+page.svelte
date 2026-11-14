@@ -2,6 +2,7 @@
 	import Icon from '#lib/Icon.svelte';
 	import { activityStamp, activityStyle, dayOffset, dueLabel, firstName, initials, isOverdue, longToday, shortDate, STATUS, tint, weekday } from '#lib/app/format.ts';
 	import { myGroups, splitActivity, userName } from '#lib/app/derive.ts';
+	import { openTask } from '#lib/app/nav.ts';
 	import { header, store } from '#lib/app/store.svelte.ts';
 	import type { Task } from '#lib/app/types.ts';
 
@@ -74,7 +75,7 @@
 				<section class="card tinted" style="background:var(--butter)">
 					<h2>Perlu perhatian{#if attention.length}<span class="count">{attention.length}</span>{/if}</h2>
 					{#each attention as t (t.id)}
-						<div class="row">
+						<button class="row tap" onclick={() => openTask(t.id)}>
 							<span class="row-icon"><Icon name={t.status === 'needs_revision' ? 'undo' : 'error'} size={17} /></span>
 							<span class="text">
 								<small>
@@ -84,7 +85,7 @@
 								</small>
 								<b>{t.title}</b>
 							</span>
-						</div>
+						</button>
 					{:else}
 						<p class="none">Semua aman, tidak ada yang mendesak.</p>
 					{/each}
@@ -95,14 +96,14 @@
 					{#each toReview as t (t.id)}
 						{@const sub = lastSub(t)}
 						{@const author = user(sub?.authorID ?? t.assigneeID)}
-						<div class="row">
+						<button class="row tap" onclick={() => openTask(t.id)}>
 							<span class="av" style="font-size:11px" style:background={tint(author?.tint)}>{initials(author?.name)}</span>
 							<span class="text">
 								<b>{t.title}</b>
 								<small>Dari {userName(snap, sub?.authorID ?? t.assigneeID)} · revisi {sub?.revision ?? 1}</small>
 							</span>
 							{#if waitingHours(t) > 48}<span class="chip stale">Menunggu {waitingHours(t)} jam</span>{/if}
-						</div>
+						</button>
 					{:else}
 						<p class="none">Tidak ada hasil kerja yang menunggu review kamu.</p>
 					{/each}
@@ -112,11 +113,11 @@
 			<section class="card">
 				<h2>Deadline 7 hari ke depan<a class="link" href="/app/tugas">Semua tugas</a></h2>
 				{#each deadlines as t (t.id)}
-					<div class="row line">
+					<button class="row tap line" onclick={() => openTask(t.id)}>
 						<span class="day">{due(t).getDate()}<small>{weekday(due(t))}</small></span>
 						<span class="text grow"><b>{t.title}</b><small class="muted">{dueLabel(due(t), t.status, now)}</small></span>
 						<span class="chip" style:background={STATUS[t.status].bg}>{STATUS[t.status].label}</span>
-					</div>
+					</button>
 				{:else}
 					<p class="none">Tidak ada deadline 7 hari ke depan.</p>
 				{/each}
@@ -254,6 +255,19 @@
 		gap: 12px;
 		padding: 11px 0;
 		border-top: 1px solid color-mix(in srgb, var(--ink) 10%, transparent);
+	}
+	.tap {
+		width: 100%;
+		border-left: none;
+		border-right: none;
+		border-bottom: none;
+		background: none;
+		text-align: left;
+		border-radius: 0;
+		transition: opacity 0.15s;
+	}
+	.tap:hover b {
+		text-decoration: underline;
 	}
 	.row.line {
 		border-top-color: var(--line);
