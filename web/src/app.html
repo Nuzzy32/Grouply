@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="id">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="text-scale" content="scale" />
+		<meta name="theme-color" content="#F8F9F7" media="(prefers-color-scheme: light)" />
+		<meta name="theme-color" content="#121314" media="(prefers-color-scheme: dark)" />
+		<link rel="icon" href="%sveltekit.assets%/favicon.png" />
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+		<link
+			rel="stylesheet"
+			href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+		/>
+		<!-- Hanya ikon yang dipakai (urut abjad, syarat icon_names). Tambah nama di sini saat memakai ikon baru. -->
+		<link
+			rel="stylesheet"
+			href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..600,0..1,0&icon_names=add,add_task,android,apartment,arrow_back,arrow_forward,arrow_upward,autorenew,block,bolt,calendar_month,chat_bubble,check_circle,chevron_left,chevron_right,close,content_copy,dark_mode,database,delete,edit,error,event,expand_less,flag,folder,folder_open,forum,group,groups,history,home,hourglass_top,info,insights,interests,inventory_2,laptop_mac,light_mode,link,lock,login,logout,more_horiz,open_in_new,pause,pending_actions,person,person_add,person_remove,phone_iphone,play_arrow,radio_button_unchecked,rate_review,remove,replay,right_panel_close,right_panel_open,schedule,search,search_off,settings,shield_person,swap_horiz,task_alt,unarchive,undo,upload,view_kanban,view_list,visibility,visibility_off,warning&display=block"
+		/>
+		<!-- Sebelum render: tema pilihan pengguna (tanpa kedip) dan penanda JS untuk animasi reveal. -->
+		<script>
+			(function () {
+				var root = document.documentElement;
+				root.classList.add('js');
+				try {
+					var t = localStorage.getItem('grouply-theme');
+					if (t === 'light' || t === 'dark') {
+						root.dataset.theme = t;
+						document.querySelectorAll('meta[name=theme-color]').forEach(function (m) {
+							m.content = t === 'dark' ? '#121314' : '#F8F9F7';
+						});
+					}
+				} catch (e) {}
+			})();
+		</script>
+		%sveltekit.head%
+	</head>
+	<body data-sveltekit-preload-data="hover">
+		<div style="display: contents">%sveltekit.body%</div>
+	</body>
+</html>

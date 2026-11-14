@@ -1,0 +1,1283 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<title>GROUPLY · Web</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..600,0..1,0&display=block" rel="stylesheet">
+<style>html,body{margin:0;height:100%;background:#F8F9F7;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Plus Jakarta Sans",system-ui,sans-serif;-webkit-font-smoothing:antialiased;color:#202124}a{color:#1F4F86}a:hover{color:#163a63}*{box-sizing:border-box}input,textarea,button{font-family:inherit;color:#202124}button{cursor:pointer}button:disabled{cursor:default}input::placeholder,textarea::placeholder{color:#80868B}::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-thumb{background:#D5D8DB;border-radius:6px;border:2px solid #F8F9F7}::-webkit-scrollbar-track{background:transparent}@keyframes glUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}@keyframes glFade{from{opacity:0}to{opacity:1}}@keyframes glSpin{to{transform:rotate(360deg)}}@keyframes glSlide{from{transform:translateX(40px);opacity:0}to{transform:none;opacity:1}}@keyframes glPop{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:none}}@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}</style>
+</helmet>
+<div style="height:100vh;display:flex;overflow:hidden;background:#F8F9F7;position:relative">
+  <aside style="flex:none;width:{{ sideW }};height:100%;display:flex;flex-direction:column;gap:16px;padding:18px 12px;border-right:1px solid #E8E9E7;transition:width .2s">
+    <div style="display:flex;align-items:center;gap:10px;padding:2px 6px;height:40px">
+      <img src="assets/brand.png" alt="GROUPLY" style="flex:none;width:36px;height:36px;border-radius:11px;object-fit:cover">
+      <sc-if value="{{ notCompact }}" hint-placeholder-val="{{ true }}"><span style="font-size:14px;font-weight:800;letter-spacing:.12em">GROUPLY</span></sc-if>
+    </div>
+    <button onClick="{{ openSearch }}" title="Cari (⌘K)" style="height:42px;border-radius:14px;border:1px solid #E8E9E7;background:#fff;display:flex;align-items:center;gap:8px;padding:0 12px;justify-content:{{ navJc }};font-size:14px;color:#62676B" style-hover="border-color:#C4C7C5">
+      <span style="font-family:'Material Symbols Rounded';font-size:20px">search</span>
+      <sc-if value="{{ notCompact }}" hint-placeholder-val="{{ true }}"><span style="flex:1;text-align:left">Cari tugas, proyek…</span><span style="font-size:12px;font-weight:600;padding:2px 6px;border-radius:6px;background:#F0F3F1;color:#4d5155">⌘K</span></sc-if>
+    </button>
+    <nav aria-label="Navigasi utama" style="display:flex;flex-direction:column;gap:4px">
+      <sc-for list="{{ nav }}" as="n" hint-placeholder-count="4">
+        <button onClick="{{ n.go }}" aria-current="{{ n.cur }}" title="{{ n.label }}" style="position:relative;height:46px;border:none;border-radius:23px;background:{{ n.bg }};color:{{ n.fg }};display:flex;align-items:center;gap:12px;padding:0 14px;justify-content:{{ n.jc }};font-size:15px;font-weight:600;transition:background .15s,color .15s" style-hover="box-shadow:inset 0 0 0 1px #D5D8DB">
+          <span style="font-family:'Material Symbols Rounded';font-size:22px;font-variation-settings:'FILL' {{ n.fill }}">{{ n.icon }}</span>
+          <sc-if value="{{ n.showLabel }}" hint-placeholder-val="{{ true }}"><span style="flex:1;text-align:left;white-space:nowrap">{{ n.label }}</span></sc-if>
+          <sc-if value="{{ n.badgeInline }}" hint-placeholder-val="{{ false }}"><span style="min-width:24px;height:22px;padding:0 7px;border-radius:11px;background:#C9F2D6;color:#202124;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center">{{ n.badge }}</span></sc-if>
+          <sc-if value="{{ n.badgeDot }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:8px;right:12px;width:10px;height:10px;border-radius:5px;background:#62C484;box-shadow:0 0 0 2px #F8F9F7"></span></sc-if>
+        </button>
+      </sc-for>
+    </nav>
+    <sc-if value="{{ notCompact }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex;flex-direction:column;gap:2px;min-height:0;overflow:auto">
+        <span style="font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#4d5155;padding:8px 14px 6px">Grup saya</span>
+        <sc-for list="{{ sideGroups }}" as="g" hint-placeholder-count="3">
+          <button onClick="{{ g.go }}" title="{{ g.name }}" style="min-height:42px;border:none;border-radius:14px;background:{{ g.bg }};box-shadow:{{ g.shadow }};display:flex;align-items:center;gap:10px;padding:0 10px;text-align:left" style-hover="background:#ECEEEB">
+            <span style="flex:none;width:28px;height:28px;border-radius:10px;background:{{ g.tint }};font-family:'Material Symbols Rounded';font-size:17px;display:flex;align-items:center;justify-content:center">{{ g.icon }}</span>
+            <span style="flex:1;min-width:0;font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ g.name }}</span>
+            <sc-if value="{{ g.hasUnread }}" hint-placeholder-val="{{ false }}"><span aria-label="{{ g.unreadLabel }}" style="flex:none;width:8px;height:8px;border-radius:4px;background:#202124"></span></sc-if>
+          </button>
+        </sc-for>
+      </div>
+    </sc-if>
+    <div style="flex:1"></div>
+    <div style="position:relative">
+      <sc-if value="{{ menu }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;left:0;bottom:58px;width:260px;z-index:20;background:#fff;border-radius:20px;padding:10px;box-shadow:0 20px 50px -16px rgba(0,0,0,.3),0 0 0 1px #E8E9E7;display:flex;flex-direction:column;gap:4px;animation:glUp .18s ease">
+          <span style="display:flex;align-items:center;gap:6px;padding:4px 8px 6px;font-size:12px;font-weight:700;color:#4d5155"><span style="height:20px;padding:0 7px;border-radius:10px;background:#F9E9BE;font-size:11px;display:flex;align-items:center">DEMO</span>Lihat sebagai</span>
+          <sc-for list="{{ personas }}" as="p" hint-placeholder-count="4">
+            <button onClick="{{ p.pick }}" aria-pressed="{{ p.on }}" style="min-height:46px;border:none;border-radius:14px;background:{{ p.bgRow }};display:flex;align-items:center;gap:10px;padding:4px 8px;text-align:left" style-hover="background:#F0F3F1">
+              <span style="flex:none;width:32px;height:32px;border-radius:16px;background:{{ p.bg }};font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center">{{ p.ini }}</span>
+              <span style="flex:1;display:flex;flex-direction:column"><span style="font-size:14px;font-weight:600">{{ p.name }}</span><span style="font-size:12px;color:#62676B">{{ p.role }}</span></span>
+              <sc-if value="{{ p.on }}" hint-placeholder-val="{{ false }}"><span style="font-family:'Material Symbols Rounded';font-size:20px">check</span></sc-if>
+            </button>
+          </sc-for>
+        </div>
+      </sc-if>
+      <button onClick="{{ toggleMenu }}" aria-expanded="{{ menu }}" title="Akun" style="width:100%;min-height:52px;border:none;border-radius:18px;background:transparent;display:flex;align-items:center;gap:10px;padding:6px;justify-content:{{ navJc }};text-align:left" style-hover="background:#ECEEEB">
+        <span style="flex:none;width:40px;height:40px;border-radius:20px;background:{{ meU.bg }};font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center">{{ meU.ini }}</span>
+        <sc-if value="{{ notCompact }}" hint-placeholder-val="{{ true }}">
+          <span style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-size:14px;font-weight:600">{{ meU.name }}</span><span style="font-size:12px;color:#62676B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ meU.email }}</span></span>
+          <span style="font-family:'Material Symbols Rounded';font-size:20px;color:#62676B">unfold_more</span>
+        </sc-if>
+      </button>
+    </div>
+  </aside>
+  <main style="flex:1;min-width:0;height:100%;display:flex;flex-direction:column">
+    <header style="flex:none;height:64px;display:flex;align-items:center;gap:16px;padding:0 24px 0 20px;border-bottom:1px solid #E8E9E7">
+      <nav aria-label="Breadcrumb" style="flex:1;min-width:0;display:flex;align-items:center;gap:2px;overflow:hidden">
+        <sc-for list="{{ crumbs }}" as="c" hint-placeholder-count="1">
+          <sc-if value="{{ c.sep }}" hint-placeholder-val="{{ false }}"><span style="flex:none;font-family:'Material Symbols Rounded';font-size:18px;color:#9AA0A6">chevron_right</span></sc-if>
+          <button onClick="{{ c.go }}" style="min-width:0;height:36px;border:none;background:none;padding:0 8px;border-radius:10px;font-size:{{ c.fs }};font-weight:{{ c.fw }};color:{{ c.fg }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:340px" style-hover="background:#ECEEEB">{{ c.label }}</button>
+        </sc-for>
+      </nav>
+      <sc-if value="{{ hasTopAction }}" hint-placeholder-val="{{ false }}">
+        <button onClick="{{ topAction.go }}" style="flex:none;height:42px;padding:0 18px 0 14px;border:none;border-radius:21px;background:#202124;color:#fff;font-size:14px;font-weight:600;display:flex;align-items:center;gap:6px" style-active="transform:scale(.97)"><span style="font-family:'Material Symbols Rounded';font-size:20px">{{ topAction.icon }}</span>{{ topAction.label }}</button>
+      </sc-if>
+    </header>
+    <div style="flex:1;min-height:0;overflow:auto;position:relative">
+      <sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+        <div data-screen-label="Beranda" style="max-width:1360px;margin:0 auto;padding:28px 32px 56px;display:flex;flex-direction:column;gap:24px;animation:glFade .25s ease">
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <span style="font-size:15px;color:#62676B">Jumat, 16 Oktober</span>
+            <span style="font-size:34px;font-weight:700;letter-spacing:-.03em;line-height:1.1">{{ greeting }}</span>
+            <span style="font-size:15px;color:#3c4043">{{ homeSummary }}</span>
+          </div>
+          <div style="display:grid;grid-template-columns:{{ homeCols }};gap:24px;align-items:start">
+            <div style="display:flex;flex-direction:column;gap:24px;min-width:0">
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:16px;align-items:stretch">
+                <div style="background:#F9E9BE;border-radius:28px;padding:20px 20px 8px;display:flex;flex-direction:column">
+                  <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:6px"><span style="font-size:19px;font-weight:700;letter-spacing:-.02em">Perlu perhatian</span><span style="min-width:30px;height:30px;padding:0 9px;border-radius:15px;background:#202124;color:#fff;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center">{{ attentionCount }}</span></div>
+                  <sc-for list="{{ attention }}" as="a" hint-placeholder-count="2">
+                    <button onClick="{{ a.open }}" style="text-align:left;background:none;border:none;padding:12px 4px;margin:0 -4px;border-radius:14px;border-top:1px solid rgba(32,33,36,.1);display:flex;align-items:center;gap:12px" style-hover="background:rgba(255,255,255,.45)">
+                      <span style="flex:none;width:40px;height:40px;border-radius:20px;background:rgba(255,255,255,.7);font-family:'Material Symbols Rounded';font-size:20px;display:flex;align-items:center;justify-content:center">{{ a.icon }}</span>
+                      <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:13px;font-weight:600;color:#4d5155">{{ a.reason }}</span><span style="font-size:16px;font-weight:600;line-height:1.25">{{ a.title }}</span><span style="font-size:13px;color:#4d5155">{{ a.project }}</span></span>
+                      <span style="font-family:'Material Symbols Rounded';font-size:22px;color:#4d5155">chevron_right</span>
+                    </button>
+                  </sc-for>
+                  <sc-if value="{{ noAttention }}" hint-placeholder-val="{{ false }}"><div style="font-size:15px;color:#4d5155;padding:14px 0 16px;border-top:1px solid rgba(32,33,36,.1);display:flex;align-items:center;gap:8px"><span style="font-family:'Material Symbols Rounded';font-size:20px">check_circle</span>Semua aman, tidak ada yang mendesak.</div></sc-if>
+                </div>
+                <div style="background:#DED2FF;border-radius:28px;padding:20px 20px 8px;display:flex;flex-direction:column">
+                  <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:6px"><span style="font-size:19px;font-weight:700;letter-spacing:-.02em">Menunggu review kamu</span><span style="min-width:30px;height:30px;padding:0 9px;border-radius:15px;background:#202124;color:#fff;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center">{{ reviewCount }}</span></div>
+                  <sc-for list="{{ reviews }}" as="v" hint-placeholder-count="1">
+                    <button onClick="{{ v.open }}" style="text-align:left;background:none;border:none;padding:12px 4px;margin:0 -4px;border-radius:14px;border-top:1px solid rgba(32,33,36,.1);display:flex;align-items:center;gap:12px" style-hover="background:rgba(255,255,255,.4)">
+                      <span style="flex:none;width:40px;height:40px;border-radius:20px;background:{{ v.a.bg }};font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px rgba(255,255,255,.7)">{{ v.a.ini }}</span>
+                      <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px">
+                        <span style="font-size:16px;font-weight:600;line-height:1.25">{{ v.title }}</span>
+                        <span style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:13px;color:#3c4043">{{ v.from }}<sc-if value="{{ v.stale }}" hint-placeholder-val="{{ false }}"><span style="height:24px;padding:0 9px 0 6px;border-radius:12px;background:#fff;box-shadow:inset 0 0 0 1.5px #202124;font-size:12px;font-weight:600;display:flex;align-items:center;gap:3px;color:#202124"><span style="font-family:'Material Symbols Rounded';font-size:15px">pending_actions</span>{{ v.staleLabel }}</span></sc-if></span>
+                      </span>
+                      <span style="font-family:'Material Symbols Rounded';font-size:22px;color:#3c4043">chevron_right</span>
+                    </button>
+                  </sc-for>
+                  <sc-if value="{{ noReviews }}" hint-placeholder-val="{{ false }}"><div style="font-size:15px;color:#3c4043;padding:14px 0 16px;border-top:1px solid rgba(32,33,36,.1);display:flex;align-items:center;gap:8px"><span style="font-family:'Material Symbols Rounded';font-size:20px">inbox</span>Tidak ada hasil kerja yang menunggu review kamu.</div></sc-if>
+                </div>
+              </div>
+              <div style="background:#fff;border-radius:28px;padding:18px 20px 6px;box-shadow:0 1px 2px rgba(0,0,0,.04);display:flex;flex-direction:column">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding-bottom:4px">
+                  <span style="font-size:19px;font-weight:700;letter-spacing:-.02em">Deadline 7 hari ke depan</span>
+                  <button onClick="{{ goTasks }}" style="height:40px;padding:0 6px 0 12px;border:none;border-radius:20px;background:none;font-size:14px;font-weight:600;display:flex;align-items:center;gap:2px" style-hover="background:#F0F3F1">Semua tugas<span style="font-family:'Material Symbols Rounded';font-size:20px">chevron_right</span></button>
+                </div>
+                <sc-for list="{{ deadlines }}" as="d" hint-placeholder-count="2">
+                  <button onClick="{{ d.open }}" style="text-align:left;border:none;background:none;padding:12px 6px;margin:0 -6px;border-radius:16px;border-top:1px solid #E8E9E7;display:flex;align-items:center;gap:14px" style-hover="background:#F8F9F7">
+                    <span style="flex:none;width:52px;height:54px;border-radius:16px;background:#F0F3F1;display:flex;flex-direction:column;align-items:center;justify-content:center"><span style="font-size:20px;font-weight:700;line-height:1">{{ d.dNum }}</span><span style="font-size:12px;font-weight:600;color:#62676B">{{ d.dDay }}</span></span>
+                    <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px"><span style="font-size:16px;font-weight:600;line-height:1.25">{{ d.title }}</span><span style="font-size:13px;color:#62676B">{{ d.projectTitle }} · {{ d.dueLabel }}</span></span>
+                    <span style="flex:none;height:28px;padding:0 11px 0 8px;border-radius:14px;background:{{ d.chipBg }};font-size:13px;font-weight:600;display:flex;align-items:center;gap:4px"><span style="font-family:'Material Symbols Rounded';font-size:16px">{{ d.chipIcon }}</span>{{ d.statusLabel }}</span>
+                  </button>
+                </sc-for>
+                <sc-if value="{{ noDeadlines }}" hint-placeholder-val="{{ false }}"><div style="padding:16px 0 18px;border-top:1px solid #E8E9E7;font-size:15px;color:#62676B">Tidak ada deadline 7 hari ke depan.</div></sc-if>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:24px;min-width:0">
+              <div style="background:#fff;border-radius:28px;padding:18px 20px 10px;box-shadow:0 1px 2px rgba(0,0,0,.04);display:flex;flex-direction:column;gap:4px">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding-bottom:4px">
+                  <span style="font-size:19px;font-weight:700;letter-spacing:-.02em">Proyek aktif</span>
+                  <button onClick="{{ goGroups }}" style="height:40px;padding:0 6px 0 12px;border:none;border-radius:20px;background:none;font-size:14px;font-weight:600;display:flex;align-items:center;gap:2px" style-hover="background:#F0F3F1">Semua grup<span style="font-family:'Material Symbols Rounded';font-size:20px">chevron_right</span></button>
+                </div>
+                <sc-for list="{{ projects }}" as="p" hint-placeholder-count="2">
+                  <button onClick="{{ p.open }}" style="text-align:left;border:none;background:none;padding:12px 8px;margin:0 -8px;border-radius:18px;display:flex;align-items:center;gap:12px" style-hover="background:#F8F9F7">
+                    <span style="flex:none;width:44px;height:44px;border-radius:22px;background:{{ p.tint }};display:flex;align-items:center;justify-content:center;font-family:'Material Symbols Rounded';font-size:21px">{{ p.icon }}</span>
+                    <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:7px">
+                      <span style="display:flex;flex-direction:column;gap:1px"><span style="font-size:15px;font-weight:600">{{ p.title }}</span><span style="font-size:13px;color:#62676B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.groupName }} · deadline {{ p.dueShort }}</span></span>
+                      <span style="display:flex;align-items:center;gap:10px"><span style="flex:1;height:6px;border-radius:3px;background:#F0F3F1;overflow:hidden"><span style="display:block;height:100%;width:{{ p.pct }};background:#202124;border-radius:3px;transition:width .5s ease"></span></span><span style="font-size:13px;font-weight:600;white-space:nowrap">{{ p.ratio }}</span></span>
+                    </span>
+                  </button>
+                </sc-for>
+                <sc-if value="{{ noProjects }}" hint-placeholder-val="{{ false }}"><div style="padding:8px 0 12px;font-size:15px;line-height:1.5;color:#62676B">Belum ada proyek aktif.</div></sc-if>
+              </div>
+              <div style="background:#fff;border-radius:28px;padding:18px 20px 8px;box-shadow:0 1px 2px rgba(0,0,0,.04);display:flex;flex-direction:column">
+                <span style="font-size:19px;font-weight:700;letter-spacing:-.02em;padding-bottom:6px">Aktivitas terbaru</span>
+                <sc-for list="{{ activity }}" as="m" hint-placeholder-count="3">
+                  <button onClick="{{ m.open }}" style="text-align:left;border:none;background:none;padding:10px 6px;margin:0 -6px;border-radius:14px;border-top:1px solid #E8E9E7;display:flex;align-items:center;gap:12px" style-hover="background:#F8F9F7">
+                    <span style="flex:none;width:36px;height:36px;border-radius:13px;background:{{ m.bg }};font-family:'Material Symbols Rounded';font-size:18px;display:flex;align-items:center;justify-content:center">{{ m.icon }}</span>
+                    <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span style="font-size:13px;color:#4d5155">{{ m.line }} · {{ m.time }}</span><span style="font-size:15px;font-weight:600">{{ m.taskTitle }}</span></span>
+                  </button>
+                </sc-for>
+                <sc-if value="{{ noActivity }}" hint-placeholder-val="{{ false }}"><div style="padding:12px 0 14px;font-size:15px;color:#62676B">Belum ada aktivitas.</div></sc-if>
+              </div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+      <sc-if value="{{ isGroupList }}" hint-placeholder-val="{{ false }}">
+        <div data-screen-label="Grup" style="max-width:1360px;margin:0 auto;padding:28px 32px 56px;display:flex;flex-direction:column;gap:22px;animation:glFade .25s ease">
+          <div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:34px;font-weight:700;letter-spacing:-.03em">Grup</span><span style="font-size:15px;color:#62676B">{{ groupsSub }}</span></div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px">
+            <sc-for list="{{ groupCards }}" as="g" hint-placeholder-count="3">
+              <div onClick="{{ g.open }}" role="button" tabindex="0" style="cursor:pointer;background:#fff;border-radius:28px;padding:20px;display:flex;flex-direction:column;gap:16px;box-shadow:0 1px 2px rgba(0,0,0,.04);transition:transform .15s,box-shadow .15s;animation:glUp .25s ease" style-hover="box-shadow:0 12px 30px -16px rgba(0,0,0,.25);transform:translateY(-2px)">
+                <div style="display:flex;gap:14px;align-items:center">
+                  <span style="flex:none;width:54px;height:54px;border-radius:20px;background:{{ g.tint }};display:flex;align-items:center;justify-content:center;font-family:'Material Symbols Rounded';font-size:27px">{{ g.icon }}</span>
+                  <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:18px;font-weight:700;letter-spacing:-.015em">{{ g.name }}</span><span style="font-size:14px;color:#62676B">{{ g.course }}</span></span>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                  <span style="display:flex;padding-right:8px"><sc-for list="{{ g.avatars }}" as="m" hint-placeholder-count="4"><span title="{{ m.name }}" style="width:32px;height:32px;margin-right:-8px;border-radius:16px;border:2.5px solid #fff;background:{{ m.bg }};font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center">{{ m.ini }}</span></sc-for></span>
+                  <span style="font-size:14px;color:#3c4043">{{ g.memberLabel }}</span>
+                </div>
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                  <span style="height:28px;padding:0 10px;border-radius:14px;background:{{ g.roleBg }};font-size:12px;font-weight:600;display:flex;align-items:center">{{ g.roleLabel }}</span>
+                  <div style="flex:1"></div>
+                  <button onClick="{{ g.chat }}" style="height:38px;padding:0 14px 0 10px;border-radius:19px;border:1.5px solid #202124;background:none;font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px" style-hover="background:#F0F3F1"><span style="font-family:'Material Symbols Rounded';font-size:17px">chat_bubble</span>Chat<sc-if value="{{ g.hasUnread }}" hint-placeholder-val="{{ false }}"><span aria-label="{{ g.unreadLabel }}" style="width:8px;height:8px;border-radius:4px;background:#202124"></span></sc-if></button>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+      <sc-if value="{{ isGroup }}" hint-placeholder-val="{{ false }}">
+        <div data-screen-label="Detail Grup" style="max-width:1360px;margin:0 auto;padding:28px 32px 56px;display:grid;grid-template-columns:{{ sideCols }};gap:24px;align-items:start;animation:glFade .25s ease">
+          <div style="display:flex;flex-direction:column;gap:20px;min-width:0">
+            <div style="background:#fff;border-radius:32px;padding:24px;display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap">
+              <span style="flex:none;width:68px;height:68px;border-radius:24px;background:{{ gd.tint }};font-family:'Material Symbols Rounded';font-size:34px;display:flex;align-items:center;justify-content:center">{{ gd.icon }}</span>
+              <div style="flex:1 1 280px;min-width:0;display:flex;flex-direction:column;gap:6px">
+                <span style="font-size:28px;font-weight:700;letter-spacing:-.025em;line-height:1.15">{{ gd.name }}</span>
+                <span style="font-size:15px;color:#62676B">{{ gd.course }}</span>
+                <sc-if value="{{ gd.hasDesc }}" hint-placeholder-val="{{ false }}"><span style="font-size:15px;line-height:1.5;color:#3c4043">{{ gd.desc }}</span></sc-if>
+                <span style="font-size:14px;color:#3c4043;display:flex;align-items:center;gap:6px;padding-top:2px"><span style="font-family:'Material Symbols Rounded';font-size:18px">insights</span>{{ gd.summary }}</span>
+              </div>
+              <button onClick="{{ gd.openChat }}" style="flex:none;height:46px;padding:0 18px 0 14px;border:none;border-radius:23px;background:#202124;color:#fff;font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px"><span style="font-family:'Material Symbols Rounded';font-size:19px">chat_bubble</span>Buka chat grup<sc-if value="{{ gd.hasUnread }}" hint-placeholder-val="{{ false }}"><span style="min-width:22px;height:22px;padding:0 6px;border-radius:11px;background:#C9F2D6;color:#202124;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center">{{ gd.unread }}</span></sc-if></button>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+              <span style="font-size:22px;font-weight:700;letter-spacing:-.02em">Proyek</span>
+              <div style="display:flex;gap:6px;flex-wrap:wrap">
+                <sc-for list="{{ gd.filters }}" as="f" hint-placeholder-count="3"><button onClick="{{ f.go }}" style="height:40px;padding:0 16px;border-radius:20px;border:1.5px solid #202124;background:{{ f.bg }};color:{{ f.fg }};font-size:14px;font-weight:600;transition:background .2s,color .2s">{{ f.label }}</button></sc-for>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px">
+              <sc-for list="{{ gd.projects }}" as="p" hint-placeholder-count="2">
+                <button onClick="{{ p.open }}" style="text-align:left;border:none;background:#fff;border-radius:24px;padding:18px;display:flex;flex-direction:column;gap:14px;box-shadow:0 1px 2px rgba(0,0,0,.04);transition:transform .15s,box-shadow .15s;animation:glUp .22s ease" style-hover="box-shadow:0 12px 30px -16px rgba(0,0,0,.25);transform:translateY(-2px)">
+                  <span style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%"><span style="width:12px;height:12px;border-radius:6px;background:{{ p.tint }};box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)"></span><span style="height:28px;padding:0 10px 0 7px;border-radius:14px;background:{{ p.statusBg }};font-size:12px;font-weight:600;display:flex;align-items:center;gap:4px"><span style="font-family:'Material Symbols Rounded';font-size:15px">{{ p.statusIcon }}</span>{{ p.statusLabel }}</span></span>
+                  <span style="display:flex;flex-direction:column;gap:4px"><span style="font-size:17px;font-weight:700;letter-spacing:-.01em;line-height:1.25">{{ p.title }}</span><span style="font-size:14px;line-height:1.45;color:#62676B;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">{{ p.desc }}</span></span>
+                  <span style="display:flex;flex-direction:column;gap:8px;width:100%">
+                    <span style="display:flex;align-items:center;gap:10px"><span style="flex:1;height:6px;border-radius:3px;background:#F0F3F1;overflow:hidden"><span style="display:block;height:100%;width:{{ p.pct }};background:#202124;border-radius:3px;transition:width .5s ease"></span></span><span style="font-size:13px;font-weight:600;white-space:nowrap">{{ p.ratio }} selesai</span></span>
+                    <span style="display:flex;align-items:center;gap:6px;font-size:13px;color:#3c4043"><span style="font-family:'Material Symbols Rounded';font-size:16px">event</span>Deadline {{ p.dueShort }} · {{ p.openCount }}</span>
+                  </span>
+                </button>
+              </sc-for>
+            </div>
+            <sc-if value="{{ gd.noProjectsAll }}" hint-placeholder-val="{{ false }}">
+              <div style="background:#fff;border-radius:28px;padding:32px 24px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center">
+                <span style="width:56px;height:56px;border-radius:20px;background:#F9E9BE;font-family:'Material Symbols Rounded';font-size:28px;display:flex;align-items:center;justify-content:center">folder_open</span>
+                <span style="font-size:19px;font-weight:700">Belum ada proyek</span>
+                <span style="max-width:420px;font-size:15px;line-height:1.5;color:#62676B">{{ gd.emptyText }}</span>
+                <sc-if value="{{ gd.isCoord }}" hint-placeholder-val="{{ false }}"><button onClick="{{ gd.newProject }}" style="margin-top:4px;height:46px;padding:0 22px;border:none;border-radius:23px;background:#202124;color:#fff;font-size:14px;font-weight:600">Buat proyek</button></sc-if>
+              </div>
+            </sc-if>
+            <sc-if value="{{ gd.noProjectsFilter }}" hint-placeholder-val="{{ false }}"><div style="padding:28px 0;text-align:center;font-size:15px;color:#62676B">{{ gd.filterEmpty }}</div></sc-if>
+          </div>
+          <div style="background:#fff;border-radius:28px;padding:18px 20px 8px;display:flex;flex-direction:column">
+            <div style="display:flex;align-items:baseline;justify-content:space-between;padding-bottom:6px"><span style="font-size:19px;font-weight:700;letter-spacing:-.02em">Anggota</span><span style="font-size:13px;color:#62676B">{{ gd.memberLabel }}</span></div>
+            <sc-for list="{{ gd.members }}" as="m" hint-placeholder-count="5">
+              <div style="min-height:60px;padding:8px 0;border-top:1px solid #E8E9E7;display:flex;align-items:center;gap:12px">
+                <span style="flex:none;width:40px;height:40px;border-radius:20px;background:{{ m.bg }};font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center">{{ m.ini }}</span>
+                <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span style="font-size:15px;font-weight:600">{{ m.name }}</span><span style="font-size:13px;color:#62676B">{{ m.sub }}</span></span>
+                <sc-if value="{{ m.isC }}" hint-placeholder-val="{{ false }}"><span style="flex:none;height:26px;padding:0 9px 0 6px;border-radius:13px;background:#C9F2D6;font-size:12px;font-weight:600;display:flex;align-items:center;gap:3px"><span style="font-family:'Material Symbols Rounded';font-size:15px">shield_person</span>Koordinator</span></sc-if>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+      <sc-if value="{{ isProject }}" hint-placeholder-val="{{ false }}">
+        <div data-screen-label="Proyek" style="padding:24px 32px 56px;display:flex;flex-direction:column;gap:20px;animation:glFade .25s ease">
+          <sc-if value="{{ isArchived }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-radius:18px;background:#ECEEEB;font-size:14px"><span style="font-family:'Material Symbols Rounded';font-size:20px">inventory_2</span>Proyek ini telah diarsipkan. Informasi dan riwayatnya tetap dapat dilihat.</div></sc-if>
+          <sc-if value="{{ isDone }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-radius:18px;background:#C9F2D6;font-size:14px"><span style="font-family:'Material Symbols Rounded';font-size:20px">task_alt</span>Proyek ini sudah selesai. Semua tugas hanya bisa dilihat.</div></sc-if>
+          <div style="display:grid;grid-template-columns:{{ projCols }};gap:20px;align-items:stretch">
+            <div style="background:#fff;border-radius:32px;padding:24px;display:flex;flex-direction:column;gap:10px;min-width:0">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+                <button onClick="{{ openProjGroup }}" style="height:32px;border:none;background:none;padding:0 6px;margin-left:-6px;border-radius:10px;font-size:14px;font-weight:600;color:#4d5155;display:flex;align-items:center;gap:6px" style-hover="background:#F0F3F1"><span style="width:20px;height:20px;border-radius:7px;background:{{ proj.tint }};font-family:'Material Symbols Rounded';font-size:13px;display:flex;align-items:center;justify-content:center">{{ proj.icon }}</span>{{ proj.groupName }}</button>
+                <span style="flex:none;height:28px;padding:0 10px 0 7px;border-radius:14px;background:{{ proj.statusBg }};font-size:12px;font-weight:600;display:flex;align-items:center;gap:4px"><span style="font-family:'Material Symbols Rounded';font-size:15px">{{ proj.statusIcon }}</span>{{ proj.statusLabel }}</span>
+              </div>
+              <span style="font-size:30px;font-weight:700;letter-spacing:-.03em;line-height:1.12;text-wrap:pretty">{{ proj.title }}</span>
+              <span style="display:flex;align-items:center;gap:6px;font-size:14px;color:#3c4043"><span style="font-family:'Material Symbols Rounded';font-size:18px">event</span>Deadline {{ projDue }}</span>
+              <span style="max-width:640px;font-size:15px;line-height:1.55;color:#3c4043;text-wrap:pretty">{{ proj.desc }}</span>
+              <div style="flex:1"></div>
+              <div style="display:flex;align-items:center;gap:10px;padding-top:6px"><span style="display:flex;padding-right:8px"><sc-for list="{{ projMembers }}" as="m" hint-placeholder-count="5"><span title="{{ m.name }}" style="width:34px;height:34px;margin-right:-8px;border-radius:17px;border:2.5px solid #fff;background:{{ m.bg }};font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center">{{ m.ini }}</span></sc-for></span><span style="font-size:14px;color:#3c4043">{{ proj.ratio }} tugas selesai</span></div>
+            </div>
+            <div style="background:#fff;border-radius:32px;padding:22px 24px;display:flex;flex-direction:column;gap:16px;min-width:0">
+              <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px"><span style="font-size:19px;font-weight:700;letter-spacing:-.02em">Group Pulse</span><span style="font-size:13px;color:#62676B">Pilih anggota untuk menyorot tugasnya</span></div>
+              <sc-if value="{{ hasPulse }}" hint-placeholder-val="{{ true }}">
+                <div style="display:flex;align-items:center;gap:22px;flex-wrap:wrap">
+                  <div role="img" aria-label="{{ ringSub }}" style="flex:none;width:132px;height:132px;position:relative">
+                    {{ ringEl }}
+                    <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center"><span style="font-size:28px;font-weight:800;letter-spacing:-.04em;font-variant-numeric:tabular-nums">{{ ringPct }}</span><span style="font-size:12px;color:#62676B;text-align:center;line-height:1.25;max-width:80px">{{ ringSub }}</span></div>
+                  </div>
+                  <div style="flex:1 1 170px;display:flex;flex-direction:column;gap:7px">
+                    <sc-for list="{{ legend }}" as="l" hint-placeholder-count="5"><div style="display:flex;align-items:center;gap:8px;font-size:14px;opacity:{{ l.op }}"><span style="flex:none;width:24px;height:24px;border-radius:12px;background:{{ l.bg }};box-shadow:inset 0 0 0 2px {{ l.ring }};font-family:'Material Symbols Rounded';font-size:14px;display:flex;align-items:center;justify-content:center">{{ l.icon }}</span><span style="flex:1;color:#3c4043">{{ l.label }}</span><span style="font-weight:700;font-variant-numeric:tabular-nums">{{ l.n }}</span></div></sc-for>
+                  </div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ noPulse }}" hint-placeholder-val="{{ false }}"><div style="padding:8px 0;font-size:15px;line-height:1.5;color:#62676B">Belum ada tugas, jadi belum ada progres.</div></sc-if>
+              <div style="display:flex;gap:4px;overflow-x:auto;margin:0 -4px;padding:4px">
+                <sc-for list="{{ pulseMembers }}" as="m" hint-placeholder-count="5">
+                  <button onClick="{{ m.pick }}" aria-pressed="{{ m.selected }}" title="{{ m.name }}" style="flex:none;width:64px;border:none;background:none;padding:4px 0;display:flex;flex-direction:column;align-items:center;gap:5px;transform:{{ m.scale }};transition:transform .25s cubic-bezier(.3,1.6,.5,1)" style-active="transform:scale(.92)">
+                    <span style="position:relative;width:44px;height:44px;border-radius:22px;background:{{ m.bg }};font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:{{ m.ring }};transition:box-shadow .2s">{{ m.ini }}<span style="position:absolute;right:-6px;bottom:-4px;min-width:26px;height:20px;padding:0 5px;border-radius:10px;background:#fff;box-shadow:0 0 0 1px #E8E9E7;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center">{{ m.ratio }}</span></span>
+                    <span style="font-size:13px;font-weight:{{ m.nameW }};max-width:62px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ m.name }}</span>
+                  </button>
+                </sc-for>
+              </div>
+              <sc-if value="{{ hasMember }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;flex-direction:column;gap:6px;padding:12px 14px;border-radius:18px;background:#F0F3F1;animation:glUp .2s ease">
+                  <span style="display:flex;align-items:center;gap:10px"><span style="flex:1;font-size:14px;font-weight:600">{{ mem.label }}</span><button onClick="{{ clearMember }}" style="height:32px;padding:0 10px;border:none;border-radius:16px;background:#fff;font-size:13px;font-weight:600">Tampilkan semua</button></span>
+                  <span style="height:6px;border-radius:3px;background:#fff;overflow:hidden"><span style="display:block;height:100%;width:{{ mem.pct }};background:#202124;border-radius:3px;transition:width .5s ease"></span></span>
+                  <span style="font-size:12px;color:#4d5155">Ringkasan pembagian tugas, bukan penilaian kontribusi.</span>
+                </div>
+              </sc-if>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding-top:4px">
+            <span style="font-size:22px;font-weight:700;letter-spacing:-.02em">Tugas</span><span style="font-size:14px;color:#62676B">{{ taskCount }}</span>
+            <div style="flex:1"></div>
+            <div role="tablist" aria-label="Tampilan tugas" style="display:flex;gap:2px;padding:4px;border-radius:16px;background:#ECEEEB">
+              <sc-for list="{{ viewOpts }}" as="o" hint-placeholder-count="2"><button role="tab" aria-selected="{{ o.on }}" onClick="{{ o.go }}" style="height:36px;padding:0 14px 0 10px;border:none;border-radius:12px;background:{{ o.bg }};box-shadow:{{ o.shadow }};font-size:14px;font-weight:600;display:flex;align-items:center;gap:6px;transition:background .15s"><span style="font-family:'Material Symbols Rounded';font-size:19px">{{ o.icon }}</span>{{ o.label }}</button></sc-for>
+            </div>
+          </div>
+          <sc-if value="{{ isBoard }}" hint-placeholder-val="{{ true }}">
+            <div style="display:grid;grid-template-columns:repeat(5,minmax(236px,1fr));gap:14px;overflow-x:auto;padding-bottom:6px;align-items:start">
+              <sc-for list="{{ boardCols }}" as="col" hint-placeholder-count="5">
+                <div style="background:#F0F3F1;border-radius:24px;padding:12px;display:flex;flex-direction:column;gap:10px;min-height:180px">
+                  <div style="display:flex;align-items:center;gap:8px;padding:4px 4px 2px">
+                    <span style="flex:none;width:24px;height:24px;border-radius:12px;background:{{ col.bg }};box-shadow:inset 0 0 0 2px {{ col.ring }};font-family:'Material Symbols Rounded';font-size:14px;display:flex;align-items:center;justify-content:center">{{ col.icon }}</span>
+                    <span style="flex:1;font-size:14px;font-weight:700">{{ col.label }}</span><span style="min-width:24px;height:22px;padding:0 7px;border-radius:11px;background:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center">{{ col.count }}</span>
+                  </div>
+                  <sc-for list="{{ col.items }}" as="t" hint-placeholder-count="2">
+                    <button onClick="{{ t.open }}" style="text-align:left;border:none;background:{{ t.cardBg }};box-shadow:{{ t.cardRing }};opacity:{{ t.op }};border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:10px;transition:opacity .25s,transform .15s,box-shadow .15s;animation:glUp .22s ease" style-hover="transform:translateY(-1px);box-shadow:0 10px 24px -14px rgba(0,0,0,.3)">
+                      <sc-if value="{{ t.overdue }}" hint-placeholder-val="{{ false }}"><span style="align-self:flex-start;height:24px;padding:0 9px 0 6px;border-radius:12px;background:#F6CED1;box-shadow:inset 0 0 0 1.5px #202124;font-size:12px;font-weight:600;display:flex;align-items:center;gap:3px"><span style="font-family:'Material Symbols Rounded';font-size:15px">error</span>Terlambat</span></sc-if>
+                      <sc-if value="{{ t.stale }}" hint-placeholder-val="{{ false }}"><span style="align-self:flex-start;height:24px;padding:0 9px 0 6px;border-radius:12px;background:#DED2FF;box-shadow:inset 0 0 0 1.5px #202124;font-size:12px;font-weight:600;display:flex;align-items:center;gap:3px"><span style="font-family:'Material Symbols Rounded';font-size:15px">pending_actions</span>{{ t.staleLabel }}</span></sc-if>
+                      <span style="font-size:15px;font-weight:600;line-height:1.3">{{ t.title }}</span>
+                      <span style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+                        <span title="{{ t.pairLabel }}" style="display:flex;align-items:center;gap:3px"><span style="width:26px;height:26px;border-radius:13px;background:{{ t.a.bg }};font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center">{{ t.a.ini }}</span><span style="font-family:'Material Symbols Rounded';font-size:14px;color:#62676B">arrow_forward</span><span style="width:26px;height:26px;border-radius:13px;background:{{ t.r.bg }};font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center">{{ t.r.ini }}</span></span>
+                        <span style="flex:1"></span>
+                        <span style="display:flex;align-items:center;gap:3px;font-size:12px;color:#3c4043"><span style="font-family:'Material Symbols Rounded';font-size:15px">schedule</span>{{ t.dueLabel }}</span>
+                        <span style="display:flex;align-items:center;gap:3px;font-size:12px;color:#3c4043"><span style="font-family:'Material Symbols Rounded';font-size:15px">chat_bubble</span>{{ t.comments }}</span>
+                      </span>
+                    </button>
+                  </sc-for>
+                  <sc-if value="{{ col.empty }}" hint-placeholder-val="{{ false }}"><div style="padding:16px 8px;border-radius:16px;border:1.5px dashed #C4C7C5;text-align:center;font-size:13px;color:#62676B">Tidak ada tugas</div></sc-if>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+          <sc-if value="{{ isList }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#fff;border-radius:24px;padding:4px 8px 6px;display:flex;flex-direction:column">
+              <div style="display:grid;grid-template-columns:{{ rowCols }};gap:16px;padding:10px 12px;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#4d5155">
+                <span>Tugas</span><span>Proyek</span><span>Status</span><sc-if value="{{ showPair }}" hint-placeholder-val="{{ true }}"><span>Pelaksana → Reviewer</span></sc-if><span>Deadline</span><span style="text-align:right">Kom.</span>
+              </div>
+              <sc-for list="{{ listRows }}" as="t" hint-placeholder-count="4">
+                <button onClick="{{ t.open }}" style="text-align:left;border:none;background:{{ t.rowBg }};opacity:{{ t.op }};display:grid;grid-template-columns:{{ rowCols }};gap:16px;align-items:center;min-height:56px;padding:8px 12px;border-radius:14px;border-top:1px solid #F0F3F1;transition:opacity .25s" style-hover="background:#F8F9F7">
+                  <span style="min-width:0;display:flex;align-items:center;gap:8px"><span style="min-width:0;font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.title }}</span><sc-if value="{{ t.overdue }}" hint-placeholder-val="{{ false }}"><span title="Terlambat" style="flex:none;font-family:'Material Symbols Rounded';font-size:18px;color:#A8231B">error</span></sc-if></span>
+                  <span style="min-width:0;font-size:14px;color:#62676B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.projectTitle }}</span>
+                  <span style="justify-self:start;height:28px;padding:0 10px 0 7px;border-radius:14px;background:{{ t.chipBg }};font-size:12px;font-weight:600;display:flex;align-items:center;gap:4px;white-space:nowrap"><span style="font-family:'Material Symbols Rounded';font-size:15px">{{ t.chipIcon }}</span>{{ t.statusLabel }}</span>
+                  <sc-if value="{{ showPair }}" hint-placeholder-val="{{ true }}"><span style="min-width:0;display:flex;align-items:center;gap:6px;font-size:13px;color:#3c4043"><span style="flex:none;width:26px;height:26px;border-radius:13px;background:{{ t.a.bg }};font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center">{{ t.a.ini }}</span><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.pairLabel }}</span></span></sc-if>
+                  <span style="font-size:13px;color:#3c4043;white-space:nowrap">{{ t.dueLabel }}</span>
+                  <span style="font-size:13px;color:#3c4043;text-align:right">{{ t.comments }}</span>
+                </button>
+              </sc-for>
+            </div>
+          </sc-if>
+          <sc-if value="{{ noTasks }}" hint-placeholder-val="{{ false }}"><div style="background:#fff;border-radius:24px;padding:28px;text-align:center;font-size:15px;color:#62676B">{{ noTasksText }}</div></sc-if>
+        </div>
+      </sc-if>
+      <sc-if value="{{ isChats }}" hint-placeholder-val="{{ false }}">
+        <div data-screen-label="Chat" style="position:absolute;inset:0;display:flex;animation:glFade .2s ease">
+          <section aria-label="Daftar percakapan" style="flex:none;width:340px;display:flex;flex-direction:column;border-right:1px solid #E8E9E7">
+            <div style="padding:18px 16px 12px;display:flex;flex-direction:column;gap:12px">
+              <span style="font-size:22px;font-weight:700;letter-spacing:-.02em">Chat grup</span>
+              <div style="height:44px;border-radius:14px;background:#fff;box-shadow:inset 0 0 0 1px #E8E9E7;display:flex;align-items:center;gap:8px;padding:0 4px 0 12px">
+                <span style="font-family:'Material Symbols Rounded';font-size:20px;color:#62676B">search</span>
+                <input value="{{ chatQuery }}" onChange="{{ onChatQuery }}" placeholder="Cari nama grup" aria-label="Cari nama grup" style="flex:1;min-width:0;border:none;outline:none;background:none;font-size:15px">
+                <sc-if value="{{ hasQuery }}" hint-placeholder-val="{{ false }}"><button onClick="{{ clearChatQuery }}" aria-label="Hapus pencarian" style="width:36px;height:36px;border:none;border-radius:18px;background:#F0F3F1;font-family:'Material Symbols Rounded';font-size:17px">close</button></sc-if>
+              </div>
+            </div>
+            <div style="flex:1;min-height:0;overflow:auto;padding:0 10px 16px;display:flex;flex-direction:column;gap:2px">
+              <sc-for list="{{ chatRows }}" as="c" hint-placeholder-count="3">
+                <button onClick="{{ c.open }}" style="text-align:left;border:none;background:{{ c.bg }};box-shadow:{{ c.shadow }};border-radius:18px;padding:12px;display:flex;align-items:center;gap:12px" style-hover="background:#fff">
+                  <span style="flex:none;width:48px;height:48px;border-radius:18px;background:{{ c.tint }};display:flex;align-items:center;justify-content:center;font-family:'Material Symbols Rounded';font-size:24px">{{ c.icon }}</span>
+                  <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px">
+                    <span style="display:flex;align-items:baseline;gap:8px"><span style="flex:1;min-width:0;font-size:15px;font-weight:{{ c.nameW }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.name }}</span><span style="flex:none;font-size:12px;color:#62676B">{{ c.time }}</span></span>
+                    <span style="display:flex;align-items:center;gap:8px"><span style="flex:1;min-width:0;font-size:13px;line-height:1.35;color:{{ c.prevC }};font-weight:{{ c.prevW }};display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">{{ c.preview }}</span><sc-if value="{{ c.hasUnread }}" hint-placeholder-val="{{ false }}"><span aria-label="{{ c.unreadLabel }}" style="flex:none;min-width:22px;height:22px;padding:0 7px;border-radius:11px;background:#202124;color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center">{{ c.unread }}</span></sc-if></span>
+                  </span>
+                </button>
+              </sc-for>
+              <sc-if value="{{ noChatResults }}" hint-placeholder-val="{{ false }}"><div style="padding:28px 12px;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center"><span style="font-family:'Material Symbols Rounded';font-size:28px;color:#62676B">search_off</span><span style="font-size:15px;font-weight:600">Tidak ada grup “{{ chatQuery }}”</span><span style="font-size:13px;color:#62676B">Coba kata kunci lain.</span></div></sc-if>
+              <sc-if value="{{ noChatsAny }}" hint-placeholder-val="{{ false }}"><div style="padding:28px 12px;text-align:center;font-size:14px;line-height:1.5;color:#62676B">Belum ada chat. Chat grup dibuat otomatis saat kamu bergabung ke grup.</div></sc-if>
+            </div>
+          </section>
+          <section aria-label="Percakapan" style="flex:1;min-width:0;display:flex;flex-direction:column">
+            <sc-if value="{{ hasChat }}" hint-placeholder-val="{{ true }}">
+              <div style="flex:none;height:72px;display:flex;align-items:center;gap:12px;padding:0 20px;border-bottom:1px solid #E8E9E7;background:#F8F9F7">
+                <span style="flex:none;width:42px;height:42px;border-radius:16px;background:{{ chatG.tint }};font-family:'Material Symbols Rounded';font-size:22px;display:flex;align-items:center;justify-content:center">{{ chatG.icon }}</span>
+                <span style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-size:16px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ chatG.name }}</span><span style="font-size:13px;color:#62676B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ chatG.memberLabel }}</span></span>
+                <button onClick="{{ openChatGroup }}" style="flex:none;height:40px;padding:0 14px 0 10px;border-radius:20px;border:1.5px solid #202124;background:none;font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px" style-hover="background:#F0F3F1"><span style="font-family:'Material Symbols Rounded';font-size:18px">group</span>Buka grup</button>
+                <sc-if value="{{ infoToggleVisible }}" hint-placeholder-val="{{ true }}"><button onClick="{{ toggleInfo }}" aria-label="Tampilkan/sembunyikan info grup" title="Info grup" style="flex:none;width:40px;height:40px;border:none;border-radius:20px;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.08);font-family:'Material Symbols Rounded';font-size:21px;display:flex;align-items:center;justify-content:center">{{ infoIcon }}</button></sc-if>
+              </div>
+              <div ref="{{ threadRef }}" style="flex:1;min-height:0;overflow:auto;padding:8px 24px 16px">
+                <div style="max-width:780px;margin:0 auto;display:flex;flex-direction:column">
+                  <sc-if value="{{ offline }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:8px;padding:10px 14px;margin-top:10px;border-radius:16px;background:#F9E9BE;font-size:14px;font-weight:500"><span style="font-family:'Material Symbols Rounded';font-size:18px">cloud_off</span>Kamu sedang offline. Pesan akan gagal terkirim.</div></sc-if>
+                  <sc-for list="{{ thread }}" as="m" hint-placeholder-count="5">
+                    <sc-if value="{{ m.isDay }}" hint-placeholder-val="{{ false }}"><div style="align-self:center;margin:16px 0 6px;height:26px;padding:0 12px;border-radius:13px;background:#ECEEEB;font-size:12px;font-weight:600;color:#4d5155;display:flex;align-items:center">{{ m.label }}</div></sc-if>
+                    <sc-if value="{{ m.isSystem }}" hint-placeholder-val="{{ false }}"><div style="align-self:center;max-width:90%;margin:8px 0;display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:14px;background:#ECEEEB;font-size:13px;font-weight:500;color:#3c4043;text-align:center"><span style="flex:none;font-family:'Material Symbols Rounded';font-size:16px">bolt</span><span>{{ m.text }} · {{ m.time }}</span></div></sc-if>
+                    <sc-if value="{{ m.isActivity }}" hint-placeholder-val="{{ false }}">
+                      <div style="align-self:center;width:100%;max-width:560px;margin:10px 0;background:#fff;border-radius:20px;box-shadow:inset 0 0 0 1px #E8E9E7;padding:12px 12px 12px 14px;display:flex;align-items:center;gap:12px;animation:glUp .22s ease">
+                        <span style="flex:none;width:40px;height:40px;border-radius:14px;background:{{ m.bg }};font-family:'Material Symbols Rounded';font-size:20px;display:flex;align-items:center;justify-content:center">{{ m.icon }}</span>
+                        <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span style="font-size:13px;color:#4d5155">{{ m.line }} · {{ m.time }}</span><span style="font-size:15px;font-weight:600;line-height:1.3">{{ m.taskTitle }}</span></span>
+                        <button onClick="{{ m.open }}" style="flex:none;height:38px;padding:0 14px;border-radius:19px;border:1.5px solid #202124;background:none;font-size:13px;font-weight:600" style-hover="background:#F0F3F1">Lihat tugas</button>
+                      </div>
+                    </sc-if>
+                    <sc-if value="{{ m.isOther }}" hint-placeholder-val="{{ false }}">
+                      <div style="display:flex;gap:8px;align-items:flex-end;max-width:72%;padding-top:{{ m.pt }}">
+                        <sc-if value="{{ m.showAvatar }}" hint-placeholder-val="{{ true }}"><span style="flex:none;width:30px;height:30px;border-radius:15px;background:{{ m.bg }};font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-bottom:20px">{{ m.ini }}</span></sc-if>
+                        <sc-if value="{{ m.hideAvatar }}" hint-placeholder-val="{{ false }}"><span style="flex:none;width:30px"></span></sc-if>
+                        <div style="display:flex;flex-direction:column;gap:3px;min-width:0">
+                          <sc-if value="{{ m.showHead }}" hint-placeholder-val="{{ true }}"><span style="font-size:13px;font-weight:600;color:#4d5155;padding-left:4px">{{ m.name }}</span></sc-if>
+                          <div style="background:#fff;border-radius:{{ m.radius }};padding:8px 12px;font-size:15px;line-height:1.4;box-shadow:0 1px 1.5px rgba(0,0,0,.06);overflow-wrap:anywhere"><sc-for list="{{ m.segs }}" as="g" hint-placeholder-count="1"><sc-if value="{{ g.isLink }}" hint-placeholder-val="{{ false }}"><a href="#" onClick="{{ g.open }}" style="color:#1F4F86;text-decoration:underline;text-underline-offset:2px">{{ g.text }}</a></sc-if><sc-if value="{{ g.isText }}" hint-placeholder-val="{{ true }}"><span>{{ g.text }}</span></sc-if></sc-for></div>
+                          <sc-if value="{{ m.showMeta }}" hint-placeholder-val="{{ true }}"><span style="font-size:12px;color:#62676B;padding-left:4px">{{ m.time }}</span></sc-if>
+                        </div>
+                      </div>
+                    </sc-if>
+                    <sc-if value="{{ m.isMine }}" hint-placeholder-val="{{ false }}">
+                      <div style="align-self:flex-end;max-width:68%;display:flex;flex-direction:column;align-items:flex-end;gap:3px;padding-top:{{ m.pt }};animation:glUp .2s ease">
+                        <div style="background:#DED2FF;border-radius:{{ m.radius }};padding:8px 12px;font-size:15px;line-height:1.4;opacity:{{ m.opacity }};transition:opacity .2s;overflow-wrap:anywhere"><sc-for list="{{ m.segs }}" as="g" hint-placeholder-count="1"><sc-if value="{{ g.isLink }}" hint-placeholder-val="{{ false }}"><a href="#" onClick="{{ g.open }}" style="color:#1F3F76;text-decoration:underline;text-underline-offset:2px">{{ g.text }}</a></sc-if><sc-if value="{{ g.isText }}" hint-placeholder-val="{{ true }}"><span>{{ g.text }}</span></sc-if></sc-for></div>
+                        <sc-if value="{{ m.failed }}" hint-placeholder-val="{{ false }}"><button onClick="{{ m.retry }}" style="height:30px;border:none;background:none;padding:0 4px;font-size:13px;font-weight:600;color:#A8231B;display:flex;align-items:center;gap:4px"><span style="font-family:'Material Symbols Rounded';font-size:16px">error</span>Gagal terkirim · Coba lagi</button></sc-if>
+                        <sc-if value="{{ m.sending }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#62676B;display:flex;align-items:center;gap:4px"><span style="font-family:'Material Symbols Rounded';font-size:14px;animation:glSpin 1s linear infinite">progress_activity</span>Mengirim…</span></sc-if>
+                        <sc-if value="{{ m.sentMeta }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#62676B;display:flex;align-items:center;gap:3px">{{ m.time }} · Terkirim<span style="font-family:'Material Symbols Rounded';font-size:14px">check</span></span></sc-if>
+                      </div>
+                    </sc-if>
+                  </sc-for>
+                </div>
+              </div>
+              <div style="flex:none;padding:12px 24px 18px;border-top:1px solid #E8E9E7">
+                <div style="max-width:780px;margin:0 auto;display:flex;flex-direction:column;gap:6px">
+                  <div style="display:flex;align-items:flex-end;gap:10px;padding:6px 6px 6px 16px;border-radius:24px;background:#fff;box-shadow:inset 0 0 0 1px #E8E9E7">
+                    <textarea value="{{ draft }}" onChange="{{ onDraft }}" onKeyDown="{{ onDraftKey }}" rows="1" maxlength="2000" placeholder="Tulis pesan ke grup…" aria-label="Tulis pesan" style="flex:1;min-width:0;min-height:36px;max-height:140px;padding:8px 0;border:none;outline:none;background:none;font-size:15px;line-height:1.4;resize:none"></textarea>
+                    <button onClick="{{ sendChat }}" aria-label="Kirim" style="flex:none;width:40px;height:40px;border-radius:20px;border:none;background:{{ sendBg }};color:#fff;font-family:'Material Symbols Rounded';font-size:21px;display:flex;align-items:center;justify-content:center;transition:background .15s" style-active="transform:scale(.9)">arrow_upward</button>
+                  </div>
+                  <span style="font-size:12px;color:#62676B;padding-left:16px">Enter untuk kirim · Shift + Enter untuk baris baru</span>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ noChat }}" hint-placeholder-val="{{ false }}"><div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:#62676B;font-size:15px"><span style="font-family:'Material Symbols Rounded';font-size:36px">forum</span>Pilih percakapan di sebelah kiri.</div></sc-if>
+          </section>
+          <sc-if value="{{ showInfoPane }}" hint-placeholder-val="{{ false }}">
+            <aside aria-label="Info grup" style="flex:none;width:300px;border-left:1px solid #E8E9E7;overflow:auto;padding:18px 16px 24px;display:flex;flex-direction:column;gap:20px;animation:glFade .2s ease">
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <span style="font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#4d5155">Perlu perhatian di grup</span>
+                <sc-for list="{{ info.attn }}" as="t" hint-placeholder-count="2">
+                  <button onClick="{{ t.open }}" style="text-align:left;border:none;background:#fff;border-radius:16px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;box-shadow:0 1px 2px rgba(0,0,0,.04)" style-hover="box-shadow:0 8px 20px -12px rgba(0,0,0,.3)">
+                    <span style="font-size:14px;font-weight:600;line-height:1.3">{{ t.title }}</span>
+                    <span style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><span style="height:24px;padding:0 8px 0 6px;border-radius:12px;background:{{ t.chipBg }};font-size:12px;font-weight:600;display:flex;align-items:center;gap:3px"><span style="font-family:'Material Symbols Rounded';font-size:14px">{{ t.chipIcon }}</span>{{ t.statusLabel }}</span><span style="font-size:12px;color:#62676B">{{ t.aName }}</span></span>
+                  </button>
+                </sc-for>
+                <sc-if value="{{ info.noAttn }}" hint-placeholder-val="{{ false }}"><span style="font-size:14px;color:#62676B">Tidak ada yang mendesak.</span></sc-if>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <span style="font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#4d5155">Proyek aktif</span>
+                <sc-for list="{{ info.projects }}" as="p" hint-placeholder-count="1">
+                  <button onClick="{{ p.open }}" style="text-align:left;border:none;background:#fff;border-radius:16px;padding:10px 12px;display:flex;flex-direction:column;gap:6px" style-hover="box-shadow:0 8px 20px -12px rgba(0,0,0,.3)">
+                    <span style="font-size:14px;font-weight:600">{{ p.title }}</span>
+                    <span style="display:flex;align-items:center;gap:8px"><span style="flex:1;height:5px;border-radius:3px;background:#F0F3F1;overflow:hidden"><span style="display:block;height:100%;width:{{ p.pct }};background:#202124"></span></span><span style="font-size:12px;font-weight:600">{{ p.ratio }}</span></span>
+                  </button>
+                </sc-for>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:4px">
+                <span style="font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#4d5155;padding-bottom:4px">Anggota</span>
+                <sc-for list="{{ info.members }}" as="m" hint-placeholder-count="4">
+                  <div style="display:flex;align-items:center;gap:10px;min-height:40px"><span style="flex:none;width:32px;height:32px;border-radius:16px;background:{{ m.bg }};font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center">{{ m.ini }}</span><span style="flex:1;font-size:14px;font-weight:500">{{ m.name }}</span><span style="font-size:12px;color:#62676B">{{ m.role }}</span></div>
+                </sc-for>
+              </div>
+            </aside>
+          </sc-if>
+        </div>
+      </sc-if>
+      <sc-if value="{{ isTasks }}" hint-placeholder-val="{{ false }}">
+        <div data-screen-label="Tugas Saya" style="max-width:1360px;margin:0 auto;padding:28px 32px 56px;display:flex;flex-direction:column;gap:20px;animation:glFade .25s ease">
+          <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap">
+            <div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:34px;font-weight:700;letter-spacing:-.03em">Tugas Saya</span><span style="font-size:15px;color:#62676B">{{ myCountLabel }}</span></div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <sc-for list="{{ filters }}" as="f" hint-placeholder-count="4"><button onClick="{{ f.go }}" style="height:42px;padding:0 6px 0 16px;border-radius:21px;border:1.5px solid #202124;background:{{ f.bg }};color:{{ f.fg }};font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px;transition:background .2s,color .2s">{{ f.label }}<span style="min-width:28px;height:28px;padding:0 8px;border-radius:14px;background:{{ f.nbg }};color:#202124;font-size:13px;display:flex;align-items:center;justify-content:center">{{ f.n }}</span></button></sc-for>
+            </div>
+          </div>
+          <sc-for list="{{ sections }}" as="sec" hint-placeholder-count="2">
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div style="display:flex;align-items:center;gap:8px;padding-left:4px"><span style="font-size:13px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#4d5155">{{ sec.title }}</span><span style="font-size:13px;color:#62676B">{{ sec.count }}</span></div>
+              <sc-if value="{{ sec.has }}" hint-placeholder-val="{{ true }}">
+                <div style="background:#fff;border-radius:24px;padding:4px 8px 6px;display:flex;flex-direction:column;box-shadow:0 1px 2px rgba(0,0,0,.04)">
+                  <div style="display:grid;grid-template-columns:{{ rowCols }};gap:16px;padding:10px 12px;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#4d5155">
+                    <span>Tugas</span><span>Proyek</span><span>Status</span><sc-if value="{{ showPair }}" hint-placeholder-val="{{ true }}"><span>Pelaksana → Reviewer</span></sc-if><span>Deadline</span><span style="text-align:right">Kom.</span>
+                  </div>
+                  <sc-for list="{{ sec.items }}" as="t" hint-placeholder-count="2">
+                    <button onClick="{{ t.open }}" style="text-align:left;border:none;background:{{ t.rowBg }};display:grid;grid-template-columns:{{ rowCols }};gap:16px;align-items:center;min-height:58px;padding:8px 12px;border-radius:14px;border-top:1px solid #F0F3F1" style-hover="background:#F8F9F7">
+                      <span style="min-width:0;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="min-width:0;font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.title }}</span><sc-if value="{{ t.overdue }}" hint-placeholder-val="{{ false }}"><span style="flex:none;height:22px;padding:0 8px 0 5px;border-radius:11px;background:#F6CED1;box-shadow:inset 0 0 0 1.5px #202124;font-size:11px;font-weight:600;display:flex;align-items:center;gap:3px"><span style="font-family:'Material Symbols Rounded';font-size:14px">error</span>Terlambat</span></sc-if><sc-if value="{{ t.stale }}" hint-placeholder-val="{{ false }}"><span style="flex:none;height:22px;padding:0 8px 0 5px;border-radius:11px;background:#DED2FF;box-shadow:inset 0 0 0 1.5px #202124;font-size:11px;font-weight:600;display:flex;align-items:center;gap:3px"><span style="font-family:'Material Symbols Rounded';font-size:14px">pending_actions</span>{{ t.staleLabel }}</span></sc-if></span>
+                      <span style="min-width:0;font-size:14px;color:#62676B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.projectTitle }}</span>
+                      <span style="justify-self:start;height:28px;padding:0 10px 0 7px;border-radius:14px;background:{{ t.chipBg }};font-size:12px;font-weight:600;display:flex;align-items:center;gap:4px;white-space:nowrap"><span style="font-family:'Material Symbols Rounded';font-size:15px">{{ t.chipIcon }}</span>{{ t.statusLabel }}</span>
+                      <sc-if value="{{ showPair }}" hint-placeholder-val="{{ true }}"><span style="min-width:0;display:flex;align-items:center;gap:4px;font-size:13px;color:#3c4043"><span style="flex:none;width:26px;height:26px;border-radius:13px;background:{{ t.a.bg }};font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center">{{ t.a.ini }}</span><span style="flex:none;font-family:'Material Symbols Rounded';font-size:14px;color:#62676B">arrow_forward</span><span style="flex:none;width:26px;height:26px;border-radius:13px;background:{{ t.r.bg }};font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center">{{ t.r.ini }}</span><span style="padding-left:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.pairLabel }}</span></span></sc-if>
+                      <span style="font-size:13px;color:#3c4043;white-space:nowrap">{{ t.dueLabel }}</span>
+                      <span style="font-size:13px;color:#3c4043;text-align:right">{{ t.comments }}</span>
+                    </button>
+                  </sc-for>
+                </div>
+              </sc-if>
+              <sc-if value="{{ sec.empty }}" hint-placeholder-val="{{ false }}"><div style="background:#fff;border-radius:24px;padding:26px;text-align:center;font-size:15px;color:#62676B">Tidak ada tugas di kategori ini.</div></sc-if>
+            </div>
+          </sc-for>
+          <sc-if value="{{ noTasksAtAll }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#fff;border-radius:28px;padding:36px 24px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center">
+              <span style="width:56px;height:56px;border-radius:20px;background:#D8EAF4;font-family:'Material Symbols Rounded';font-size:28px;display:flex;align-items:center;justify-content:center">task_alt</span>
+              <span style="font-size:19px;font-weight:700">Belum ada tugas</span>
+              <span style="max-width:440px;font-size:15px;line-height:1.5;color:#62676B">Saat koordinator membagi tugas atau ada hasil kerja yang perlu kamu review, semuanya muncul di sini.</span>
+            </div>
+          </sc-if>
+        </div>
+      </sc-if>
+    </div>
+  </main>
+  <sc-if value="{{ hasTask }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeTask }}" style="position:absolute;inset:0;z-index:40;background:rgba(20,22,24,.16);animation:glFade .2s ease"></div>
+    <aside role="dialog" aria-label="{{ tk.title }}" data-screen-label="Detail Tugas" style="position:absolute;top:0;right:0;bottom:0;width:580px;max-width:calc(100% - 96px);z-index:41;background:#F8F9F7;box-shadow:-30px 0 60px -24px rgba(0,0,0,.3);border-left:1px solid #E8E9E7;display:flex;flex-direction:column;animation:glSlide .26s cubic-bezier(.2,.9,.3,1)">
+      <div style="flex:none;padding:16px 20px 12px 24px;display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="flex:1;display:flex;flex-wrap:wrap;gap:6px">
+            <span style="height:30px;padding:0 12px 0 9px;border-radius:15px;background:{{ tk.chipBg }};font-size:13px;font-weight:600;display:flex;align-items:center;gap:5px;transition:background .3s"><span style="font-family:'Material Symbols Rounded';font-size:17px">{{ tk.chipIcon }}</span>{{ tk.statusLabel }}</span>
+            <sc-if value="{{ tk.overdue }}" hint-placeholder-val="{{ false }}"><span style="height:30px;padding:0 12px 0 9px;border-radius:15px;background:#F6CED1;box-shadow:inset 0 0 0 1.5px #202124;font-size:13px;font-weight:600;display:flex;align-items:center;gap:5px"><span style="font-family:'Material Symbols Rounded';font-size:17px">error</span>Terlambat</span></sc-if>
+            <sc-if value="{{ tk.stale }}" hint-placeholder-val="{{ false }}"><span style="height:30px;padding:0 12px 0 9px;border-radius:15px;background:#DED2FF;box-shadow:inset 0 0 0 1.5px #202124;font-size:13px;font-weight:600;display:flex;align-items:center;gap:5px"><span style="font-family:'Material Symbols Rounded';font-size:17px">pending_actions</span>{{ tk.staleLabel }}</span></sc-if>
+          </div>
+          <button onClick="{{ closeTask }}" aria-label="Tutup (Esc)" title="Tutup (Esc)" style="flex:none;width:40px;height:40px;border-radius:20px;border:none;background:#ECEEEB;font-family:'Material Symbols Rounded';font-size:21px;display:flex;align-items:center;justify-content:center" style-hover="background:#E2E4E1">close</button>
+        </div>
+        <span style="font-size:26px;font-weight:700;letter-spacing:-.025em;line-height:1.15;text-wrap:pretty">{{ tk.title }}</span>
+        <button onClick="{{ openTaskProject }}" style="align-self:flex-start;height:30px;border:none;background:none;padding:0 6px;margin-left:-6px;border-radius:10px;font-size:14px;color:#3c4043;display:flex;align-items:center;gap:4px" style-hover="background:#ECEEEB"><span style="font-family:'Material Symbols Rounded';font-size:17px">folder</span>{{ tk.projectTitle }}<span style="font-family:'Material Symbols Rounded';font-size:17px">chevron_right</span></button>
+        <div role="tablist" style="display:flex;background:#ECEEEB;border-radius:16px;padding:4px;gap:2px">
+          <sc-for list="{{ taskTabs }}" as="x" hint-placeholder-count="3"><button role="tab" aria-selected="{{ x.sel }}" onClick="{{ x.go }}" style="flex:1;min-width:0;height:38px;border:none;border-radius:12px;background:{{ x.bg }};box-shadow:{{ x.shadow }};font-size:14px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:6px;transition:background .15s">{{ x.label }}<sc-if value="{{ x.hasCount }}" hint-placeholder-val="{{ false }}"><span style="min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:#DED2FF;font-size:12px;display:flex;align-items:center;justify-content:center">{{ x.count }}</span></sc-if></button></sc-for>
+        </div>
+      </div>
+      <div ref="{{ dbodyRef }}" style="flex:1;min-height:0;overflow:auto;padding:4px 24px 20px">
+        <sc-if value="{{ tabOverview }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;flex-direction:column;gap:12px;animation:glFade .2s ease">
+            <sc-if value="{{ hasFeedback }}" hint-placeholder-val="{{ false }}"><div style="background:#F6CED1;border-radius:20px;padding:14px 16px;display:flex;flex-direction:column;gap:6px"><span style="font-size:14px;font-weight:700;display:flex;align-items:center;gap:6px"><span style="font-family:'Material Symbols Rounded';font-size:18px">undo</span>{{ feedbackBy }} meminta revisi</span><span style="font-size:15px;line-height:1.45">{{ feedbackText }}</span></div></sc-if>
+            <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px">
+              <div style="background:#fff;border-radius:18px;padding:12px 14px;display:flex;align-items:center;gap:10px"><span style="flex:none;width:36px;height:36px;border-radius:18px;background:{{ tk.a.bg }};font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center">{{ tk.a.ini }}</span><span style="min-width:0;display:flex;flex-direction:column"><span style="font-size:12px;color:#62676B">Pelaksana</span><span style="font-size:15px;font-weight:600">{{ tk.aName }}</span></span></div>
+              <div style="background:#fff;border-radius:18px;padding:12px 14px;display:flex;align-items:center;gap:10px"><span style="flex:none;width:36px;height:36px;border-radius:18px;background:{{ tk.r.bg }};font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center">{{ tk.r.ini }}</span><span style="min-width:0;display:flex;flex-direction:column"><span style="font-size:12px;color:#62676B">Reviewer</span><span style="font-size:15px;font-weight:600">{{ tk.rName }}</span></span></div>
+              <div style="background:#fff;border-radius:18px;padding:12px 14px;display:flex;align-items:center;gap:10px"><span style="flex:none;width:36px;height:36px;border-radius:18px;background:#F0F3F1;font-family:'Material Symbols Rounded';font-size:19px;display:flex;align-items:center;justify-content:center">schedule</span><span style="min-width:0;display:flex;flex-direction:column"><span style="font-size:12px;color:#62676B">Deadline</span><span style="font-size:15px;font-weight:600">{{ tk.dueLabel }}</span></span></div>
+              <div style="background:#fff;border-radius:18px;padding:12px 14px;display:flex;align-items:center;gap:10px"><span style="flex:none;width:36px;height:36px;border-radius:18px;background:#F0F3F1;font-family:'Material Symbols Rounded';font-size:19px;display:flex;align-items:center;justify-content:center">history</span><span style="min-width:0;display:flex;flex-direction:column"><span style="font-size:12px;color:#62676B">Hasil kerja</span><span style="font-size:15px;font-weight:600">{{ tkRevs }}</span></span></div>
+            </div>
+            <div style="background:#fff;border-radius:20px;padding:16px 18px;display:flex;flex-direction:column;gap:8px"><span style="font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#4d5155">Deskripsi</span><span style="font-size:15px;line-height:1.55;text-wrap:pretty">{{ tkDesc }}</span></div>
+            <button onClick="{{ discuss }}" style="text-align:left;border:none;background:#DED2FF;border-radius:20px;padding:14px 16px;display:flex;align-items:center;gap:12px" style-hover="filter:brightness(.98)">
+              <span style="flex:none;width:40px;height:40px;border-radius:14px;border:1.5px solid #202124;font-family:'Material Symbols Rounded';font-size:21px;display:flex;align-items:center;justify-content:center">forum</span>
+              <span style="flex:1;display:flex;flex-direction:column;gap:1px"><span style="font-size:15px;font-weight:600">Diskusi tugas ini</span><span style="font-size:13px;color:#3c4043">{{ tk.comments }} komentar · terpisah dari chat grup</span></span>
+              <span style="font-family:'Material Symbols Rounded';font-size:22px">chevron_right</span>
+            </button>
+          </div>
+        </sc-if>
+        <sc-if value="{{ tabSubmission }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:12px;animation:glFade .2s ease">
+            <sc-for list="{{ subs }}" as="x" hint-placeholder-count="1">
+              <div style="background:#fff;border-radius:20px;padding:16px 18px;display:flex;flex-direction:column;gap:12px">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><div style="display:flex;flex-direction:column;gap:1px"><span style="font-size:16px;font-weight:700">{{ x.title }}</span><span style="font-size:13px;color:#62676B">{{ x.meta }}</span></div><span style="flex:none;height:28px;padding:0 11px 0 8px;border-radius:14px;background:{{ x.chipBg }};font-size:12px;font-weight:600;display:flex;align-items:center;gap:4px"><span style="font-family:'Material Symbols Rounded';font-size:16px">{{ x.chipIcon }}</span>{{ x.chipLabel }}</span></div>
+                <span style="font-size:15px;line-height:1.5">{{ x.note }}</span>
+                <sc-for list="{{ x.links }}" as="l" hint-placeholder-count="1"><button onClick="{{ l.open }}" style="text-align:left;border:none;background:#F0F3F1;border-radius:14px;padding:0 12px;min-height:42px;display:flex;align-items:center;gap:8px;font-size:14px;font-weight:500" style-hover="background:#E8E9E7"><span style="font-family:'Material Symbols Rounded';font-size:18px">link</span><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ l.url }}</span><span style="font-family:'Material Symbols Rounded';font-size:17px;color:#62676B">open_in_new</span></button></sc-for>
+                <sc-if value="{{ x.hasFeedback }}" hint-placeholder-val="{{ false }}"><div style="border-top:1px solid #E8E9E7;padding-top:12px;display:flex;flex-direction:column;gap:4px"><span style="font-size:13px;font-weight:600;color:#62676B">Catatan {{ x.by }}</span><span style="font-size:15px;line-height:1.45">{{ x.feedback }}</span></div></sc-if>
+                <sc-if value="{{ x.showLock }}" hint-placeholder-val="{{ false }}"><div style="border-top:1px solid #E8E9E7;padding-top:12px;display:flex;align-items:center;gap:8px;font-size:13px;color:#3c4043"><span style="font-family:'Material Symbols Rounded';font-size:17px">lock</span>{{ x.lockText }}</div></sc-if>
+              </div>
+            </sc-for>
+            <sc-if value="{{ noSubs }}" hint-placeholder-val="{{ false }}"><div style="background:#fff;border-radius:20px;padding:28px 20px;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center"><span style="width:50px;height:50px;border-radius:18px;background:#F9E9BE;font-family:'Material Symbols Rounded';font-size:25px;display:flex;align-items:center;justify-content:center">inventory_2</span><span style="font-size:16px;font-weight:600">Belum ada hasil kerja</span><span style="font-size:14px;color:#62676B;line-height:1.5">Pelaksana mengirim catatan dan maksimal 5 link https. Semua revisi tersimpan di sini.</span></div></sc-if>
+          </div>
+        </sc-if>
+        <sc-if value="{{ tabDiscussion }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;animation:glFade .2s ease">
+            <span style="font-size:13px;color:#62676B;padding:2px 0 4px">Komentar di sini hanya untuk tugas ini.</span>
+            <sc-for list="{{ dthread }}" as="m" hint-placeholder-count="3">
+              <sc-if value="{{ m.isDay }}" hint-placeholder-val="{{ false }}"><div style="align-self:center;margin:14px 0 6px;height:24px;padding:0 12px;border-radius:12px;background:#ECEEEB;font-size:12px;font-weight:600;color:#4d5155;display:flex;align-items:center">{{ m.label }}</div></sc-if>
+              <sc-if value="{{ m.isSystem }}" hint-placeholder-val="{{ false }}"><div style="align-self:center;max-width:92%;margin:8px 0;display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:14px;background:#ECEEEB;font-size:13px;font-weight:500;color:#3c4043;text-align:center"><span style="flex:none;font-family:'Material Symbols Rounded';font-size:16px">bolt</span><span>{{ m.text }} · {{ m.time }}</span></div></sc-if>
+              <sc-if value="{{ m.isOther }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;gap:8px;align-items:flex-end;max-width:84%;padding-top:{{ m.pt }}">
+                  <sc-if value="{{ m.showAvatar }}" hint-placeholder-val="{{ true }}"><span style="flex:none;width:28px;height:28px;border-radius:14px;background:{{ m.bg }};font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-bottom:20px">{{ m.ini }}</span></sc-if>
+                  <sc-if value="{{ m.hideAvatar }}" hint-placeholder-val="{{ false }}"><span style="flex:none;width:28px"></span></sc-if>
+                  <div style="display:flex;flex-direction:column;gap:3px;min-width:0">
+                    <sc-if value="{{ m.showHead }}" hint-placeholder-val="{{ true }}"><span style="font-size:13px;font-weight:600;color:#4d5155;padding-left:4px">{{ m.name }}</span></sc-if>
+                    <div style="background:#fff;border-radius:{{ m.radius }};padding:8px 12px;font-size:15px;line-height:1.4;box-shadow:0 1px 1.5px rgba(0,0,0,.06);overflow-wrap:anywhere"><sc-for list="{{ m.segs }}" as="g" hint-placeholder-count="1"><sc-if value="{{ g.isLink }}" hint-placeholder-val="{{ false }}"><a href="#" onClick="{{ g.open }}" style="color:#1F4F86;text-decoration:underline">{{ g.text }}</a></sc-if><sc-if value="{{ g.isText }}" hint-placeholder-val="{{ true }}"><span>{{ g.text }}</span></sc-if></sc-for></div>
+                    <sc-if value="{{ m.showMeta }}" hint-placeholder-val="{{ true }}"><span style="font-size:12px;color:#62676B;padding-left:4px">{{ m.time }}</span></sc-if>
+                  </div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ m.isMine }}" hint-placeholder-val="{{ false }}">
+                <div style="align-self:flex-end;max-width:80%;display:flex;flex-direction:column;align-items:flex-end;gap:3px;padding-top:{{ m.pt }};animation:glUp .2s ease">
+                  <div style="background:#DED2FF;border-radius:{{ m.radius }};padding:8px 12px;font-size:15px;line-height:1.4;opacity:{{ m.opacity }};overflow-wrap:anywhere"><sc-for list="{{ m.segs }}" as="g" hint-placeholder-count="1"><sc-if value="{{ g.isLink }}" hint-placeholder-val="{{ false }}"><a href="#" onClick="{{ g.open }}" style="color:#1F3F76;text-decoration:underline">{{ g.text }}</a></sc-if><sc-if value="{{ g.isText }}" hint-placeholder-val="{{ true }}"><span>{{ g.text }}</span></sc-if></sc-for></div>
+                  <sc-if value="{{ m.failed }}" hint-placeholder-val="{{ false }}"><button onClick="{{ m.retry }}" style="height:30px;border:none;background:none;padding:0 4px;font-size:13px;font-weight:600;color:#A8231B;display:flex;align-items:center;gap:4px"><span style="font-family:'Material Symbols Rounded';font-size:16px">error</span>Gagal terkirim · Coba lagi</button></sc-if>
+                  <sc-if value="{{ m.sending }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#62676B;display:flex;align-items:center;gap:4px"><span style="font-family:'Material Symbols Rounded';font-size:14px;animation:glSpin 1s linear infinite">progress_activity</span>Mengirim…</span></sc-if>
+                  <sc-if value="{{ m.sentMeta }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#62676B">{{ m.time }} · Terkirim</span></sc-if>
+                </div>
+              </sc-if>
+            </sc-for>
+            <sc-if value="{{ dEmpty }}" hint-placeholder-val="{{ false }}"><div style="padding:36px 12px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px"><span style="font-size:16px;font-weight:600">Mulai diskusi</span><span style="font-size:14px;line-height:1.5;color:#62676B">Pertanyaan soal tugas ini tetap di sini, tidak tenggelam di chat grup.</span></div></sc-if>
+          </div>
+        </sc-if>
+      </div>
+      <div style="flex:none;padding:12px 24px 20px;border-top:1px solid #E8E9E7">
+        <sc-if value="{{ hasCta }}" hint-placeholder-val="{{ false }}"><button onClick="{{ cta.go }}" style="width:100%;height:52px;border:none;border-radius:18px;background:#202124;color:#fff;font-size:16px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px;animation:glUp .2s ease" style-active="transform:scale(.99)"><span style="font-family:'Material Symbols Rounded';font-size:21px">{{ cta.icon }}</span>{{ cta.label }}</button></sc-if>
+        <sc-if value="{{ hasInfo }}" hint-placeholder-val="{{ false }}"><div style="min-height:50px;border-radius:18px;background:#fff;box-shadow:inset 0 0 0 1px #E8E9E7;font-size:14px;font-weight:500;display:flex;align-items:center;justify-content:center;gap:8px;padding:8px 16px;text-align:center"><span style="font-family:'Material Symbols Rounded';font-size:19px">{{ infoIcon }}</span>{{ info }}</div></sc-if>
+        <sc-if value="{{ showTComposer }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;align-items:flex-end;gap:10px;padding:6px 6px 6px 16px;border-radius:24px;background:#fff;box-shadow:inset 0 0 0 1px #E8E9E7">
+            <textarea value="{{ tdraft }}" onChange="{{ onTDraft }}" onKeyDown="{{ onTKey }}" rows="1" maxlength="2000" placeholder="Komentari tugas ini…" aria-label="Komentari tugas ini" style="flex:1;min-width:0;min-height:36px;max-height:120px;padding:8px 0;border:none;outline:none;background:none;font-size:15px;line-height:1.4;resize:none"></textarea>
+            <button onClick="{{ sendT }}" aria-label="Kirim komentar" style="flex:none;width:40px;height:40px;border-radius:20px;border:none;background:{{ tSendBg }};color:#fff;font-family:'Material Symbols Rounded';font-size:21px;display:flex;align-items:center;justify-content:center">arrow_upward</button>
+          </div>
+        </sc-if>
+        <sc-if value="{{ showTReadOnly }}" hint-placeholder-val="{{ false }}"><div style="min-height:44px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:14px;color:#3c4043"><span style="font-family:'Material Symbols Rounded';font-size:18px">lock</span>{{ roText }}</div></sc-if>
+      </div>
+    </aside>
+  </sc-if>
+  <sc-if value="{{ hasModal }}" hint-placeholder-val="{{ false }}"><div onClick="{{ closeModal }}" style="position:absolute;inset:0;z-index:60;background:rgba(20,22,24,.34);animation:glFade .15s ease"></div></sc-if>
+  <sc-if value="{{ mSubmit }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;z-index:61;display:flex;align-items:center;justify-content:center;padding:40px;pointer-events:none">
+      <div role="dialog" aria-label="{{ submitTitle }}" style="pointer-events:auto;width:100%;max-width:560px;max-height:100%;overflow:auto;background:#F8F9F7;border-radius:28px;padding:24px;display:flex;flex-direction:column;gap:16px;box-shadow:0 40px 80px -30px rgba(0,0,0,.45);animation:glPop .2s ease">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px"><div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:22px;font-weight:700;letter-spacing:-.02em">{{ submitTitle }}</span><span style="font-size:14px;color:#3c4043">{{ sTask }} · {{ reviewerName }} akan diberi tahu untuk mereview.</span></div><button onClick="{{ closeModal }}" aria-label="Tutup" style="flex:none;width:40px;height:40px;border-radius:20px;border:none;background:#ECEEEB;font-family:'Material Symbols Rounded';font-size:21px">close</button></div>
+        <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:14px;font-weight:600">Apa yang kamu kerjakan? <span style="color:#A8231B">*</span></span><textarea value="{{ fv.note }}" onChange="{{ on.note }}" rows="4" maxlength="1000" placeholder="Contoh: Tabel sudah 3NF, alasan dekomposisi ada di halaman 2." style="border-radius:16px;border:1px solid #E8E9E7;background:#fff;padding:12px 14px;font-size:15px;line-height:1.45;resize:vertical;outline:none"></textarea></label>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;justify-content:space-between"><span style="font-size:14px;font-weight:600">Link (opsional)</span><span style="font-size:13px;color:#62676B">{{ linkCount }}</span></div>
+          <sc-for list="{{ linkFields }}" as="l" hint-placeholder-count="1"><div style="display:flex;align-items:center;gap:8px;height:46px;border-radius:14px;border:1px solid #E8E9E7;background:#fff;padding:0 12px"><span style="font-family:'Material Symbols Rounded';font-size:18px;color:#62676B">link</span><input value="{{ l.value }}" onChange="{{ l.onChange }}" placeholder="https://docs.google.com/…" aria-label="Link hasil kerja" style="flex:1;min-width:0;border:none;outline:none;font-size:15px;background:none"></div></sc-for>
+          <sc-if value="{{ canAddLink }}" hint-placeholder-val="{{ true }}"><button onClick="{{ addLink }}" style="align-self:flex-start;height:36px;border:none;background:none;padding:0;font-size:14px;font-weight:600;display:flex;align-items:center;gap:4px"><span style="font-family:'Material Symbols Rounded';font-size:19px">add</span>Tambah link</button></sc-if>
+        </div>
+        <sc-if value="{{ hasErr }}" hint-placeholder-val="{{ false }}"><div role="alert" style="display:flex;align-items:center;gap:8px;padding:12px 14px;border-radius:14px;background:#F6CED1;font-size:14px;font-weight:500"><span style="font-family:'Material Symbols Rounded';font-size:18px">error</span>{{ formErr }}</div></sc-if>
+        <div style="display:flex;gap:10px;justify-content:flex-end"><button onClick="{{ closeModal }}" style="height:48px;padding:0 20px;border:none;border-radius:16px;background:#ECEEEB;font-size:15px;font-weight:600">Batal</button><button onClick="{{ doSubmit }}" disabled="{{ busy }}" style="height:48px;padding:0 22px;border:none;border-radius:16px;background:#202124;color:#fff;font-size:15px;font-weight:600;display:flex;align-items:center;gap:8px;opacity:{{ busyOp }}"><sc-if value="{{ busy }}" hint-placeholder-val="{{ false }}"><span style="font-family:'Material Symbols Rounded';font-size:19px;animation:glSpin 1s linear infinite">progress_activity</span></sc-if>{{ submitBtn }}</button></div>
+      </div>
+    </div>
+  </sc-if>
+  <sc-if value="{{ mReview }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;z-index:61;display:flex;align-items:center;justify-content:center;padding:40px;pointer-events:none">
+      <div role="dialog" aria-label="Review hasil kerja" style="pointer-events:auto;width:100%;max-width:560px;max-height:100%;overflow:auto;background:#F8F9F7;border-radius:28px;padding:24px;display:flex;flex-direction:column;gap:16px;box-shadow:0 40px 80px -30px rgba(0,0,0,.45);animation:glPop .2s ease">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><span style="flex:1;min-width:0;font-size:22px;font-weight:700;letter-spacing:-.02em">Review hasil kerja</span><button onClick="{{ closeModal }}" aria-label="Tutup" style="flex:none;width:40px;height:40px;border-radius:20px;border:none;background:#ECEEEB;font-family:'Material Symbols Rounded';font-size:21px">close</button></div>
+        <div style="background:#fff;border-radius:20px;padding:16px 18px;display:flex;flex-direction:column;gap:10px">
+          <span style="font-size:13px;font-weight:600;color:#62676B">{{ lastSub.meta }}</span>
+          <span style="font-size:15px;line-height:1.5">{{ lastSub.note }}</span>
+          <sc-for list="{{ lastSub.links }}" as="l" hint-placeholder-count="1"><div style="background:#F0F3F1;border-radius:14px;padding:0 12px;min-height:42px;display:flex;align-items:center;gap:8px;font-size:14px;font-weight:500"><span style="font-family:'Material Symbols Rounded';font-size:18px">link</span><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ l.url }}</span></div></sc-for>
+        </div>
+        <sc-if value="{{ hasErr }}" hint-placeholder-val="{{ false }}"><div role="alert" style="display:flex;align-items:center;gap:8px;padding:12px 14px;border-radius:14px;background:#F6CED1;font-size:14px;font-weight:500"><span style="font-family:'Material Symbols Rounded';font-size:18px">error</span>{{ formErr }}</div></sc-if>
+        <sc-if value="{{ reviewIdle }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;gap:10px"><button onClick="{{ pickChanges }}" style="flex:1;height:50px;border-radius:16px;border:1.5px solid #202124;background:#fff;font-size:15px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:6px"><span style="font-family:'Material Symbols Rounded';font-size:20px">undo</span>Minta revisi</button><button onClick="{{ approve }}" disabled="{{ busy }}" style="flex:1;height:50px;border:none;border-radius:16px;background:#202124;color:#fff;font-size:15px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:6px;opacity:{{ busyOp }}"><span style="font-family:'Material Symbols Rounded';font-size:20px">check_circle</span>{{ approveBtn }}</button></div>
+        </sc-if>
+        <sc-if value="{{ reviewChanges }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:10px;animation:glFade .2s ease">
+            <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:14px;font-weight:600">Apa yang perlu diubah? <span style="color:#A8231B">*</span></span><textarea value="{{ fv.feedback }}" onChange="{{ on.feedback }}" rows="3" maxlength="1000" placeholder="Spesifik dan ramah, misal: pisahkan Fine jadi entity sendiri." style="border-radius:16px;border:1px solid #E8E9E7;background:#fff;padding:12px 14px;font-size:15px;line-height:1.45;resize:vertical;outline:none"></textarea></label>
+            <div style="display:flex;gap:10px;justify-content:flex-end"><button onClick="{{ cancelChanges }}" style="height:48px;padding:0 20px;border:none;border-radius:16px;background:#ECEEEB;font-size:15px;font-weight:600">Kembali</button><button onClick="{{ requestChanges }}" disabled="{{ busy }}" style="height:48px;padding:0 22px;border:none;border-radius:16px;background:#202124;color:#fff;font-size:15px;font-weight:600;opacity:{{ busyOp }}">{{ changesBtn }}</button></div>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </sc-if>
+  <sc-if value="{{ mNewTask }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;z-index:61;display:flex;align-items:center;justify-content:center;padding:40px;pointer-events:none">
+      <div role="dialog" aria-label="Buat tugas" style="pointer-events:auto;width:100%;max-width:620px;max-height:100%;overflow:auto;background:#F8F9F7;border-radius:28px;padding:24px;display:flex;flex-direction:column;gap:16px;box-shadow:0 40px 80px -30px rgba(0,0,0,.45);animation:glPop .2s ease">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px"><div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:22px;font-weight:700;letter-spacing:-.02em">Buat tugas</span><span style="font-size:14px;color:#3c4043">{{ ntProj }} · {{ ntProjDue }}</span></div><button onClick="{{ closeModal }}" aria-label="Tutup" style="flex:none;width:40px;height:40px;border-radius:20px;border:none;background:#ECEEEB;font-family:'Material Symbols Rounded';font-size:21px">close</button></div>
+        <label style="display:flex;flex-direction:column;gap:6px"><span style="display:flex;justify-content:space-between;font-size:14px;font-weight:600"><span>Judul <span style="color:#A8231B">*</span></span><span style="font-weight:400;color:#62676B">{{ counts.title }}</span></span><input value="{{ fv.title }}" onChange="{{ on.title }}" maxlength="120" placeholder="Contoh: Buat use case diagram" style="height:48px;border-radius:14px;border:1px solid #E8E9E7;background:#fff;padding:0 14px;font-size:15px;outline:none"></label>
+        <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:14px;font-weight:600">Deskripsi</span><textarea value="{{ fv.desc }}" onChange="{{ on.desc }}" rows="3" maxlength="2000" placeholder="Jelaskan apa yang perlu dikerjakan dan hasil yang diharapkan..." style="border-radius:14px;border:1px solid #E8E9E7;background:#fff;padding:12px 14px;font-size:15px;line-height:1.45;resize:vertical;outline:none"></textarea></label>
+        <div style="display:flex;flex-direction:column;gap:8px"><span style="font-size:14px;font-weight:600">Pelaksana <span style="color:#A8231B">*</span></span><div style="display:flex;flex-wrap:wrap;gap:8px"><sc-for list="{{ ntAssignees }}" as="m" hint-placeholder-count="5"><button onClick="{{ m.pick }}" aria-pressed="{{ m.on }}" style="height:40px;padding:0 14px 0 4px;border-radius:20px;border:1.5px solid #202124;background:{{ m.btnBg }};color:{{ m.btnFg }};font-size:14px;font-weight:600;display:flex;align-items:center;gap:7px;opacity:{{ m.op }};transition:background .15s"><span style="width:30px;height:30px;border-radius:15px;background:{{ m.bg }};color:#202124;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center">{{ m.ini }}</span>{{ m.name }}</button></sc-for></div></div>
+        <div style="display:flex;flex-direction:column;gap:8px"><span style="font-size:14px;font-weight:600">Reviewer <span style="color:#A8231B">*</span></span><div style="display:flex;flex-wrap:wrap;gap:8px"><sc-for list="{{ ntReviewers }}" as="m" hint-placeholder-count="5"><button onClick="{{ m.pick }}" aria-pressed="{{ m.on }}" style="height:40px;padding:0 14px 0 4px;border-radius:20px;border:1.5px solid #202124;background:{{ m.btnBg }};color:{{ m.btnFg }};font-size:14px;font-weight:600;display:flex;align-items:center;gap:7px;opacity:{{ m.op }};transition:background .15s"><span style="width:30px;height:30px;border-radius:15px;background:{{ m.bg }};color:#202124;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center">{{ m.ini }}</span>{{ m.name }}</button></sc-for></div></div>
+        <div style="display:flex;flex-direction:column;gap:8px"><span style="font-size:14px;font-weight:600">Deadline <span style="color:#A8231B">*</span></span>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><sc-for list="{{ quick }}" as="d" hint-placeholder-count="3"><button onClick="{{ d.pick }}" style="height:40px;padding:0 14px;border-radius:14px;border:1.5px solid #202124;background:{{ d.bg }};color:{{ d.fg }};font-size:14px;font-weight:600">{{ d.label }}</button></sc-for><label style="flex:1 1 180px;display:flex;align-items:center;gap:8px;height:42px;border-radius:14px;border:1px solid #E8E9E7;background:#fff;padding:0 12px"><span style="font-family:'Material Symbols Rounded';font-size:19px">calendar_month</span><input type="date" value="{{ fv.date }}" onChange="{{ on.date }}" min="{{ minDate }}" aria-label="Pilih tanggal deadline" style="flex:1;min-width:0;border:none;outline:none;background:none;font-size:15px"></label></div>
+          <span style="font-size:13px;color:#62676B">{{ dateLabel }}</span>
+          <sc-if value="{{ ntWarn }}" hint-placeholder-val="{{ false }}"><div style="display:flex;gap:8px;align-items:flex-start;padding:10px 12px;border-radius:14px;background:#F9E9BE;font-size:14px;line-height:1.45"><span style="font-family:'Material Symbols Rounded';font-size:18px">warning</span>{{ ntWarnText }}</div></sc-if>
+        </div>
+        <sc-if value="{{ hasErr }}" hint-placeholder-val="{{ false }}"><div role="alert" style="display:flex;align-items:center;gap:8px;padding:12px 14px;border-radius:14px;background:#F6CED1;font-size:14px;font-weight:500"><span style="font-family:'Material Symbols Rounded';font-size:18px">error</span>{{ formErr }}</div></sc-if>
+        <div style="display:flex;gap:10px;justify-content:flex-end"><button onClick="{{ closeModal }}" style="height:48px;padding:0 20px;border:none;border-radius:16px;background:#ECEEEB;font-size:15px;font-weight:600">Batal</button><button onClick="{{ createTask }}" disabled="{{ busy }}" style="height:48px;padding:0 22px;border:none;border-radius:16px;background:#202124;color:#fff;font-size:15px;font-weight:600;opacity:{{ busyOp }}">{{ createTaskBtn }}</button></div>
+      </div>
+    </div>
+  </sc-if>
+  <sc-if value="{{ mNewProject }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;z-index:61;display:flex;align-items:center;justify-content:center;padding:40px;pointer-events:none">
+      <div role="dialog" aria-label="Buat proyek" style="pointer-events:auto;width:100%;max-width:560px;max-height:100%;overflow:auto;background:#F8F9F7;border-radius:28px;padding:24px;display:flex;flex-direction:column;gap:16px;box-shadow:0 40px 80px -30px rgba(0,0,0,.45);animation:glPop .2s ease">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px"><div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:22px;font-weight:700;letter-spacing:-.02em">Buat proyek</span><span style="font-size:14px;color:#3c4043">{{ pfGroupName }}</span></div><button onClick="{{ closeModal }}" aria-label="Tutup" style="flex:none;width:40px;height:40px;border-radius:20px;border:none;background:#ECEEEB;font-family:'Material Symbols Rounded';font-size:21px">close</button></div>
+        <label style="display:flex;flex-direction:column;gap:6px"><span style="display:flex;justify-content:space-between;font-size:14px;font-weight:600"><span>Nama proyek <span style="color:#A8231B">*</span></span><span style="font-weight:400;color:#62676B">{{ counts.name }}</span></span><input value="{{ fv.name }}" onChange="{{ on.name }}" maxlength="60" placeholder="Contoh: Aplikasi Kantin Kampus" style="height:48px;border-radius:14px;border:1px solid #E8E9E7;background:#fff;padding:0 14px;font-size:15px;outline:none"></label>
+        <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:14px;font-weight:600">Deskripsi</span><textarea value="{{ fv.desc }}" onChange="{{ on.desc }}" rows="3" maxlength="300" placeholder="Tujuan proyek dan hasil akhir yang diharapkan" style="border-radius:14px;border:1px solid #E8E9E7;background:#fff;padding:12px 14px;font-size:15px;line-height:1.45;resize:vertical;outline:none"></textarea></label>
+        <div style="display:flex;flex-direction:column;gap:8px"><span style="font-size:14px;font-weight:600">Deadline <span style="color:#A8231B">*</span></span>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><sc-for list="{{ quick }}" as="d" hint-placeholder-count="3"><button onClick="{{ d.pick }}" style="height:40px;padding:0 14px;border-radius:14px;border:1.5px solid #202124;background:{{ d.bg }};color:{{ d.fg }};font-size:14px;font-weight:600">{{ d.label }}</button></sc-for><label style="flex:1 1 180px;display:flex;align-items:center;gap:8px;height:42px;border-radius:14px;border:1px solid #E8E9E7;background:#fff;padding:0 12px"><span style="font-family:'Material Symbols Rounded';font-size:19px">calendar_month</span><input type="date" value="{{ fv.date }}" onChange="{{ on.date }}" min="{{ minDate }}" aria-label="Pilih tanggal deadline proyek" style="flex:1;min-width:0;border:none;outline:none;background:none;font-size:15px"></label></div>
+          <span style="font-size:13px;color:#62676B">{{ dateLabel }}</span>
+        </div>
+        <sc-if value="{{ hasErr }}" hint-placeholder-val="{{ false }}"><div role="alert" style="display:flex;align-items:center;gap:8px;padding:12px 14px;border-radius:14px;background:#F6CED1;font-size:14px;font-weight:500"><span style="font-family:'Material Symbols Rounded';font-size:18px">error</span>{{ formErr }}</div></sc-if>
+        <div style="display:flex;gap:10px;justify-content:flex-end"><button onClick="{{ closeModal }}" style="height:48px;padding:0 20px;border:none;border-radius:16px;background:#ECEEEB;font-size:15px;font-weight:600">Batal</button><button onClick="{{ saveProject }}" disabled="{{ busy }}" style="height:48px;padding:0 22px;border:none;border-radius:16px;background:#202124;color:#fff;font-size:15px;font-weight:600;opacity:{{ busyOp }}">{{ pfBtn }}</button></div>
+      </div>
+    </div>
+  </sc-if>
+  <sc-if value="{{ mSearch }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;z-index:61;display:flex;justify-content:center;align-items:flex-start;padding:12vh 40px 40px;pointer-events:none">
+      <div role="dialog" aria-label="Pencarian" style="pointer-events:auto;width:100%;max-width:640px;max-height:100%;display:flex;flex-direction:column;background:#fff;border-radius:24px;box-shadow:0 40px 80px -30px rgba(0,0,0,.45);overflow:hidden;animation:glPop .18s ease">
+        <div style="flex:none;display:flex;align-items:center;gap:10px;padding:0 16px;height:60px;border-bottom:1px solid #E8E9E7"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:#62676B">search</span><input ref="{{ searchRef }}" value="{{ searchQ }}" onChange="{{ onSearch }}" onKeyDown="{{ onSearchKey }}" placeholder="Cari tugas, proyek, atau grup" aria-label="Cari" style="flex:1;min-width:0;border:none;outline:none;background:none;font-size:17px"><span style="font-size:12px;font-weight:600;padding:3px 7px;border-radius:6px;background:#F0F3F1;color:#4d5155">Esc</span></div>
+        <div style="flex:1;min-height:0;overflow:auto;padding:8px 8px 12px;display:flex;flex-direction:column;gap:4px">
+          <sc-if value="{{ hasSTasks }}" hint-placeholder-val="{{ true }}">
+            <span style="font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#4d5155;padding:10px 10px 4px">{{ sTasksTitle }}</span>
+            <sc-for list="{{ sTasks }}" as="t" hint-placeholder-count="3"><button onClick="{{ t.open }}" style="text-align:left;border:none;background:none;min-height:50px;padding:6px 10px;border-radius:14px;display:flex;align-items:center;gap:12px" style-hover="background:#F0F3F1"><span style="flex:none;width:30px;height:30px;border-radius:15px;background:{{ t.chipBg }};font-family:'Material Symbols Rounded';font-size:17px;display:flex;align-items:center;justify-content:center">{{ t.chipIcon }}</span><span style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-size:15px;font-weight:600">{{ t.title }}</span><span style="font-size:13px;color:#62676B">{{ t.projectTitle }} · {{ t.statusLabel }}</span></span><span style="font-size:13px;color:#62676B">{{ t.dueLabel }}</span></button></sc-for>
+          </sc-if>
+          <sc-if value="{{ hasSProjects }}" hint-placeholder-val="{{ false }}">
+            <span style="font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#4d5155;padding:10px 10px 4px">Proyek</span>
+            <sc-for list="{{ sProjects }}" as="p" hint-placeholder-count="2"><button onClick="{{ p.go }}" style="text-align:left;border:none;background:none;min-height:50px;padding:6px 10px;border-radius:14px;display:flex;align-items:center;gap:12px" style-hover="background:#F0F3F1"><span style="flex:none;width:30px;height:30px;border-radius:10px;background:{{ p.tint }};font-family:'Material Symbols Rounded';font-size:17px;display:flex;align-items:center;justify-content:center">folder</span><span style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-size:15px;font-weight:600">{{ p.title }}</span><span style="font-size:13px;color:#62676B">{{ p.groupName }}</span></span><span style="font-size:13px;color:#62676B">{{ p.ratio }}</span></button></sc-for>
+          </sc-if>
+          <sc-if value="{{ hasSGroups }}" hint-placeholder-val="{{ false }}">
+            <span style="font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#4d5155;padding:10px 10px 4px">Grup</span>
+            <sc-for list="{{ sGroups }}" as="g" hint-placeholder-count="2"><button onClick="{{ g.go }}" style="text-align:left;border:none;background:none;min-height:50px;padding:6px 10px;border-radius:14px;display:flex;align-items:center;gap:12px" style-hover="background:#F0F3F1"><span style="flex:none;width:30px;height:30px;border-radius:10px;background:{{ g.tint }};font-family:'Material Symbols Rounded';font-size:17px;display:flex;align-items:center;justify-content:center">{{ g.icon }}</span><span style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-size:15px;font-weight:600">{{ g.name }}</span><span style="font-size:13px;color:#62676B">{{ g.course }}</span></span></button></sc-for>
+          </sc-if>
+          <sc-if value="{{ noResults }}" hint-placeholder-val="{{ false }}"><div style="padding:32px 12px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px"><span style="font-family:'Material Symbols Rounded';font-size:30px;color:#62676B">search_off</span><span style="font-size:15px;font-weight:600">Tidak ada hasil untuk “{{ searchQ }}”</span><span style="font-size:13px;color:#62676B">Coba kata kunci lain.</span></div></sc-if>
+        </div>
+        <div style="flex:none;display:flex;gap:16px;padding:10px 16px;border-top:1px solid #E8E9E7;font-size:12px;color:#62676B"><span>Enter buka hasil pertama</span><span>Esc tutup</span></div>
+      </div>
+    </div>
+  </sc-if>
+  <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
+    <div role="status" style="position:absolute;left:0;right:0;bottom:28px;z-index:90;display:flex;justify-content:center;pointer-events:none">
+      <div style="max-width:560px;background:#202124;color:#fff;border-radius:18px;padding:12px 18px;font-size:14px;font-weight:500;line-height:1.4;display:flex;align-items:center;gap:10px;box-shadow:0 16px 36px -12px rgba(0,0,0,.45);animation:glUp .2s ease"><span style="flex:none;font-family:'Material Symbols Rounded';font-size:19px;color:{{ toastColor }}">{{ toastIcon }}</span>{{ toast }}</div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;startView&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;home&quot;,&quot;groups&quot;,&quot;chats&quot;,&quot;tasks&quot;],&quot;default&quot;:&quot;home&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Prototipe&quot;},&quot;projectView&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;papan&quot;,&quot;daftar&quot;],&quot;default&quot;:&quot;papan&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Prototipe&quot;},&quot;offline&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Prototipe&quot;}}">
+const NOW = new Date('2026-10-16T19:30:00');
+const MON = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+const WD = ['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
+const pad = n => String(n).padStart(2, '0');
+const ymd = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+const TODAY = ymd(NOW);
+const addDays = n => { const d = new Date(NOW); d.setDate(d.getDate() + n); return ymd(d); };
+const hm = d => pad(d.getHours()) + ':' + pad(d.getMinutes());
+const short = d => d.getDate() + ' ' + MON[d.getMonth()];
+const longD = d => WD[d.getDay()] + ', ' + short(d);
+const validDate = s => /^\d{4}-\d{2}-\d{2}$/.test(s || '') && s >= TODAY && s <= '2027-12-31';
+const ST = {
+  todo: { label: 'Belum dimulai', bg: '#F9E9BE', icon: 'radio_button_unchecked', ring: '#E6C25E' },
+  in_progress: { label: 'Sedang dikerjakan', bg: '#D8EAF4', icon: 'autorenew', ring: '#86B8D6' },
+  in_review: { label: 'Menunggu review', bg: '#DED2FF', icon: 'visibility', ring: '#A893EE' },
+  needs_revision: { label: 'Perlu revisi', bg: '#F6CED1', icon: 'undo', ring: '#E08C94' },
+  done: { label: 'Selesai', bg: '#C9F2D6', icon: 'check_circle', ring: '#62C484' },
+};
+const COLS = ['todo', 'in_progress', 'in_review', 'needs_revision', 'done'];
+const RING = ['done', 'in_review', 'in_progress', 'needs_revision', 'todo'];
+const ACT = {
+  submitted: { verb: 'mengirim hasil', icon: 'upload', bg: '#DED2FF' },
+  approved: { verb: 'menyetujui', icon: 'check_circle', bg: '#C9F2D6' },
+  changes: { verb: 'meminta revisi', icon: 'undo', bg: '#F6CED1' },
+  assigned: { verb: 'membuat tugas', icon: 'add_task', bg: '#D8EAF4' },
+};
+const PERSONAS = [['u1', 'Koordinator'], ['u2', 'Pelaksana'], ['u3', 'Reviewer'], ['u4', 'Anggota']];
+let _n = 100;
+const nid = p => (p || 'm') + (++_n);
+const T = (from, text, day, time) => ({ id: nid(), n: _n, type: 'text', from, text, day, time, state: 'sent' });
+const S = (actor, rest, day, time, target) => ({ id: nid(), n: _n, type: 'system', actor, rest, target, day, time });
+const A = (kind, actor, tid, day, time, to) => ({ id: nid(), n: _n, type: 'activity', kind, actor, tid, to, day, time });
+function seed() {
+  const users = { u1: { name: 'Alex', email: 'alex.pratama@student.ac.id', bg: '#DED2FF' }, u2: { name: 'Raka', email: 'raka.aditya@student.ac.id', bg: '#C9F2D6' },
+    u3: { name: 'Nadia', email: 'nadia.putri@student.ac.id', bg: '#F9E9BE' }, u4: { name: 'Dimas', email: 'dimas.s@student.ac.id', bg: '#D8EAF4' },
+    u5: { name: 'Sinta', email: 'sinta@student.ac.id', bg: '#F6CED1' }, u6: { name: 'Bima', email: 'bima@student.ac.id', bg: '#C9F2D6' }, u7: { name: 'Laras', email: 'laras@student.ac.id', bg: '#D8EAF4' } };
+  return { users,
+    groups: [
+      { id: 'g1', name: 'Basis Data · Kelompok 3', desc: 'Tugas besar Basis Data semester 3.', course: 'Basis Data · IF-B', members: ['u1','u2','u3','u4','u5'], coord: 'u1', tint: '#C9F2D6', icon: 'database' },
+      { id: 'g2', name: 'UI/UX Research', desc: 'Riset usability aplikasi kampus.', course: 'Interaksi Manusia & Komputer', members: ['u1','u3','u5'], coord: 'u3', tint: '#DED2FF', icon: 'interests' },
+      { id: 'g3', name: 'Statistika · Kelompok 1', desc: 'Analisis data survei kebiasaan belajar.', course: 'Statistika Dasar', members: ['u6','u7'], coord: 'u6', tint: '#D8EAF4', icon: 'monitoring' },
+    ],
+    projects: [
+      { id: 'p1', gid: 'g1', title: 'Sistem Informasi Perpustakaan', desc: 'Rancang basis data perpustakaan kampus: ERD, normalisasi sampai 3NF, DDL, dan presentasi akhir.', due: '2026-10-24T23:59:00', completed: false, archived: false },
+      { id: 'p3', gid: 'g1', title: 'Proposal Topik', desc: 'Proposal topik tugas besar untuk disetujui dosen.', due: '2026-10-09T23:59:00', completed: true, archived: false },
+      { id: 'p2', gid: 'g2', title: 'Laporan Usability Test', desc: 'Uji 5 partisipan pada aplikasi KRS online dan susun laporan temuan.', due: '2026-10-30T23:59:00', completed: false, archived: false },
+    ],
+    tasks: [
+      { id: 't1', pid: 'p1', title: 'Draft diagram ERD', desc: 'ERD lengkap dengan entity Member, Book, Loan, Fine beserta kardinalitasnya.', a: 'u2', r: 'u1', due: '2026-10-18T23:59:00', status: 'in_review', reviewHours: 52,
+        subs: [{ rev: 1, author: 'u2', note: 'ERD v1 dengan 9 entity. Relasi Member–Loan 1:N. Tolong cek apakah Fine perlu jadi entity sendiri.', links: ['https://drive.google.com/file/d/erd-v1'], at: 'Rab 14 Okt, 15:20' }],
+        msgs: [T('u3', 'Fine mending jadi entity sendiri, biar denda per hari gampang dihitung.', 'Rab, 14 Okt', '13:02'), S('u2', 'mengirim revisi 1', 'Rab, 14 Okt', '15:20'), T('u2', 'Udah aku kirim ya, tinggal nunggu review.', 'Rab, 14 Okt', '15:21')] },
+      { id: 't2', pid: 'p1', title: 'Normalisasi tabel ke 3NF', desc: 'Turunkan ERD ke tabel relasional dan normalisasi sampai 3NF. Tulis alasan setiap dekomposisi.', a: 'u1', r: 'u3', due: '2026-10-17T23:59:00', status: 'in_progress', subs: [],
+        msgs: [T('u3', 'Sertakan tabel sebelum dan sesudah normalisasi ya.', 'Kemarin', '10:14')] },
+      { id: 't3', pid: 'p1', title: 'Tulis script DDL SQL', desc: 'Script CREATE TABLE untuk PostgreSQL, lengkap dengan constraint dan index.', a: 'u1', r: 'u4', due: '2026-10-19T12:00:00', status: 'needs_revision',
+        subs: [{ rev: 1, author: 'u1', note: 'DDL v1, 9 tabel dengan primary key.', links: ['https://github.com/kelompok3/perpus-ddl'], at: 'Kam 15 Okt, 21:05', decision: 'changes_requested', feedback: 'Tambahkan ON DELETE untuk FK di tabel Loan, dan CHECK tanggal kembali ≥ tanggal pinjam.', by: 'u4' }],
+        msgs: [S('u1', 'mengirim revisi 1', 'Kemarin', '21:05'), S('u4', 'meminta revisi', 'Hari ini', '08:40'), T('u4', 'Sisanya udah oke, tinggal constraint aja.', 'Hari ini', '08:41')] },
+      { id: 't11', pid: 'p1', title: 'Kamus data', desc: 'Dokumentasikan setiap atribut: tipe data, panjang, dan contoh nilai.', a: 'u2', r: 'u3', due: '2026-10-20T23:59:00', status: 'todo', subs: [], msgs: [] },
+      { id: 't4', pid: 'p1', title: 'Studi literatur', desc: 'Rangkum 5 referensi sistem perpustakaan.', a: 'u3', r: 'u2', due: '2026-10-12T23:59:00', status: 'done', subs: [{ rev: 1, author: 'u3', note: 'Rangkuman 5 jurnal.', links: [], at: 'Min 11 Okt', decision: 'approved', by: 'u2' }], msgs: [] },
+      { id: 't5', pid: 'p1', title: 'Slide presentasi', desc: '10 slide untuk presentasi 15 menit di kelas.', a: 'u4', r: 'u1', due: '2026-10-22T23:59:00', status: 'todo', subs: [], msgs: [] },
+      { id: 't6', pid: 'p1', title: 'Narasi use case', desc: 'Narasi use case peminjaman dan pengembalian buku.', a: 'u5', r: 'u3', due: '2026-10-13T23:59:00', status: 'done', subs: [{ rev: 1, author: 'u5', note: 'Narasi 4 use case.', links: [], at: 'Sel 13 Okt', decision: 'approved', by: 'u3' }], msgs: [] },
+      { id: 't12', pid: 'p3', title: 'Draft proposal', desc: 'Latar belakang, rumusan masalah, dan ruang lingkup.', a: 'u5', r: 'u1', due: '2026-10-06T23:59:00', status: 'done', subs: [{ rev: 1, author: 'u5', note: 'Draft 4 halaman.', links: [], at: 'Sen 5 Okt', decision: 'approved', by: 'u1' }], msgs: [] },
+      { id: 't13', pid: 'p3', title: 'Revisi proposal', desc: 'Perbaiki sesuai masukan dosen.', a: 'u2', r: 'u3', due: '2026-10-09T23:59:00', status: 'done', subs: [{ rev: 1, author: 'u2', note: 'Sudah sesuai masukan.', links: [], at: 'Jum 9 Okt', decision: 'approved', by: 'u3' }], msgs: [] },
+      { id: 't7', pid: 'p2', title: 'Rekrut 5 partisipan', desc: 'Rekrut mahasiswa angkatan 2024–2025.', a: 'u5', r: 'u1', due: '2026-10-14T23:59:00', status: 'done', subs: [{ rev: 1, author: 'u5', note: '5 partisipan sudah terjadwal.', links: [], at: 'Sel 13 Okt', decision: 'approved', by: 'u1' }], msgs: [] },
+      { id: 't8', pid: 'p2', title: 'Script wawancara', desc: 'Script wawancara 20 menit dan 6 skenario tugas.', a: 'u1', r: 'u5', due: '2026-10-15T23:59:00', status: 'todo', subs: [], msgs: [] },
+      { id: 't9', pid: 'p2', title: 'Affinity mapping', desc: 'Kelompokkan temuan dari 5 sesi wawancara.', a: 'u3', r: 'u5', due: '2026-10-25T23:59:00', status: 'in_progress', subs: [], msgs: [] },
+      { id: 't10', pid: 'p2', title: 'Ringkasan temuan sesi 1', desc: 'Rangkum 5 temuan utama dari sesi 1, lengkap dengan kutipan partisipan.', a: 'u1', r: 'u3', due: '2026-10-21T23:59:00', status: 'todo', subs: [], msgs: [] },
+    ],
+    chats: {
+      g1: [A('submitted', 'u2', 't1', 'Rab, 14 Okt', '15:20'), T('u3', 'Guys, deadline ERD hari Minggu ya. Jangan mepet.', 'Kemarin', '19:40'), T('u2', 'Siap, aku lanjut ERD malam ini.', 'Kemarin', '20:14'),
+        A('submitted', 'u1', 't3', 'Kemarin', '21:05'), A('changes', 'u4', 't3', 'Hari ini', '08:40'), T('u4', 'Lex, cek feedback-ku di tugas DDL ya. Minor kok.', 'Hari ini', '08:42'),
+        T('u1', 'Oke, nanti malam aku benerin.', 'Hari ini', '09:15'), T('u5', 'Template slide aku taruh sini: https://canva.com/design/perpus-k3', 'Hari ini', '12:10'),
+        T('u2', 'ERD-ku udah 2 hari nunggu review nih', 'Hari ini', '18:55'), T('u3', 'Nanti malam call bentar bisa? 15 menit aja.', 'Hari ini', '19:02')],
+      g2: [A('approved', 'u1', 't7', 'Sel, 13 Okt', '16:00'), T('u5', 'Makasih Alex! Jadwal sesi aku share besok.', 'Sel, 13 Okt', '16:04'),
+        T('u3', 'Sesi 1 lancar. Catatan lengkap: https://notion.so/sesi-1-krs', 'Hari ini', '10:20'), T('u3', 'Alex, script wawancara jangan lupa ya, sesi 2 hari Senin.', 'Hari ini', '10:21')],
+      g3: [S('u6', 'membuat grup', 'Kemarin', '09:00'), T('u7', 'Halo! Nanti kita bagi tugas analisis ya.', 'Kemarin', '09:12')],
+    },
+    unread: { 'u1:g1': 2, 'u2:g1': 1, 'u4:g1': 3, 'u3:g2': 1 },
+  };
+}
+function dueInfo(t) {
+  const d = new Date(t.due), a = new Date(NOW.getFullYear(), NOW.getMonth(), NOW.getDate()), b = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const n = Math.round((b - a) / 86400000), overdue = t.status !== 'done' && d < NOW;
+  let label;
+  if (overdue) label = 'Terlambat · ' + short(d);
+  else if (n === 0) label = 'Hari ini, ' + hm(d);
+  else if (n === 1) label = 'Besok, ' + hm(d);
+  else if (n < 7) label = WD[d.getDay()] + ', ' + hm(d);
+  else label = short(d);
+  return { label, overdue, soon: !overdue && n <= 2 && t.status !== 'done' };
+}
+function segs(text, onOpen) {
+  return text.split(/(https?:\/\/\S+)/).filter(Boolean).map(p => {
+    const link = /^https?:\/\//.test(p);
+    return { text: link ? p.replace(/^https?:\/\//, '') : p, isLink: link, isText: !link, open: e => { e.preventDefault(); onOpen(); } };
+  });
+}
+
+class Component extends DCLogic {
+  state = Object.assign({ me: 'u1', view: this.props.startView || 'home', gid: null, pid: null, chatId: 'g1', taskId: null, taskTab: 'overview',
+    modal: null, sd: {}, form: {}, links: [''], formErr: null, busy: false, toast: null, filter: 'all', chatQuery: '', member: null, draft: '', tdraft: '',
+    searchQ: '', vw: typeof window !== 'undefined' ? window.innerWidth : 1440, gFilter: 'active', showInfo: true, ringReady: false, menu: false,
+    projView: this.props.projectView === 'daftar' ? 'list' : 'board' }, seed());
+
+  componentDidMount() {
+    this._rs = () => this.setState({ vw: window.innerWidth });
+    this._kd = e => {
+      if ((e.metaKey || e.ctrlKey) && (e.key || '').toLowerCase() === 'k') { e.preventDefault(); this.openSearch(); }
+      else if (e.key === 'Escape') { if (this.state.modal) this.closeModal(); else if (this.state.taskId) this.closeTask(); else if (this.state.menu) this.setState({ menu: false }); }
+    };
+    window.addEventListener('resize', this._rs); window.addEventListener('keydown', this._kd);
+    this._rt = setTimeout(() => this.setState({ ringReady: true }), 120);
+    if (this.state.view === 'chats') this.markRead(this.state.chatId);
+  }
+  componentWillUnmount() { window.removeEventListener('resize', this._rs); window.removeEventListener('keydown', this._kd); clearTimeout(this._rt); clearTimeout(this._tt); }
+  componentDidUpdate() {
+    const s = this.state, p = this.props;
+    const cur = { view: s.view, chatId: s.chatId, taskId: s.taskId, taskTab: s.taskTab, pid: s.pid, sv: p.startView, pv: p.projectView };
+    const prev = this._prev || cur; this._prev = cur;
+    if (prev.sv !== cur.sv && cur.sv) { this.go(cur.sv); return; }
+    if (prev.pv !== cur.pv) this.setState({ projView: cur.pv === 'daftar' ? 'list' : 'board' });
+    if (cur.view === 'chats' && (prev.view !== 'chats' || prev.chatId !== cur.chatId || !this._did)) { this._did = true; this.toBottom('chat'); }
+    if (cur.taskId && cur.taskTab === 'discussion' && (prev.taskTab !== 'discussion' || prev.taskId !== cur.taskId)) this.toBottom('task');
+    if (cur.pid && prev.pid !== cur.pid) this.ringPulse();
+  }
+  toBottom(w) { [40, 260].forEach(ms => setTimeout(() => { const el = w === 'chat' ? this._thread : this._dbody; if (el) el.scrollTo({ top: el.scrollHeight, behavior: ms > 100 ? 'smooth' : 'auto' }); }, ms)); }
+  ringPulse() { this.setState({ ringReady: false }); setTimeout(() => this.setState({ ringReady: true }), 60); }
+  clock() { this._tick = Math.min((this._tick || 31) + 1, 59); return '19:' + pad(this._tick); }
+  flash(msg, kind) { this.setState({ toast: { msg, kind: kind || 'ok' } }); clearTimeout(this._tt); this._tt = setTimeout(() => this.setState({ toast: null }), 2800); }
+
+  u(id) { return this.state.users[id] || { name: 'Pengguna', bg: '#ECEEEB' }; }
+  nm(id) { return id === this.state.me ? 'Kamu' : this.u(id).name; }
+  ini(id) { return this.u(id).name.slice(0, 2).toUpperCase(); }
+  av(id) { return { ini: this.ini(id), bg: this.u(id).bg, name: this.nm(id) }; }
+  task(id) { return this.state.tasks.find(t => t.id === id); }
+  proj(id) { return this.state.projects.find(p => p.id === id); }
+  grp(id) { return this.state.groups.find(g => g.id === id); }
+  isMember(gid, who) { const g = this.grp(gid); return !!g && g.members.includes(who || this.state.me); }
+  isCoord(gid) { const g = this.grp(gid); return !!g && g.coord === this.state.me; }
+  gidOfTask(tid) { const t = this.task(tid), p = t && this.proj(t.pid); return p ? p.gid : null; }
+  myGroups() { return this.state.groups.filter(g => g.members.includes(this.state.me)); }
+  liveTasks() { const gids = this.myGroups().map(g => g.id); return this.state.tasks.filter(t => { const p = this.proj(t.pid); return p && !p.archived && gids.includes(p.gid); }); }
+  upd(tid, fn) { this.setState(s => ({ tasks: s.tasks.map(t => t.id === tid ? fn(Object.assign({}, t)) : t) })); }
+  chatPush(gid, msg, from) {
+    this.setState(s => {
+      const unread = Object.assign({}, s.unread), g = s.groups.find(x => x.id === gid), viewing = s.view === 'chats' && s.chatId === gid;
+      if (g) g.members.forEach(m => { if (m !== from && !(m === s.me && viewing)) unread[m + ':' + gid] = (unread[m + ':' + gid] || 0) + 1; });
+      return { chats: Object.assign({}, s.chats, { [gid]: (s.chats[gid] || []).concat(msg) }), unread };
+    });
+  }
+  activity(kind, tid, to, gid) { gid = gid || this.gidOfTask(tid); if (gid) this.chatPush(gid, A(kind, this.state.me, tid, 'Hari ini', this.clock(), to), this.state.me); }
+  sysText(m) { return (m.actor ? this.nm(m.actor) + ' ' : '') + m.rest.replace('{t}', this.nm(m.target)); }
+
+  go(view) { this.setState({ view, gid: null, pid: null, menu: false, taskId: null }); if (view === 'chats') this.markRead(this.state.chatId); }
+  markRead(gid) { this.setState(s => ({ unread: Object.assign({}, s.unread, { [s.me + ':' + gid]: 0 }) })); }
+  openGroup(gid) { this.setState({ view: 'groups', gid, pid: null, gFilter: 'active', taskId: null, menu: false }); }
+  openProject(pid, keepTask) { const p = this.proj(pid); this.setState(s => ({ view: 'groups', gid: p.gid, pid, member: null, taskId: keepTask ? s.taskId : null, modal: null })); }
+  openChat(gid) { this.setState({ view: 'chats', chatId: gid, gid: null, pid: null, draft: '', taskId: null, modal: null }); this.markRead(gid); }
+  openTask(tid, tab) { this.setState({ taskId: tid, taskTab: tab || 'overview', tdraft: '', modal: null, menu: false }); }
+  closeTask() { this.setState({ taskId: null }); }
+  open(modal, sd, form) { this.setState({ modal, sd: sd || {}, form: form || {}, formErr: null, busy: false }); }
+  closeModal() { if (!this.state.busy) this.setState({ modal: null }); }
+  openSearch() { this.setState({ modal: 'search', searchQ: '', formErr: null, menu: false }); }
+  setForm(k, v) { this.setState(s => ({ form: Object.assign({}, s.form, { [k]: v }), formErr: null })); }
+  err(msg) { this.setState({ formErr: msg }); return false; }
+  deny(msg) { this.flash(msg, 'err'); return false; }
+  runBusy(fn, errMsg) {
+    if (this.state.busy) return;
+    this.setState({ busy: true, formErr: null });
+    setTimeout(() => { if (this.props.offline) return this.setState({ busy: false, formErr: errMsg }); this.setState({ busy: false }); fn(); }, 700);
+  }
+  setPersona(id) {
+    const s = this.state, mine = s.groups.filter(g => g.members.includes(id));
+    const keepG = s.gid && mine.some(g => g.id === s.gid);
+    this.setState({ me: id, menu: false, member: null, taskId: null, modal: null, draft: '', tdraft: '', filter: 'all',
+      gid: keepG ? s.gid : null, pid: keepG ? s.pid : null, view: s.gid && !keepG ? 'groups' : s.view,
+      chatId: mine.some(g => g.id === s.chatId) ? s.chatId : (mine[0] ? mine[0].id : null) });
+    this.flash('Demo: melihat sebagai ' + this.u(id).name, 'info');
+  }
+
+  guardTask(tid) {
+    const t = this.task(tid), p = t && this.proj(t.pid);
+    if (!t || !p) return this.deny('Tugas tidak ditemukan.');
+    if (!this.isMember(p.gid)) return this.deny('Kamu bukan anggota grup ini.');
+    if (p.archived) return this.deny('Proyek ini telah diarsipkan.');
+    if (p.completed) return this.deny('Proyek ini sudah selesai. Buka kembali proyek untuk mengubah tugas.');
+    return t;
+  }
+  start(tid) {
+    const t = this.guardTask(tid); if (!t) return;
+    if (t.a !== this.state.me) return this.deny('Hanya pelaksana yang bisa memulai tugas ini.');
+    if (t.status !== 'todo') return this.deny('Status tugas sudah berubah.');
+    this.upd(tid, x => { x.status = 'in_progress'; x.msgs = x.msgs.concat(S(this.state.me, 'mulai mengerjakan', 'Hari ini', this.clock())); return x; });
+    this.flash('Tugas dimulai. Semangat!');
+  }
+  openSubmit(tid) {
+    const t = this.guardTask(tid); if (!t) return;
+    if (t.a !== this.state.me) return this.deny('Hanya pelaksana yang bisa mengirim hasil.');
+    if (!['in_progress', 'needs_revision'].includes(t.status)) return this.deny('Mulai kerjakan tugas dulu sebelum mengirim hasil.');
+    this.setState({ links: [''] }); this.open('submit', { tid, expect: t.status }, { note: '' });
+  }
+  submit() {
+    const { tid, expect } = this.state.sd, t = this.task(tid), me = this.state.me;
+    if (!t || t.status !== expect || t.a !== me) return this.err('Tugas ini sudah berubah. Tutup lalu buka lagi untuk melihat status terbaru.');
+    const note = (this.state.form.note || '').trim(), links = this.state.links.map(l => l.trim()).filter(Boolean);
+    if (!note) return this.err('Tulis catatan singkat tentang yang kamu kerjakan.');
+    if (links.some(l => !/^https:\/\/[^\s]+\.[^\s]+/.test(l))) return this.err('Link harus diawali https:// dan berupa alamat lengkap.');
+    this.runBusy(() => {
+      const rev = t.subs.length + 1, time = this.clock();
+      this.upd(tid, x => { x.status = 'in_review'; x.reviewHours = 0; x.subs = x.subs.concat({ rev, author: me, note, links, at: 'Hari ini, ' + time }); x.msgs = x.msgs.concat(S(me, 'mengirim revisi ' + rev, 'Hari ini', time)); return x; });
+      this.activity('submitted', tid); this.setState({ modal: null, taskTab: 'submission' });
+      this.flash('Terkirim. ' + this.u(t.r).name + ' akan diberi tahu.');
+    }, 'Gagal mengirim. Periksa koneksimu lalu coba lagi.');
+  }
+  openReview(tid) {
+    const t = this.guardTask(tid); if (!t) return;
+    if (t.r !== this.state.me) return this.deny(t.a === this.state.me ? 'Kamu tidak bisa menyetujui hasil kerjamu sendiri.' : 'Hanya ' + this.u(t.r).name + ' (reviewer) yang bisa mereview tugas ini.');
+    if (t.status !== 'in_review') return this.deny('Belum ada hasil kerja yang menunggu review.');
+    this.open('review', { tid, mode: null }, { feedback: '' });
+  }
+  decide(decision) {
+    const { tid } = this.state.sd, t = this.task(tid), me = this.state.me;
+    if (!t || t.status !== 'in_review') return this.err('Tugas ini sudah direview atau berubah status.');
+    if (t.r !== me || t.a === me) return this.err('Hanya reviewer yang ditunjuk yang bisa mereview.');
+    const fb = (this.state.form.feedback || '').trim();
+    if (decision === 'changes' && !fb) return this.err('Jelaskan apa yang perlu diubah.');
+    this.setState(s => ({ sd: Object.assign({}, s.sd, { pending: decision }) }));
+    this.runBusy(() => {
+      const rev = t.subs.length, time = this.clock();
+      this.upd(tid, x => {
+        x.subs = x.subs.map((sb, i) => i === x.subs.length - 1 ? Object.assign({}, sb, { decision: decision === 'approved' ? 'approved' : 'changes_requested', feedback: fb || null, by: me }) : sb);
+        x.status = decision === 'approved' ? 'done' : 'needs_revision';
+        x.msgs = x.msgs.concat(S(me, decision === 'approved' ? 'menyetujui revisi ' + rev : 'meminta revisi', 'Hari ini', time));
+        return x;
+      });
+      this.activity(decision, tid); this.setState({ modal: null, taskTab: 'submission' });
+      this.flash(decision === 'approved' ? 'Disetujui. Tugas selesai.' : 'Revisi diminta. ' + this.u(t.a).name + ' akan diberi tahu.');
+    }, 'Gagal menyimpan review. Periksa koneksimu lalu coba lagi.');
+  }
+  openNewTask(pid) {
+    const p = this.proj(pid); if (!p) return;
+    if (!this.isCoord(p.gid)) return this.deny('Hanya koordinator yang bisa membuat tugas.');
+    if (p.archived || p.completed) return this.deny(p.archived ? 'Proyek ini telah diarsipkan.' : 'Proyek ini sudah selesai. Buka kembali proyek untuk menambah tugas.');
+    this.open('newTask', { pid }, { title: '', desc: '', a: null, r: null, date: addDays(3) });
+  }
+  createTask() {
+    const s = this.state, f = s.form, p = this.proj(s.sd.pid); if (!p) return;
+    const title = (f.title || '').trim();
+    if (!title) return this.err('Judul tugas wajib diisi.');
+    if (title.length > 120) return this.err('Judul tugas maksimal 120 karakter.');
+    if (!f.a) return this.err('Pilih pelaksana tugas.');
+    if (!f.r) return this.err('Pilih reviewer tugas.');
+    if (f.a === f.r) return this.err('Pelaksana dan reviewer harus orang berbeda.');
+    if (!validDate(f.date)) return this.err('Pilih deadline yang valid, mulai hari ini.');
+    this.runBusy(() => {
+      const id = nid('t');
+      const task = { id, pid: p.id, title, desc: (f.desc || '').trim(), a: f.a, r: f.r, due: f.date + 'T23:59:00', status: 'todo', subs: [], msgs: [S(s.me, 'membuat tugas ini', 'Hari ini', this.clock())] };
+      this.setState(st => ({ tasks: st.tasks.concat(task), modal: null }));
+      this.activity('assigned', id, f.a, p.gid);
+      this.flash('Tugas dibuat. ' + (f.a === s.me ? 'Ditugaskan ke kamu.' : this.u(f.a).name + ' akan diberi tahu.'));
+    }, 'Gagal membuat tugas. Periksa koneksimu lalu coba lagi.');
+  }
+  openNewProject(gid) {
+    if (!this.isCoord(gid)) return this.deny('Hanya koordinator yang bisa membuat proyek.');
+    this.open('newProject', { gid }, { name: '', desc: '', date: addDays(14) });
+  }
+  saveProject() {
+    const s = this.state, f = s.form, name = (f.name || '').trim(), gid = s.sd.gid;
+    if (name.length < 3) return this.err('Nama proyek minimal 3 karakter.');
+    if (name.length > 60) return this.err('Nama proyek maksimal 60 karakter.');
+    if (!validDate(f.date)) return this.err('Pilih deadline yang valid, mulai hari ini.');
+    this.runBusy(() => {
+      const id = nid('p');
+      this.setState(st => ({ projects: st.projects.concat({ id, gid, title: name, desc: (f.desc || '').trim(), due: f.date + 'T23:59:00', completed: false, archived: false }), modal: null }));
+      this.chatPush(gid, S(s.me, 'membuat proyek “' + name + '”', 'Hari ini', this.clock()), s.me);
+      setTimeout(() => this.openProject(id), 0);
+      this.flash('Proyek dibuat. Tambahkan tugas pertama.');
+    }, 'Gagal membuat proyek. Periksa koneksimu lalu coba lagi.');
+  }
+
+  setList(ref, fn) {
+    if (ref.kind === 'chat') this.setState(s => ({ chats: Object.assign({}, s.chats, { [ref.id]: fn(s.chats[ref.id] || []) }) }));
+    else this.upd(ref.id, t => { t.msgs = fn(t.msgs); return t; });
+  }
+  send(ref, key) {
+    const text = (this.state[key] || '').trim(); if (!text) return;
+    if (ref.kind === 'task') { const p = this.proj((this.task(ref.id) || {}).pid); if (p && (p.archived || p.completed)) return this.deny('Diskusi hanya-baca karena proyek ' + (p.archived ? 'diarsipkan' : 'sudah selesai') + '.'); }
+    const m = { id: nid(), n: _n, type: 'text', from: this.state.me, text, day: 'Hari ini', time: this.clock(), state: 'sending' };
+    this.setList(ref, l => l.concat(m)); this.setState({ [key]: '' }); this.toBottom(ref.kind === 'chat' ? 'chat' : 'task'); this.deliver(ref, m.id);
+  }
+  deliver(ref, mid) {
+    setTimeout(() => { const ok = !this.props.offline; this.setList(ref, l => l.map(m => m.id === mid ? Object.assign({}, m, { state: ok ? 'sent' : 'failed' }) : m)); }, 900);
+  }
+  retry(ref, mid) { this.setList(ref, l => l.map(m => m.id === mid ? Object.assign({}, m, { state: 'sending' }) : m)); this.deliver(ref, mid); }
+
+  vmTask(t) {
+    const st = ST[t.status], di = dueInfo(t), P = this.proj(t.pid) || { title: '' }, mem = this.state.member, sel = this.state.taskId === t.id;
+    return { id: t.id, title: t.title, status: t.status, statusLabel: st.label, chipBg: st.bg, chipIcon: st.icon, dueLabel: di.label, overdue: di.overdue, soon: di.soon,
+      stale: t.status === 'in_review' && (t.reviewHours || 0) > 48, staleLabel: 'Menunggu ' + (t.reviewHours || 0) + ' jam',
+      a: this.av(t.a), r: this.av(t.r), aName: this.nm(t.a), rName: this.nm(t.r), pairLabel: this.nm(t.a) + ' → ' + this.nm(t.r),
+      comments: String(t.msgs.filter(m => m.type === 'text').length), projectTitle: P.title, op: mem && t.a !== mem ? .35 : 1,
+      cardBg: sel ? '#F4F0FF' : '#fff', cardRing: sel ? 'inset 0 0 0 2px #202124' : '0 1px 2px rgba(0,0,0,.05)', rowBg: sel ? '#F4F0FF' : 'transparent',
+      open: () => this.openTask(t.id) };
+  }
+  vmProject(p) {
+    const ts = this.state.tasks.filter(t => t.pid === p.id), g = this.grp(p.gid) || { name: '', tint: '#fff', icon: 'folder' }, done = ts.filter(t => t.status === 'done').length;
+    const st = p.archived ? ['Diarsipkan', '#ECEEEB', 'inventory_2'] : p.completed ? ['Selesai', '#C9F2D6', 'check_circle'] : ['Aktif', '#D8EAF4', 'bolt'];
+    return { id: p.id, title: p.title, desc: p.desc || 'Belum ada deskripsi.', groupName: g.name, tint: g.tint, icon: g.icon, dueShort: short(new Date(p.due)),
+      total: ts.length, done, ratio: done + '/' + ts.length, pct: (ts.length ? Math.round(done / ts.length * 100) : 0) + '%', open: () => this.openProject(p.id),
+      statusLabel: st[0], statusBg: st[1], statusIcon: st[2], openCount: (ts.length - done) + ' tugas berjalan' };
+  }
+  vmAct(m) {
+    const t = this.task(m.tid), a = ACT[m.kind];
+    return { id: m.id, icon: a.icon, bg: a.bg, line: this.nm(m.actor) + ' ' + a.verb + (m.kind === 'assigned' && m.to ? ' untuk ' + this.nm(m.to) : ''), taskTitle: t ? t.title : 'Tugas tidak tersedia', time: m.day === 'Hari ini' ? m.time : m.day, open: () => t && this.openTask(m.tid) };
+  }
+  preview(gid) {
+    const l = this.state.chats[gid] || [], m = l[l.length - 1];
+    if (!m) return { text: 'Belum ada pesan. Sapa kelompokmu!', time: '' };
+    let text;
+    if (m.type === 'activity') { const t = this.task(m.tid); text = this.nm(m.actor) + ' ' + ACT[m.kind].verb + ' ' + (t ? t.title : ''); }
+    else if (m.type === 'system') text = this.sysText(m);
+    else text = this.nm(m.from) + ': ' + m.text;
+    if (m.state === 'failed') text = 'Gagal terkirim · ' + text;
+    return { text, time: m.day === 'Hari ini' ? m.time : m.day === 'Kemarin' ? 'Kemarin' : (m.day.split(', ')[1] || m.day) };
+  }
+  threadVals(list, ref) {
+    const me = this.state.me, out = []; let lastDay = null;
+    list.forEach((m, i) => {
+      if (m.day !== lastDay) { out.push({ id: 'd' + m.id, isDay: true, label: m.day }); lastDay = m.day; }
+      const prev = list[i - 1], next = list[i + 1];
+      const samePrev = prev && prev.type === 'text' && m.type === 'text' && prev.from === m.from && prev.day === m.day;
+      const sameNext = next && next.type === 'text' && m.type === 'text' && next.from === m.from && next.day === m.day;
+      if (m.type === 'system') return out.push({ id: m.id, isSystem: true, text: this.sysText(m), time: m.time });
+      if (m.type === 'activity') return out.push(Object.assign(this.vmAct(m), { isActivity: true }));
+      const mine = m.from === me;
+      const radius = mine ? ('18px ' + (samePrev ? '6px' : '18px') + ' ' + (sameNext ? '6px' : '18px') + ' 18px') : ((samePrev ? '6px' : '18px') + ' 18px 18px ' + (sameNext ? '6px' : '18px'));
+      out.push({ id: m.id, isMine: mine, isOther: !mine, name: this.nm(m.from), ini: this.ini(m.from), bg: this.u(m.from).bg, time: m.time,
+        segs: segs(m.text, () => this.flash('Membuka link di tab baru (simulasi)', 'info')),
+        showHead: !samePrev, showAvatar: !sameNext, hideAvatar: !!sameNext, showMeta: !sameNext, pt: samePrev ? '2px' : '12px', radius,
+        failed: m.state === 'failed', sending: m.state === 'sending', sentMeta: m.state === 'sent' && !sameNext, opacity: m.state === 'sending' ? .6 : 1, retry: () => this.retry(ref, m.id) });
+    });
+    return out;
+  }
+  ringEl(raw) {
+    const R = 52, C = 2 * Math.PI * R, n = raw.length, ready = this.state.ringReady; let acc = 0;
+    const els = RING.map(k => {
+      const c = raw.filter(t => t.status === k).length, len = n ? c / n * C : 0;
+      const el = React.createElement('circle', { key: k, cx: 66, cy: 66, r: R, fill: 'none', stroke: ST[k].ring, strokeWidth: 15,
+        strokeDasharray: (ready && len ? Math.max(len - 3, 0.01) : 0) + ' ' + C, strokeDashoffset: ready ? -acc : 0,
+        style: { transition: 'stroke-dasharray .8s cubic-bezier(.2,.8,.2,1), stroke-dashoffset .8s cubic-bezier(.2,.8,.2,1)' } });
+      acc += len; return el;
+    });
+    return React.createElement('svg', { width: 132, height: 132, viewBox: '0 0 132 132', style: { transform: 'rotate(-90deg)', display: 'block' } },
+      React.createElement('circle', { key: 'bg', cx: 66, cy: 66, r: R, fill: 'none', stroke: '#F0F3F1', strokeWidth: 15 }), ...els);
+  }
+
+  homeVals() {
+    const me = this.state.me, live = this.liveTasks(), vm = live.map(t => [t, this.vmTask(t)]), att = [];
+    vm.forEach(([r, t]) => {
+      if (r.a !== me || t.status === 'done' || t.status === 'in_review') return;
+      if (t.status === 'needs_revision') { const last = r.subs[r.subs.length - 1]; att.push({ w: 0, t, icon: 'undo', reason: 'Revisi diminta' + (last && last.by ? ' oleh ' + this.u(last.by).name : '') }); }
+      else if (t.overdue) att.push({ w: 1, t, icon: 'error', reason: 'Terlambat sejak ' + short(new Date(r.due)) });
+    });
+    att.sort((a, b) => a.w - b.w);
+    const ids = att.map(x => x.t.id), end = new Date(NOW.getTime() + 7 * 86400000);
+    const reviews = vm.filter(([r, t]) => r.r === me && t.status === 'in_review').map(([r, t]) => Object.assign({}, t, { from: 'Dari ' + this.nm(r.a) + ' · revisi ' + r.subs.length }));
+    const deadlines = vm.filter(([r, t]) => { const d = new Date(r.due); return r.a === me && t.status !== 'done' && t.status !== 'in_review' && !ids.includes(t.id) && d >= NOW && d <= end; })
+      .sort((a, b) => new Date(a[0].due) - new Date(b[0].due)).map(([r, t]) => { const d = new Date(r.due); return Object.assign({}, t, { dNum: String(d.getDate()), dDay: WD[d.getDay()] }); });
+    const gids = this.myGroups().map(g => g.id);
+    const projects = this.state.projects.filter(p => gids.includes(p.gid) && !p.archived && !p.completed).map(p => this.vmProject(p));
+    const acts = [];
+    gids.forEach(gid => (this.state.chats[gid] || []).forEach(m => { if (m.type === 'activity' && this.task(m.tid)) acts.push(m); }));
+    acts.sort((a, b) => b.n - a.n);
+    return { greeting: 'Halo, ' + this.u(me).name, homeSummary: att.length + ' perlu perhatian · ' + reviews.length + ' menunggu review kamu · ' + deadlines.length + ' deadline minggu ini',
+      attention: att.map(x => ({ title: x.t.title, project: x.t.projectTitle, icon: x.icon, reason: x.reason, open: x.t.open })), attentionCount: String(att.length), noAttention: !att.length,
+      reviews, reviewCount: String(reviews.length), noReviews: !reviews.length, deadlines, noDeadlines: !deadlines.length, projects, noProjects: !projects.length,
+      activity: acts.slice(0, 5).map(m => this.vmAct(m)), noActivity: !acts.length };
+  }
+  myTasksVals(rowCols) {
+    const s = this.state, me = s.me, live = this.liveTasks();
+    const mine = live.filter(t => t.a === me).map(t => this.vmTask(t)), toReview = live.filter(t => t.r === me && t.status === 'in_review').map(t => this.vmTask(t));
+    const action = mine.filter(t => t.status === 'needs_revision' || (t.overdue && t.status !== 'in_review')).concat(toReview);
+    const soon = mine.filter(t => !action.includes(t) && t.soon && t.status !== 'in_review');
+    const rest = mine.filter(t => !action.includes(t) && !soon.includes(t) && t.status !== 'done');
+    const done = mine.filter(t => t.status === 'done'), active = mine.filter(t => t.status === 'in_progress');
+    const F = [['all', 'Semua', mine.length + toReview.length], ['review', 'Perlu review', toReview.length], ['active', 'Dikerjakan', active.length], ['done', 'Selesai', done.length]];
+    const none = !mine.length && !toReview.length;
+    let sections = [];
+    if (!none) {
+      if (s.filter === 'all') sections = [['Perlu tindakan', action], ['Segera', soon], ['Sedang berjalan', rest], ['Selesai', done]].filter(x => x[1].length).map(([title, items]) => ({ title, items, count: String(items.length), empty: false, has: true }));
+      else { const items = s.filter === 'review' ? toReview : s.filter === 'active' ? active : done; sections = [{ title: F.find(f => f[0] === s.filter)[1], items, count: String(items.length), empty: !items.length, has: items.length > 0 }]; }
+    }
+    return { filters: F.map(([k, label, n]) => ({ label, n: String(n), bg: s.filter === k ? '#202124' : '#fff', fg: s.filter === k ? '#fff' : '#202124', nbg: s.filter === k ? '#C9F2D6' : '#F0F3F1', go: () => this.setState({ filter: k }) })),
+      sections, noTasksAtAll: none, myCountLabel: none ? 'Belum ada tugas untukmu' : (mine.length - done.length) + ' terbuka · ' + toReview.length + ' menunggu review kamu' };
+  }
+  groupVals(gid) {
+    const s = this.state, g = this.grp(gid), me = s.me, coord = g.coord === me;
+    const all = s.projects.filter(p => p.gid === gid), act = all.filter(p => !p.archived && !p.completed), dn = all.filter(p => p.completed && !p.archived), ar = all.filter(p => p.archived);
+    const F = [['active', 'Aktif', act], ['done', 'Selesai', dn], ['archived', 'Arsip', ar]], cur = F.find(f => f[0] === s.gFilter) || F[0];
+    const pids = all.map(p => p.id), unread = s.unread[me + ':' + gid] || 0;
+    return { gd: { name: g.name, desc: g.desc || '', hasDesc: !!g.desc, course: g.course, tint: g.tint, icon: g.icon, isCoord: coord, memberLabel: g.members.length + ' dari 8 anggota',
+      summary: act.length + ' proyek aktif · ' + s.tasks.filter(t => pids.includes(t.pid) && t.status !== 'done').length + ' tugas berjalan', unread: String(unread), hasUnread: unread > 0,
+      members: g.members.map(id => ({ name: this.nm(id) + (id === me ? ' (kamu)' : ''), ini: this.ini(id), bg: this.u(id).bg, role: id === g.coord ? 'Koordinator' : 'Anggota', isC: id === g.coord,
+        sub: s.tasks.filter(t => pids.includes(t.pid) && t.a === id && t.status !== 'done').length + ' tugas aktif' })),
+      filters: F.map(([k, label, list]) => ({ label: label + ' · ' + list.length, bg: cur[0] === k ? '#202124' : '#fff', fg: cur[0] === k ? '#fff' : '#202124', go: () => this.setState({ gFilter: k }) })),
+      projects: cur[2].map(p => this.vmProject(p)), noProjectsAll: !all.length, noProjectsFilter: all.length > 0 && !cur[2].length,
+      filterEmpty: cur[0] === 'archived' ? 'Belum ada proyek yang diarsipkan.' : cur[0] === 'done' ? 'Belum ada proyek yang selesai.' : 'Tidak ada proyek aktif. Lihat tab Selesai atau Arsip.',
+      emptyText: coord ? 'Mulai proyek pertama untuk mengatur tugas dan kerja sama kelompokmu.' : 'Koordinator belum membuat proyek. Proyek baru akan muncul di sini.',
+      openChat: () => this.openChat(gid), newProject: () => this.openNewProject(gid) } };
+  }
+  projectVals(pid) {
+    const s = this.state, p = this.proj(pid), g = this.grp(p.gid), raw = s.tasks.filter(t => t.pid === pid), n = raw.length;
+    const pts = COLS.reduce((acc, k) => acc.concat(raw.filter(t => t.status === k)), []).map(t => this.vmTask(t));
+    const pv = this.vmProject(p), cnt = k => raw.filter(t => t.status === k).length;
+    const members = g.members.map(id => {
+      const mt = raw.filter(t => t.a === id), d = mt.filter(t => t.status === 'done').length, sel = s.member === id;
+      return { id, name: this.nm(id), ini: this.ini(id), bg: this.u(id).bg, ratio: d + '/' + mt.length, selected: sel, d, total: mt.length,
+        ring: sel ? '0 0 0 2.5px #fff, 0 0 0 4.5px #202124' : 'none', scale: sel ? 'scale(1.06)' : 'scale(1)', nameW: sel ? 700 : 500,
+        pick: () => this.setState(st => ({ member: st.member === id ? null : id })) };
+    });
+    const sm = members.find(m => m.selected);
+    return { proj: pv, projDue: longD(new Date(p.due)) + ' · 23:59', projMembers: g.members.map(id => this.av(id)), openProjGroup: () => this.openGroup(p.gid),
+      isArchived: !!p.archived, isDone: !!p.completed && !p.archived,
+      ringEl: this.ringEl(raw), ringPct: n ? Math.round(pv.done / n * 100) + '%' : '—', ringSub: n ? pv.done + ' dari ' + n + ' disetujui' : 'Belum ada tugas', hasPulse: n > 0, noPulse: !n,
+      legend: RING.map(k => ({ label: ST[k].label, icon: ST[k].icon, bg: ST[k].bg, ring: ST[k].ring, n: String(cnt(k)), op: cnt(k) ? 1 : .45 })),
+      pulseMembers: members, hasMember: !!sm,
+      mem: sm ? { name: sm.name, pct: (sm.total ? Math.round(sm.d / sm.total * 100) : 0) + '%', label: (sm.id === s.me ? 'Tugasmu' : 'Tugas ' + sm.name) + ' · ' + sm.d + ' dari ' + sm.total + ' selesai' } : { name: '', pct: '0%', label: '' },
+      clearMember: () => this.setState({ member: null }),
+      boardCols: COLS.map(k => { const items = pts.filter(t => t.status === k); return { label: ST[k].label, icon: ST[k].icon, bg: ST[k].bg, ring: ST[k].ring, count: String(items.length), items, empty: !items.length }; }),
+      listRows: pts, noTasks: !n, noTasksText: g.coord === s.me ? 'Belum ada tugas. Tambahkan tugas pertama dengan tombol Buat tugas.' : 'Belum ada tugas. Koordinator akan menambahkan tugas.',
+      taskCount: n + ' tugas', isBoard: s.projView === 'board' && n > 0, isList: s.projView === 'list' && n > 0,
+      viewOpts: [['board', 'Papan', 'view_kanban'], ['list', 'Daftar', 'view_list']].map(([k, label, icon]) => ({ label, icon, on: s.projView === k, bg: s.projView === k ? '#fff' : 'transparent', shadow: s.projView === k ? '0 1px 3px rgba(0,0,0,.1)' : 'none', go: () => this.setState({ projView: k }) })) };
+  }
+  chatVals() {
+    const s = this.state, me = s.me, q = s.chatQuery.trim().toLowerCase(), mine = this.myGroups();
+    const rows = mine.filter(g => !q || g.name.toLowerCase().includes(q)).map(g => {
+      const pv = this.preview(g.id), un = s.unread[me + ':' + g.id] || 0, on = s.chatId === g.id;
+      return { name: g.name, tint: g.tint, icon: g.icon, preview: pv.text, time: pv.time, unread: String(un), hasUnread: un > 0, unreadLabel: un + ' pesan belum dibaca',
+        bg: on ? '#fff' : 'transparent', shadow: on ? '0 1px 3px rgba(0,0,0,.08)' : 'none', nameW: un ? 700 : 600, prevC: un ? '#202124' : '#62676B', prevW: un ? 500 : 400, open: () => this.openChat(g.id) };
+    });
+    const g = s.chatId && this.isMember(s.chatId) ? this.grp(s.chatId) : null, ref = g ? { kind: 'chat', id: g.id } : null;
+    const v = { chatRows: rows, noChatResults: mine.length > 0 && !rows.length, noChatsAny: !mine.length, chatQuery: s.chatQuery, onChatQuery: e => this.setState({ chatQuery: e.target.value }),
+      hasQuery: !!s.chatQuery, clearChatQuery: () => this.setState({ chatQuery: '' }), hasChat: !!g, noChat: !g };
+    if (!g) return Object.assign(v, { chatG: { name: '', icon: '', tint: '#fff', memberLabel: '' }, thread: [], info: { members: [], attn: [], projects: [], noAttn: true } });
+    const pids = s.projects.filter(p => p.gid === g.id && !p.archived).map(p => p.id);
+    const attn = s.tasks.filter(t => pids.includes(t.pid) && (t.status === 'in_review' || t.status === 'needs_revision' || dueInfo(t).overdue)).map(t => this.vmTask(t));
+    return Object.assign(v, { chatG: { name: g.name, icon: g.icon, tint: g.tint, memberLabel: g.members.length + ' anggota · ' + g.members.map(id => this.u(id).name).join(', ') },
+      thread: this.threadVals(s.chats[g.id] || [], ref), threadEmpty: !(s.chats[g.id] || []).length,
+      openChatGroup: () => this.openGroup(g.id), toggleInfo: () => this.setState(st => ({ showInfo: !st.showInfo })), infoIcon: s.showInfo ? 'right_panel_close' : 'right_panel_open',
+      sendChat: () => this.send(ref, 'draft'), sendBg: s.draft.trim() ? '#202124' : '#B4B8BC', draft: s.draft, onDraft: e => this.setState({ draft: e.target.value }),
+      onDraftKey: e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); this.send(ref, 'draft'); } },
+      info: { members: g.members.map(id => ({ name: this.nm(id), ini: this.ini(id), bg: this.u(id).bg, role: id === g.coord ? 'Koordinator' : 'Anggota' })), attn, noAttn: !attn.length,
+        projects: s.projects.filter(p => p.gid === g.id && !p.archived && !p.completed).map(p => this.vmProject(p)) } });
+  }
+  taskVals(tid) {
+    const s = this.state, t = this.task(tid), tk = this.vmTask(t), p = this.proj(t.pid), me = s.me, mine = t.a === me, rev = t.r === me, last = t.subs[t.subs.length - 1];
+    let cta = null, info = null, infoIcon = 'hourglass_top';
+    if (p.archived) { info = 'Proyek diarsipkan · tugas hanya bisa dilihat'; infoIcon = 'inventory_2'; }
+    else if (p.completed) { info = 'Proyek selesai · tugas hanya bisa dilihat'; infoIcon = 'task_alt'; }
+    else if (mine && t.status === 'todo') cta = { label: 'Mulai kerjakan', icon: 'play_arrow', go: () => this.start(tid) };
+    else if (mine && t.status === 'in_progress') cta = { label: 'Kirim hasil', icon: 'upload', go: () => this.openSubmit(tid) };
+    else if (mine && t.status === 'needs_revision') cta = { label: 'Kirim revisi', icon: 'upload', go: () => this.openSubmit(tid) };
+    else if (rev && t.status === 'in_review') cta = { label: 'Review revisi ' + t.subs.length, icon: 'rate_review', go: () => this.openReview(tid) };
+    else if (t.status === 'done') { info = 'Disetujui oleh ' + (last && last.by ? this.nm(last.by).replace('Kamu', 'kamu') : 'reviewer'); infoIcon = 'check_circle'; }
+    else if (t.status === 'in_review') info = 'Menunggu review dari ' + this.nm(t.r);
+    else if (t.status === 'needs_revision') info = 'Menunggu revisi dari ' + this.nm(t.a);
+    else if (t.status === 'in_progress') { info = 'Sedang dikerjakan ' + this.nm(t.a); infoIcon = 'autorenew'; }
+    else info = 'Belum dimulai oleh ' + this.nm(t.a);
+    const TT = [['overview', 'Ringkasan', 0], ['submission', 'Hasil kerja', t.subs.length], ['discussion', 'Diskusi', Number(tk.comments)]];
+    const subs = t.subs.slice().reverse().map(x => {
+      const pending = !x.decision && x.rev === t.subs.length && t.status === 'in_review';
+      return { title: 'Revisi ' + x.rev, meta: this.nm(x.author) + ' · ' + x.at, note: x.note, showLock: pending && !rev,
+        lockText: mine ? 'Kamu tidak bisa menyetujui hasil kerjamu sendiri.' : 'Hanya ' + this.nm(t.r) + ' yang bisa mereview.',
+        links: x.links.map(l => ({ url: l.replace('https://', ''), open: () => this.flash('Membuka link di tab baru (simulasi)', 'info') })),
+        chipLabel: x.decision === 'approved' ? 'Disetujui' : x.decision ? 'Perlu revisi' : pending ? 'Menunggu review' : 'Terkirim',
+        chipBg: x.decision === 'approved' ? '#C9F2D6' : x.decision ? '#F6CED1' : '#DED2FF', chipIcon: x.decision === 'approved' ? 'check_circle' : x.decision ? 'undo' : 'visibility',
+        feedback: x.feedback || '', hasFeedback: !!x.feedback, by: x.by ? this.nm(x.by) : '' };
+    });
+    const fb = t.status === 'needs_revision' && last && last.feedback ? last : null, ro = p.archived || p.completed, disc = s.taskTab === 'discussion', ref = { kind: 'task', id: tid };
+    return { tk, tkDesc: t.desc || 'Belum ada deskripsi.', tkRevs: t.subs.length ? 'Revisi ' + t.subs.length : 'Belum ada',
+      tabOverview: s.taskTab === 'overview', tabSubmission: s.taskTab === 'submission', tabDiscussion: disc,
+      taskTabs: TT.map(([k, label, c]) => ({ label, count: String(c), hasCount: c > 0 && k !== 'overview', bg: s.taskTab === k ? '#fff' : 'transparent', shadow: s.taskTab === k ? '0 1px 3px rgba(0,0,0,.08)' : 'none', sel: s.taskTab === k, go: () => this.setState({ taskTab: k }) })),
+      cta: cta || { label: '', icon: '', go: null }, hasCta: !!cta && !disc, info, infoIcon, hasInfo: !!info && !disc,
+      hasFeedback: !!fb, feedbackText: fb ? fb.feedback : '', feedbackBy: fb ? this.nm(fb.by) : '',
+      subs, noSubs: !subs.length, discuss: () => this.setState({ taskTab: 'discussion' }),
+      openTaskProject: () => this.openProject(p.id, true), closeTask: () => this.closeTask(),
+      dthread: this.threadVals(t.msgs, ref), dEmpty: !t.msgs.length, showTComposer: disc && !ro, showTReadOnly: disc && ro,
+      roText: p.archived ? 'Diskusi hanya-baca karena proyek diarsipkan.' : 'Diskusi hanya-baca karena proyek sudah selesai.',
+      tdraft: s.tdraft, onTDraft: e => this.setState({ tdraft: e.target.value }), sendT: () => this.send(ref, 'tdraft'), tSendBg: s.tdraft.trim() ? '#202124' : '#B4B8BC',
+      onTKey: e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); this.send(ref, 'tdraft'); } } };
+  }
+  modalVals() {
+    const s = this.state, sd = s.sd || {}, f = s.form, m = s.modal, v = {};
+    const bind = k => e => this.setForm(k, e.target.value);
+    v.fv = { note: f.note || '', feedback: f.feedback || '', title: f.title || '', desc: f.desc || '', name: f.name || '', date: f.date || '' };
+    v.on = { note: bind('note'), feedback: bind('feedback'), title: bind('title'), desc: bind('desc'), name: bind('name'), date: bind('date') };
+    v.counts = { title: (f.title || '').length + '/120', name: (f.name || '').length + '/60' };
+    v.quick = [['1', 'Besok'], ['3', '3 hari lagi'], ['7', 'Minggu depan']].map(([d, label]) => { const val = addDays(Number(d)), on = f.date === val; return { label, bg: on ? '#202124' : '#fff', fg: on ? '#fff' : '#202124', pick: () => this.setForm('date', val) }; });
+    v.minDate = TODAY; v.dateLabel = validDate(f.date) ? longD(new Date(f.date + 'T23:59:00')) + ' · 23:59' : 'Tanggal belum valid';
+    if ((m === 'submit' || m === 'review') && this.task(sd.tid)) {
+      const t = this.task(sd.tid), last = t.subs[t.subs.length - 1];
+      Object.assign(v, { submitTitle: t.status === 'needs_revision' ? 'Kirim revisi' : 'Kirim hasil', sTask: t.title, reviewerName: this.u(t.r).name,
+        linkFields: s.links.map((l, i) => ({ value: l, onChange: e => { const val = e.target.value; this.setState(st => ({ links: st.links.map((x, j) => j === i ? val : x), formErr: null })); } })),
+        canAddLink: s.links.length < 5, addLink: () => this.setState(st => ({ links: st.links.concat('') })), linkCount: s.links.length + '/5',
+        doSubmit: () => this.submit(), submitBtn: s.busy ? 'Mengirim…' : /Gagal/.test(s.formErr || '') ? 'Coba lagi' : 'Kirim untuk direview',
+        lastSub: last ? { note: last.note, links: last.links.map(l => ({ url: l.replace('https://', '') })), meta: 'Revisi ' + last.rev + ' · ' + this.nm(last.author) + ' · ' + last.at } : { note: '', links: [], meta: '' },
+        reviewChanges: sd.mode === 'changes', reviewIdle: sd.mode !== 'changes',
+        pickChanges: () => this.setState(st => ({ sd: Object.assign({}, st.sd, { mode: 'changes' }), formErr: null })), cancelChanges: () => this.setState(st => ({ sd: Object.assign({}, st.sd, { mode: null }), formErr: null })),
+        approve: () => this.decide('approved'), requestChanges: () => this.decide('changes'),
+        approveBtn: s.busy && sd.pending === 'approved' ? 'Menyimpan…' : 'Setujui', changesBtn: s.busy ? 'Mengirim…' : 'Kirim ke ' + this.u(t.a).name });
+    }
+    if (m === 'newTask' && this.proj(sd.pid)) {
+      const p = this.proj(sd.pid), g = this.grp(p.gid);
+      const chip = (id, on, dis, pick) => ({ name: this.nm(id), ini: this.ini(id), bg: this.u(id).bg, on, btnBg: on ? '#202124' : '#fff', btnFg: on ? '#fff' : '#202124', op: dis ? .4 : 1, pick });
+      Object.assign(v, { ntProj: p.title, ntProjDue: 'Deadline proyek ' + longD(new Date(p.due)),
+        ntAssignees: g.members.map(id => chip(id, f.a === id, false, () => this.setState(st => ({ form: Object.assign({}, st.form, { a: id, r: st.form.r === id ? null : st.form.r }), formErr: null })))),
+        ntReviewers: g.members.map(id => chip(id, f.r === id, f.a === id, () => f.a === id ? this.err('Pelaksana dan reviewer harus orang berbeda.') : this.setForm('r', id))),
+        ntWarn: validDate(f.date) && f.date > p.due.slice(0, 10), ntWarnText: 'Deadline tugas melewati deadline proyek (' + short(new Date(p.due)) + '). Tetap bisa disimpan, pastikan ini disengaja.',
+        createTask: () => this.createTask(), createTaskBtn: s.busy ? 'Menyimpan…' : /Gagal/.test(s.formErr || '') ? 'Coba lagi' : 'Buat tugas' });
+    }
+    if (m === 'newProject') Object.assign(v, { pfGroupName: (this.grp(sd.gid) || {}).name || '', saveProject: () => this.saveProject(), pfBtn: s.busy ? 'Menyimpan…' : /Gagal/.test(s.formErr || '') ? 'Coba lagi' : 'Buat proyek' });
+    if (m === 'search') {
+      const q = s.searchQ.trim().toLowerCase(), gids = this.myGroups().map(g => g.id), live = this.liveTasks();
+      const tasks = (q ? live.filter(t => t.title.toLowerCase().includes(q)) : live.filter(t => (t.a === s.me || t.r === s.me) && t.status !== 'done')).slice(0, 6).map(t => this.vmTask(t));
+      const projs = s.projects.filter(p => gids.includes(p.gid) && (q ? p.title.toLowerCase().includes(q) : !p.archived && !p.completed)).slice(0, 4).map(p => this.vmProject(p));
+      const grps = this.myGroups().filter(g => !q || g.name.toLowerCase().includes(q)).map(g => ({ name: g.name, course: g.course, tint: g.tint, icon: g.icon, go: () => { this.setState({ modal: null }); this.openGroup(g.id); } }));
+      const first = tasks[0] ? tasks[0].open : projs[0] ? projs[0].open : grps[0] ? grps[0].go : null;
+      Object.assign(v, { searchQ: s.searchQ, onSearch: e => this.setState({ searchQ: e.target.value }), onSearchKey: e => { if (e.key === 'Enter' && first) { e.preventDefault(); first(); } },
+        sTasks: tasks, hasSTasks: tasks.length > 0, sTasksTitle: q ? 'Tugas' : 'Tugasmu yang terbuka', sProjects: projs.map(p => Object.assign({}, p, { go: () => { this.setState({ modal: null }); p.open(); } })), hasSProjects: projs.length > 0,
+        sGroups: grps, hasSGroups: grps.length > 0, noResults: !tasks.length && !projs.length && !grps.length,
+        searchRef: this._sref || (this._sref = el => { if (el) setTimeout(() => el.focus(), 30); }) });
+    }
+    return v;
+  }
+
+  renderVals() {
+    const s = this.state, me = s.me, vw = s.vw, compact = vw < 1100, narrow = vw < 1240;
+    let totalUnread = 0; this.myGroups().forEach(g => { totalUnread += s.unread[me + ':' + g.id] || 0; });
+    const nav = [['home', 'Beranda', 'home'], ['groups', 'Grup', 'group'], ['chats', 'Chat', 'chat_bubble'], ['tasks', 'Tugas Saya', 'task_alt']].map(([k, label, icon]) => {
+      const on = s.view === k, b = k === 'chats' && totalUnread > 0;
+      return { label, icon, cur: on ? 'page' : 'false', bg: on ? '#202124' : 'transparent', fg: on ? '#fff' : '#202124', fill: on ? 1 : 0, jc: compact ? 'center' : 'flex-start', showLabel: !compact,
+        badge: String(totalUnread), badgeInline: b && !compact, badgeDot: b && compact, go: () => this.go(k) };
+    });
+    const sideGroups = this.myGroups().map(g => { const on = s.view === 'groups' && s.gid === g.id, un = s.unread[me + ':' + g.id] || 0; return { name: g.name, icon: g.icon, tint: g.tint, bg: on ? '#fff' : 'transparent', shadow: on ? '0 1px 3px rgba(0,0,0,.08)' : 'none', hasUnread: un > 0, unreadLabel: un + ' pesan baru', go: () => this.openGroup(g.id) }; });
+    const G = s.gid && this.isMember(s.gid) ? this.grp(s.gid) : null, P = G && s.pid ? this.proj(s.pid) : null;
+    const isGroupList = s.view === 'groups' && !G, isGroup = s.view === 'groups' && !!G && !P, isProject = s.view === 'groups' && !!P;
+    const cr = [];
+    if (s.view === 'home') cr.push(['Beranda', () => this.go('home')]);
+    if (s.view === 'tasks') cr.push(['Tugas Saya', () => this.go('tasks')]);
+    if (s.view === 'chats') { cr.push(['Chat', () => this.go('chats')]); const cg = this.grp(s.chatId); if (cg && this.isMember(cg.id)) cr.push([cg.name, () => {}]); }
+    if (s.view === 'groups') { cr.push(['Grup', () => this.go('groups')]); if (G) cr.push([G.name, () => this.openGroup(G.id)]); if (P) cr.push([P.title, () => {}]); }
+    const crumbs = cr.map(([label, go], i) => { const last = i === cr.length - 1; return { label, go, sep: i > 0, fs: last ? '16px' : '15px', fw: last ? 700 : 500, fg: last ? '#202124' : '#62676B' }; });
+    let topAction = null;
+    if (isGroup) topAction = { label: 'Buat proyek', icon: G.coord === me ? 'add' : 'lock', go: () => this.openNewProject(G.id) };
+    if (isProject) topAction = { label: 'Buat tugas', icon: G.coord === me && !P.archived && !P.completed ? 'add' : 'lock', go: () => this.openNewTask(P.id) };
+    const groupCards = this.myGroups().map(g => {
+      const un = s.unread[me + ':' + g.id] || 0, act = s.projects.filter(p => p.gid === g.id && !p.archived && !p.completed).length;
+      return { name: g.name, course: g.course, tint: g.tint, icon: g.icon, roleLabel: g.coord === me ? 'Koordinator' : 'Anggota', roleBg: g.coord === me ? '#C9F2D6' : '#F0F3F1',
+        avatars: g.members.slice(0, 5).map(id => this.av(id)), memberLabel: g.members.length + ' anggota · ' + (act ? act + ' proyek aktif' : 'belum ada proyek aktif'),
+        hasUnread: un > 0, unreadLabel: un + ' pesan baru', open: () => this.openGroup(g.id), chat: e => { e.stopPropagation(); this.openChat(g.id); } };
+    });
+    const rowCols = compact ? 'minmax(0,2.2fr) minmax(0,1.3fr) 176px 132px 48px' : 'minmax(0,2.2fr) minmax(0,1.3fr) 176px 196px 150px 52px';
+    const cf = s.toast, M = s.modal;
+    const vals = {
+      sideW: compact ? '76px' : '264px', notCompact: !compact, navJc: compact ? 'center' : 'flex-start', nav, sideGroups,
+      openSearch: () => this.openSearch(), menu: s.menu, toggleMenu: () => this.setState(st => ({ menu: !st.menu })),
+      meU: { name: this.u(me).name, email: this.u(me).email, ini: this.ini(me), bg: this.u(me).bg },
+      personas: PERSONAS.map(([id, role]) => ({ name: this.u(id).name, role, ini: this.ini(id), bg: this.u(id).bg, on: s.me === id, bgRow: s.me === id ? '#F0F3F1' : 'transparent', pick: () => this.setPersona(id) })),
+      crumbs, hasTopAction: !!topAction, topAction: topAction || { label: '', icon: '', go: null },
+      isHome: s.view === 'home', isGroupList, isGroup, isProject, isChats: s.view === 'chats', isTasks: s.view === 'tasks',
+      homeCols: narrow ? 'minmax(0,1fr)' : 'minmax(0,1.65fr) minmax(320px,1fr)', sideCols: narrow ? 'minmax(0,1fr)' : 'minmax(0,1fr) 320px', projCols: narrow ? 'minmax(0,1fr)' : 'minmax(0,1fr) minmax(440px,540px)',
+      rowCols, showPair: !compact, goTasks: () => this.go('tasks'), goGroups: () => this.go('groups'),
+      groupCards, groupsSub: this.myGroups().length + ' grup · koordinator di ' + this.myGroups().filter(g => g.coord === me).length,
+      showInfoPane: vw >= 1320 && s.showInfo, infoToggleVisible: vw >= 1320,
+      threadRef: this._tref || (this._tref = el => { if (el) this._thread = el; }), dbodyRef: this._dref || (this._dref = el => { if (el) this._dbody = el; }),
+      offline: !!this.props.offline,
+      hasTask: !!(s.taskId && this.task(s.taskId) && this.isMember(this.gidOfTask(s.taskId))), drawerW: Math.min(580, vw - 96) + 'px',
+      hasModal: !!M, closeModal: () => this.closeModal(), mSubmit: M === 'submit', mReview: M === 'review', mNewTask: M === 'newTask', mNewProject: M === 'newProject', mSearch: M === 'search',
+      formErr: s.formErr, hasErr: !!s.formErr, busy: !!s.busy, busyOp: s.busy ? .7 : 1,
+      hasToast: !!cf, toast: cf ? cf.msg : '', toastIcon: cf && cf.kind === 'err' ? 'error' : cf && cf.kind === 'info' ? 'info' : 'check_circle',
+      toastColor: cf && cf.kind === 'err' ? '#F6CED1' : cf && cf.kind === 'info' ? '#D8EAF4' : '#C9F2D6',
+    };
+    Object.assign(vals, this.homeVals(), this.myTasksVals(), this.chatVals(), this.modalVals());
+    if (isGroup) Object.assign(vals, this.groupVals(G.id));
+    if (isProject) Object.assign(vals, this.projectVals(P.id));
+    if (vals.hasTask) Object.assign(vals, this.taskVals(s.taskId));
+    return vals;
+  }
+}
+
+</script>
+</body>
+</html>

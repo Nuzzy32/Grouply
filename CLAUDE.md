@@ -2,7 +2,7 @@
 
 ## Perubahan scope eksplisit: Flutter, 17 Oktober 2026
 
-- Pengguna meminta migrasi ke Flutter untuk Android dan iOS. `flutter/` adalah client lintas platform baru; batas iOS-only di spesifikasi v1.3 berikut merupakan konteks historis, bukan larangan untuk migrasi yang telah diminta ini. Web tetap tidak termasuk scope.
+- Pengguna meminta migrasi ke Flutter untuk Android dan iOS. `flutter/` adalah client lintas platform baru; batas iOS-only di spesifikasi v1.3 berikut merupakan konteks historis, bukan larangan untuk migrasi yang telah diminta ini. Web: lihat bagian Web di bawah.
 - Pertahankan source Swift, test native, dan migration Supabase yang sudah ada; jangan hapus atau menganggap Flutter sudah menggantikan rilis native sepenuhnya. Backend/RPC dipakai bersama, bukan disalin ke database baru.
 - Jalankan Flutter dari `flutter/`; baca `flutter/README.md` dan `docs/FLUTTER_MIGRATION.md` untuk konfigurasi, perintah, bukti pengujian, dan gap. Jangan klaim build/test lokal sebagai bukti cloud, perangkat fisik, atau rilis store. Daftar akun dan atur ulang sandi lewat kode email tersedia di Flutter (teruji localhost); login Apple, push, dan migrasi otomatis data Swift belum tersedia.
 
@@ -12,6 +12,12 @@
 - Fitur baru hanya untuk client Flutter; SwiftUI tidak diperbarui dan tidak mengenal organisasi. Tahap 2 (ORG-07..10: kepanitiaan, koordinator sie, rapat, persetujuan berjenjang, pengumuman) disetujui 12 November 2026 sesuai `docs/DESIGN-org-tahap2.md`; push server (ORG-11) ditunda. Desain Tahap 3a (ORG-12..14: template proker, arsip periode dan serah terima, rekap LPJ) disetujui 13 November 2026 sesuai `docs/DESIGN-org-tahap3.md`, dan pembangunannya diminta pengguna pada hari yang sama (sebelum pilot). Lampiran file (ORG-15, Tahap 3b) ditunda dan belum disetujui. Premium tanpa AI (di bawah) menambah rekap CSV dan draf LPJ teks per proker.
 - Urutan kunci wajib di semua jalur: profil → grup (urut id) → organisasi (urut id, `FOR NO KEY UPDATE`) → `user_sync_state` (urut user_id). Trigger `group_members_org_guard` menjaga setiap pemegang jabatan tetap anggota divisi atau kepanitiaan, dan membatalkan (`lapsed`) pengajuan milik orang yang keluar organisasi; jangan melemahkannya tanpa menjalankan `python3 scripts/billing_local.py check-locks`.
 - Premium tanpa AI dimulai dari satu template **Persiapan Seminar** (sebagian ORG-12) untuk Flutter dan Organization Plan aktif. Aksi `publishTaskBatch` memakai aturan `createTask` dan tanda terima transaksi untuk retry; permintaan yang belum terkonfirmasi disimpan per akun di Keychain dan dihapus saat logout. Tindak lanjut rapat memakai `add/publish/removeMeetingFollowUp`; poin yang belum terbit bisa dihapus koordinator atau notulis. Tahap berikutnya mengikuti [rencana Premium](docs/PLAN-premium-tanpa-ai.md).
+
+## Perubahan scope eksplisit: Web, 14 November 2026
+
+- Pengguna meminta website Grouply: landing page dan aplikasi web setelah login, di `web/` (SvelteKit + Svelte 5, TypeScript, CSS biasa tanpa library animasi). Ini pengecualian untuk larangan "web" di bawah. Desain acuan: `reference/claude-design/web/` (`Grouply Landing.dc.html`, `Grouply Web.dc.html`), data referensi saja.
+- Web memakai Supabase dan RPC yang sama (`grouply_snapshot`/`grouply_mutate`) dengan publishable key; aturan tetap di RLS/RPC, bukan di client. Jangan membuat backend atau kontrak terpisah untuk web.
+- Token warna di `web/src/app.css` mengikuti `docs/DESIGN_SYSTEM.md` dan `docs/DARK_THEME.md`. Jalankan dari `web/`: `npm run dev`, `npm run check`, `npm run build`.
 
 ## Sumber dan platform
 
