@@ -5,6 +5,8 @@
 	import { pending, sendMessage } from '../messages.svelte.ts';
 	import { closeTask } from '../nav.ts';
 	import { flash, store } from '../store.svelte.ts';
+	import { supabase } from '../supabase.ts';
+	import type { SubmissionFile } from '../types.ts';
 	import Composer from './Composer.svelte';
 	import Modal from './Modal.svelte';
 	import TaskManage from './TaskManage.svelte';
@@ -26,6 +28,26 @@
 	const comments = $derived(thread.filter((m) => m.kind === 'text').length);
 	const readOnly = $derived(project?.status !== 'active');
 	const waitHours = $derived(Math.floor((now.getTime() - new Date(last?.createdAt ?? now).getTime()) / 3_600_000));
+
+	// Lampiran per submission, dengan tautan bertanda tangan 10 menit dari Storage privat.
+	// ponytail: tautan kedaluwarsa bila drawer dibiarkan terbuka > 10 menit; buka ulang drawer.
+	let files = $state<Record<string, (SubmissionFile & { url?: string })[]>>({});
+	$effect(() => {
+		const id = taskID;
+		const count = subs.length;
+		if (!snap.submissionFilesAvailable || !count) return;
+		let stale = false;
+		(async () => {
+			const { data } = await supabase.from('submissions').select('id,files').eq('task_id', id);
+			const rows = (data ?? []) as { id: string; files: SubmissionFile[] }[];
+			const paths = rows.flatMap((r) => r.files.map((f) => f.path));
+			const signed = paths.length ? (await supabase.storage.from('submission-files').createSignedUrls(paths, 600)).data ?? [] : [];
+			const url = new Map(signed.map((s) => [s.path, s.signedUrl]));
+			if (!stale) files = Object.fromEntries(rows.map((r) => [r.id, r.files.map((f) => ({ ...f, url: url.get(f.path) ?? undefined }))]));
+		})();
+		return () => (stale = true);
+	});
+	const size = (b: number) => (b < 1048576 ? `${Math.ceil(b / 1024)} KB` : `${(b / 1048576).toFixed(1).replace('.', ',')} MB`);
 
 	type Tab = 'overview' | 'submission' | 'discussion';
 	let tab = $state<Tab>('overview');
@@ -136,6 +158,14 @@
 	});
 </script>
 
+{#snippet attachments(id: string)}
+	{#each files[id] ?? [] as f (f.path)}
+		<a class="link" href={f.url} target="_blank" rel="noopener noreferrer" aria-label="Buka {f.name}">
+			<Icon name={f.type.startsWith('image/') ? 'image' : 'description'} size={18} /><span>{f.name}</span><small class="size">{size(f.size)}</small><Icon name="open_in_new" size={17} />
+		</a>
+	{/each}
+{/snippet}
+
 <svelte:window
 	onkeydown={(e) => {
 		// Esc menutup drawer kecuali ada dialog atau menu yang sedang terbuka di atasnya.
@@ -222,6 +252,7 @@
 							{#each s.links as l (l)}
 								<a class="link" href={l} target="_blank" rel="noopener noreferrer"><Icon name="link" size={18} /><span>{l.replace('https://', '')}</span><Icon name="open_in_new" size={17} /></a>
 							{/each}
+							{@render attachments(s.id)}
 							{#if s.feedback}
 								<div class="note"><small>Catatan {name(s.reviewerID)}</small><span>{s.feedback}</span></div>
 							{/if}
@@ -303,6 +334,7 @@
 			{#each last.links as l (l)}
 				<a class="link" href={l} target="_blank" rel="noopener noreferrer"><Icon name="link" size={18} /><span>{l.replace('https://', '')}</span><Icon name="open_in_new" size={17} /></a>
 			{/each}
+			{@render attachments(last.id)}
 		</div>
 		{#if error}<div class="notice error" role="alert">{error}</div>{/if}
 		{#if !changes}
@@ -637,6 +669,12 @@
 	}
 	.link:hover {
 		background: var(--border);
+	}
+	.link .size {
+		flex: none;
+		margin-left: auto;
+		color: var(--secondary);
+		font-size: 13px;
 	}
 	.link span {
 		flex: 1;

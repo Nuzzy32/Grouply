@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import Icon from '#lib/Icon.svelte';
+	import Gupy from '#lib/gupy/Gupy.svelte';
 	import { myGroups, unreadCount } from '#lib/app/derive.ts';
 	import { groupIcon, initials, tint } from '#lib/app/format.ts';
 	import { flash, header, store } from '#lib/app/store.svelte.ts';
@@ -104,7 +105,7 @@
 		</div>
 	{:else}
 		<div class="empty">
-			<span class="empty-icon"><Icon name="groups" size={28} /></span>
+			<Gupy size={140} idle={false} />
 			<b>Belum ada grup</b>
 			<span>Buat grup untuk kelompokmu, atau gabung dengan kode undangan dari koordinator.</span>
 			<div class="actions">
@@ -301,15 +302,6 @@
 		align-items: center;
 		gap: 10px;
 		text-align: center;
-	}
-	.empty-icon {
-		width: 56px;
-		height: 56px;
-		border-radius: 20px;
-		background: var(--mint);
-		display: flex;
-		align-items: center;
-		justify-content: center;
 	}
 	.empty b {
 		font-size: 19px;

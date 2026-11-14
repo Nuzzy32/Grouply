@@ -253,6 +253,7 @@ class _ProjectState extends _WorkspaceState<ProjectScreen> {
         ?_projectLeadRow(this, p, group),
         ..._projectPlanSection(this, p, group),
         _pulse(p, group, tasks, isCoord, stale, idle),
+        if (tasks.isNotEmpty) _contribution(group, tasks),
         Padding(
           padding: EdgeInsets.only(top: 4),
           child: Row(
@@ -706,6 +707,79 @@ class _ProjectState extends _WorkspaceState<ProjectScreen> {
               GLTheme.butter,
               '$idle tugas tanpa aktivitas lebih dari 48 jam',
             ),
+        ],
+      ),
+    );
+  }
+
+  /// Who finished what: each member's share of the approved tasks
+  /// (`core/contribution.dart`). Lateness is shown, never subtracted.
+  Widget _contribution(JsonMap group, List<JsonMap> tasks) {
+    final rows = contributions(tasks, group.ids('memberIDs'), DateTime.now());
+    final any = rows.any((r) => r.done > 0);
+    return Container(
+      key: Key('project-contribution'),
+      width: double.infinity,
+      padding: EdgeInsets.all(20),
+      decoration: glBox(GLTheme.surface, 32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        spacing: 14,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            spacing: 2,
+            children: [
+              Text('Kontribusi', style: gl(20, w700, -0.02)),
+              Text(
+                any
+                    ? 'Porsi dari tugas yang sudah disetujui; tiap tugas dihitung sama.'
+                    : 'Persentase muncul setelah ada tugas yang disetujui.',
+                style: gl(13, w400, 0, GLTheme.secondary, 3),
+              ),
+            ],
+          ),
+          for (final r in rows) _contributionRow(r),
+        ],
+      ),
+    );
+  }
+
+  Widget _contributionRow(Contribution r) {
+    final details = [
+      '${r.done} disetujui',
+      if (r.review > 0) '${r.review} direview',
+      if (r.active > 0) '${r.active} dikerjakan',
+      if (r.late > 0) '${r.late} terlambat',
+    ].join(' · ');
+    return MergeSemantics(
+      child: Row(
+        spacing: 12,
+        children: [
+          GLAvatar(user: store.user(r.id), size: 40, fontSize: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              spacing: 5,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        _pjDisplayName(store, r.id),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: gl(15, w600),
+                      ),
+                    ),
+                    Text('${r.percent}%', style: _pjDigits(gl(15, w700))),
+                  ],
+                ),
+                _pjBar(r.percent / 100, GLTheme.muted),
+                Text(details, style: gl(12, w400, 0, GLTheme.secondary)),
+              ],
+            ),
+          ),
         ],
       ),
     );

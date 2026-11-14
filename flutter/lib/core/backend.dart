@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -51,6 +53,23 @@ abstract class GrouplyBackend {
     String? periodID,
     List<String>? projectIDs,
   });
+  /// Uploads one submission attachment into the private bucket
+  /// `submission-files` at `<taskID>/<random uuid>` and returns that path.
+  /// Storage RLS only lets the task's assignee upload while it is open.
+  Future<String> uploadSubmissionFile(
+    String taskID,
+    Uint8List bytes,
+    String contentType,
+  );
+
+  /// `{submissionID: files}` for one task, read from `submissions` (RLS).
+  Future<Map<String, List<Map<String, dynamic>>>> submissionFiles(
+    String taskID,
+  );
+
+  /// A link that opens one attachment for 10 minutes.
+  Future<String> submissionFileUrl(String path);
+
   Future<void> connect(void Function() onChange);
   Future<void> disconnect();
   Future<void> foreground();
@@ -353,6 +372,46 @@ class SupabaseGrouplyBackend implements GrouplyBackend {
       params: {'action': action, 'payload': payload},
     ),
   );
+  static const submissionBucket = 'submission-files';
+
+  @override
+  Future<String> uploadSubmissionFile(
+    String taskID,
+    Uint8List bytes,
+    String contentType,
+  ) async {
+    final path = '$taskID/${_uuid()}';
+    await _sdk.storage
+        .from(submissionBucket)
+        .uploadBinary(
+          path,
+          bytes,
+          fileOptions: FileOptions(contentType: contentType),
+        );
+    return path;
+  }
+
+  @override
+  Future<Map<String, List<Map<String, dynamic>>>> submissionFiles(
+    String taskID,
+  ) async {
+    final rows = await _sdk
+        .from('submissions')
+        .select('id,files')
+        .eq('task_id', taskID);
+    return {
+      for (final row in rows)
+        '${row['id']}': [
+          for (final file in row['files'] as List? ?? const [])
+            _object(file),
+        ],
+    };
+  }
+
+  @override
+  Future<String> submissionFileUrl(String path) =>
+      _sdk.storage.from(submissionBucket).createSignedUrl(path, 600);
+
   @override
   Future<Map<String, dynamic>> orgOverview(String id) async =>
       _object(await _sdk.rpc('grouply_org_overview', params: {'org_id': id}));
@@ -493,4 +552,14 @@ class SupabaseGrouplyBackend implements GrouplyBackend {
       }),
     );
   }
+}
+
+/// Random v4 UUID for storage object names.
+String _uuid() {
+  final random = Random.secure();
+  final b = List<int>.generate(16, (_) => random.nextInt(256));
+  b[6] = (b[6] & 0x0f) | 0x40;
+  b[8] = (b[8] & 0x3f) | 0x80;
+  final h = b.map((x) => x.toRadixString(16).padLeft(2, '0')).join();
+  return '${h.substring(0, 8)}-${h.substring(8, 12)}-${h.substring(12, 16)}-${h.substring(16, 20)}-${h.substring(20)}';
 }

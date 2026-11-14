@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Icon from '#lib/Icon.svelte';
+	import Gupy from '#lib/gupy/Gupy.svelte';
 	import { activityStamp, activityStyle, dayOffset, dueLabel, firstName, initials, isOverdue, longToday, shortDate, STATUS, tint, weekday } from '#lib/app/format.ts';
 	import { myGroups, splitActivity, userName } from '#lib/app/derive.ts';
 	import { openTask } from '#lib/app/nav.ts';
@@ -62,7 +63,7 @@
 
 	{#if !hasGroups}
 		<div class="card empty">
-			<span class="empty-icon"><Icon name="groups" size={28} /></span>
+			<Gupy size={140} idle={false} waveOnShow />
 			<b>Belum ada grup</b>
 			<span>Buat grup atau gabung dengan kode undangan dari koordinatormu.</span>
 			<a class="btn btn-primary" href="/app/grup">Buka Grup</a>
@@ -389,15 +390,6 @@
 		text-align: center;
 		gap: 8px;
 		padding: 32px 20px;
-	}
-	.empty-icon {
-		width: 56px;
-		height: 56px;
-		border-radius: 18px;
-		background: var(--mint);
-		display: flex;
-		align-items: center;
-		justify-content: center;
 	}
 	.empty span {
 		color: var(--text2);

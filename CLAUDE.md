@@ -19,6 +19,13 @@
 - Web memakai Supabase dan RPC yang sama (`grouply_snapshot`/`grouply_mutate`) dengan publishable key; aturan tetap di RLS/RPC, bukan di client. Jangan membuat backend atau kontrak terpisah untuk web.
 - Token warna di `web/src/app.css` mengikuti `docs/DESIGN_SYSTEM.md` dan `docs/DARK_THEME.md`. Jalankan dari `web/`: `npm run dev`, `npm run check`, `npm run build`.
 
+## Perubahan scope eksplisit: Lampiran hasil kerja, 14 November 2026
+
+- Pengguna meminta opsi kirim file di Kirim hasil (pengecualian larangan "attachment" di bawah; lampiran org ORG-15 tetap terpisah). Maks 3 file per submission, 10 MB per file, PDF/JPG/PNG/DOCX/XLSX/PPTX, tautan tetap boleh.
+- Bucket privat `submission-files` di `<task>/<uuid>`: hanya pelaksana tugas yang terbuka boleh unggah, anggota grup boleh baca, tidak ada ubah/hapus. `submitWork` dengan `files` divalidasi di `private.submit_work_files` (ukuran dan tipe diambil dari Storage). Migration `20261114140000_submission_files.sql`, tes `supabase/tests/submission_files.sql`. Stack lokal sekarang menjalankan `storage-api`.
+- Flutter: unggah dan buka (package `file_picker`, target iOS 14). Web: hanya menampilkan dan membuka lampiran.
+- Kartu **Kontribusi** di halaman proyek (Flutter + web, dihitung di client): porsi tiap anggota = tugas `done` miliknya ÷ semua tugas `done` proyek, bobot sama, dibulatkan dengan sisa terbesar. Terlambat/revisi hanya ditampilkan, tidak mengurangi persen. Ini pengecualian untuk larangan "scoring" di bawah. Logika: `flutter/lib/core/contribution.dart` dan `web/src/lib/app/contribution.ts`.
+
 ## Sumber dan platform
 
 - Native iPhone iOS 17+, SwiftUI; Bahasa Indonesia, desain Soft Future.

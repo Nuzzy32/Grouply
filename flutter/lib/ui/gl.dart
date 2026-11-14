@@ -140,6 +140,8 @@ final _symbols = <String, IconData>{
   'key': Icons.key_outlined,
   'largecircle.fill.circle': CupertinoIcons.smallcircle_fill_circle,
   'link': CupertinoIcons.link,
+  'paperclip': CupertinoIcons.paperclip,
+  'photo': CupertinoIcons.photo,
   'list.bullet.clipboard': CupertinoIcons.doc_on_clipboard,
   'lock': CupertinoIcons.lock,
   'magnifyingglass': CupertinoIcons.search,
@@ -592,11 +594,15 @@ class GLEmptyState extends StatelessWidget {
     required this.message,
     required this.icon,
     this.tint,
+    this.art,
   });
   final String title;
   final String message;
   final String icon;
   final Color? tint;
+
+  /// Replaces the icon tile (e.g. Gupy on first-run empty states).
+  final Widget? art;
   @override
   Widget build(BuildContext context) => Container(
     width: double.infinity,
@@ -604,12 +610,13 @@ class GLEmptyState extends StatelessWidget {
     decoration: glBox(GLTheme.surface, 28),
     child: Column(
       children: [
-        Container(
-          width: 56,
-          height: 56,
-          decoration: glBox(tint ?? GLTheme.mint, 20),
-          child: GLIcon(icon, size: 28),
-        ),
+        art ??
+            Container(
+              width: 56,
+              height: 56,
+              decoration: glBox(tint ?? GLTheme.mint, 20),
+              child: GLIcon(icon, size: 28),
+            ),
         SizedBox(height: 10),
         Text(title, textAlign: TextAlign.center, style: gl(19, w700)),
         SizedBox(height: 10),

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -144,6 +145,28 @@ class FakeBackend implements GrouplyBackend {
     reads.add('report:$groupID:$periodID:$projectIDs');
     return reportData(groupID, periodID, projectIDs);
   }
+
+  final uploads = <String>[];
+  Map<String, List<Map<String, dynamic>>> files = {};
+  @override
+  Future<String> uploadSubmissionFile(
+    String taskID,
+    Uint8List bytes,
+    String contentType,
+  ) async {
+    final path = '$taskID/${uploads.length}';
+    uploads.add(path);
+    return path;
+  }
+
+  @override
+  Future<Map<String, List<Map<String, dynamic>>>> submissionFiles(
+    String taskID,
+  ) async => files;
+
+  @override
+  Future<String> submissionFileUrl(String path) async =>
+      'https://files.test/$path';
 
   @override
   Future<void> connect(void Function() onChange) async {
