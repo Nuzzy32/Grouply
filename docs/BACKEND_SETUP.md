@@ -7,12 +7,14 @@ Backend ini berjalan lokal pada Docker dan memakai Supabase Auth, PostgreSQL, RL
 Dari root repo, dengan Docker aktif:
 
 ```sh
-supabase start -x storage-api,imgproxy,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
+supabase start -x imgproxy,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
 python3 scripts/backend_local.py setup
 python3 scripts/backend_local.py smoke
 xcodegen generate
 open Grouply.xcodeproj
 ```
+
+`storage-api` ikut dijalankan sejak 14 November 2026 untuk lampiran hasil kerja (bucket privat `submission-files`, migration `20261114140000_submission_files.sql`).
 
 Port Grouply: API **55321**, PostgreSQL **55322**, email lokal **55324**, shadow database **55320**. Port berbeda mencegah bentrok dengan proyek Supabase lain. Jangan menjalankan `supabase stop` terhadap proyek lain.
 
@@ -45,7 +47,7 @@ Tes integrasi native membaca path akun lokal melalui scheme environment `GROUPLY
 Migration canonical ada di `supabase/migrations/`. Jangan menyalin contoh DDL dari dokumen produk sebagai migration kedua.
 
 ```sh
-for suite in workflow milestone_e organization organization_work organization_plan; do
+for suite in workflow milestone_e organization organization_work organization_plan premium_task_batch meeting_follow_ups submission_files; do
   docker exec -i supabase_db_Grouply psql -U postgres -d postgres \
     -v ON_ERROR_STOP=1 < supabase/tests/$suite.sql
 done
