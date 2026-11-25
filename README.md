@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/readme/app-icon.png" width="112" alt="Grouply logo">
+  <img src="docs/assets/readme/logo-gupy.png" width="112" alt="Grouply logo">
 </p>
 
 <h1 align="center">Grouply</h1>
