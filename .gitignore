@@ -15,3 +15,15 @@ supabase/.temp/
 supabase/.branches/
 supabase/workspace.sql
 .worktrees/
+
+# Catatan dan konfigurasi asisten AI (lokal saja)
+CLAUDE.md
+CLAUDE.local.md
+.claude/
+AGENTS.md
+GEMINI.md
+.cursor/
+.cursorrules
+.windsurf/
+.github/copilot-instructions.md
+docs/HANDOFF-*.md
